@@ -10,7 +10,10 @@ export default function HomePage() {
       <header className="bg-white shadow-sm border-b">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="flex justify-between items-center h-16">
-            <h1 className="text-xl font-semibold">Availability Planner</h1>
+            <div className="flex items-center gap-3">
+              <img src="/favicon.svg" alt="Availability Planner" className="h-8 w-8" />
+              <h1 className="text-xl font-semibold">Availability Planner</h1>
+            </div>
             <LanguageSelector currentLocale="en" />
           </div>
         </div>

@@ -19,7 +19,7 @@ import { CalendarIcon, Users } from "lucide-react"
 import { format } from "date-fns"
 import { nl } from "date-fns/locale"
 import { supabase } from "@/lib/supabase"
-import type { Locale } from "@/lib/i18n"
+import { useTranslation, type Locale } from "@/lib/i18n"
 import { MemberAvatar } from "./member-avatar"
 
 interface Member {
@@ -44,13 +44,14 @@ export function BulkUpdateDialog({ members, locale, onUpdate }: BulkUpdateDialog
     "available" | "unavailable" | "need_to_check" | "absent" | "holiday"
   >("available")
   const [isUpdating, setIsUpdating] = useState(false)
+  const { t } = useTranslation(locale)
 
   const statusOptions = [
-    { value: "available", label: "Beschikbaar", icon: "🟢" },
-    { value: "unavailable", label: "Niet beschikbaar", icon: "🔴" },
-    { value: "need_to_check", label: "Moet checken", icon: "🔵" },
-    { value: "absent", label: "Afwezig", icon: "⚫" },
-    { value: "holiday", label: "Vakantie", icon: "🟡" },
+    { value: "available", label: t("status.available"), icon: "🟢" },
+    { value: "unavailable", label: t("status.unavailable"), icon: "🔴" },
+    { value: "need_to_check", label: t("status.need_to_check"), icon: "🔵" },
+    { value: "absent", label: t("status.absent"), icon: "⚫" },
+    { value: "holiday", label: t("status.holiday"), icon: "🟡" },
   ]
 
   const handleMemberToggle = (memberId: string) => {
@@ -67,7 +68,7 @@ export function BulkUpdateDialog({ members, locale, onUpdate }: BulkUpdateDialog
 
   const handleBulkUpdate = async () => {
     if (selectedMembers.length === 0 || selectedDates.length === 0) {
-      alert("Selecteer teamleden en datums.")
+      alert(t("bulk.selectMembersAndDates"))
       return
     }
 
@@ -94,7 +95,7 @@ export function BulkUpdateDialog({ members, locale, onUpdate }: BulkUpdateDialog
       setSelectedDates([])
     } catch (error) {
       console.error("Bulk update error:", error)
-      alert("Er is een fout opgetreden bij het bijwerken.")
+      alert(t("common.error"))
     } finally {
       setIsUpdating(false)
     }
@@ -105,14 +106,14 @@ export function BulkUpdateDialog({ members, locale, onUpdate }: BulkUpdateDialog
       <DialogTrigger asChild>
         <Button variant="outline" size="sm" className="rounded-lg bg-transparent">
           <Users className="h-4 w-4 mr-2" />
-          Bulk Update
+          {t("bulk.title")}
         </Button>
       </DialogTrigger>
       <DialogContent className="sm:max-w-[600px] bg-white dark:bg-gray-800 max-h-[80vh] overflow-y-auto">
         <DialogHeader>
-          <DialogTitle className="text-gray-900 dark:text-white">Bulk beschikbaarheid bijwerken</DialogTitle>
+          <DialogTitle className="text-gray-900 dark:text-white">{t("bulk.title")}</DialogTitle>
           <DialogDescription className="text-gray-600 dark:text-gray-300">
-            Selecteer teamleden, datums en status om meerdere beschikbaarheden tegelijk bij te werken.
+            {t("bulk.description")}
           </DialogDescription>
         </DialogHeader>
 
@@ -121,10 +122,10 @@ export function BulkUpdateDialog({ members, locale, onUpdate }: BulkUpdateDialog
           <div className="space-y-3">
             <div className="flex items-center justify-between">
               <Label className="text-sm font-medium text-gray-900 dark:text-white">
-                Teamleden ({selectedMembers.length}/{members.length})
+                {t("bulk.selectMembers")} ({selectedMembers.length}/{members.length})
               </Label>
               <Button variant="outline" size="sm" onClick={handleSelectAllMembers} className="text-xs bg-transparent">
-                {selectedMembers.length === members.length ? "Deselecteer alles" : "Selecteer alles"}
+                {selectedMembers.length === members.length ? t("bulk.deselectAll") : t("bulk.selectAll")}
               </Button>
             </div>
             <div className="grid grid-cols-1 gap-2 max-h-40 overflow-y-auto border border-gray-200 dark:border-gray-700 rounded-lg p-3">
@@ -152,15 +153,15 @@ export function BulkUpdateDialog({ members, locale, onUpdate }: BulkUpdateDialog
           {/* Date Selection */}
           <div className="space-y-3">
             <Label className="text-sm font-medium text-gray-900 dark:text-white">
-              Datums ({selectedDates.length} geselecteerd)
+              {t("bulk.selectDates")} ({selectedDates.length} {t("bulk.selected")})
             </Label>
             <Popover>
               <PopoverTrigger asChild>
                 <Button variant="outline" className="w-full justify-start text-left font-normal bg-transparent">
                   <CalendarIcon className="mr-2 h-4 w-4" />
                   {selectedDates.length > 0
-                    ? `${selectedDates.length} datum${selectedDates.length > 1 ? "s" : ""} geselecteerd`
-                    : "Selecteer datums"}
+                    ? `${selectedDates.length} ${t("bulk.datesSelected")}`
+                    : t("bulk.selectDates")}
                 </Button>
               </PopoverTrigger>
               <PopoverContent className="w-auto p-0" align="start">
@@ -184,7 +185,7 @@ export function BulkUpdateDialog({ members, locale, onUpdate }: BulkUpdateDialog
 
           {/* Status Selection */}
           <div className="space-y-3">
-            <Label className="text-sm font-medium text-gray-900 dark:text-white">Status</Label>
+            <Label className="text-sm font-medium text-gray-900 dark:text-white">{t("bulk.selectStatus")}</Label>
             <div className="grid grid-cols-1 gap-2">
               {statusOptions.map((option) => (
                 <div key={option.value} className="flex items-center space-x-2">
@@ -212,7 +213,7 @@ export function BulkUpdateDialog({ members, locale, onUpdate }: BulkUpdateDialog
 
         <DialogFooter>
           <Button variant="outline" onClick={() => setOpen(false)} className="text-gray-700 dark:text-gray-300">
-            Annuleren
+            {t("common.cancel")}
           </Button>
           <Button
             onClick={handleBulkUpdate}
@@ -222,10 +223,10 @@ export function BulkUpdateDialog({ members, locale, onUpdate }: BulkUpdateDialog
             {isUpdating ? (
               <>
                 <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin mr-2" />
-                Bijwerken...
+                {t("bulk.updating")}
               </>
             ) : (
-              `${selectedMembers.length * selectedDates.length} items bijwerken`
+              `${selectedMembers.length * selectedDates.length} ${t("bulk.itemsToUpdate")}`
             )}
           </Button>
         </DialogFooter>

@@ -29,6 +29,10 @@ export const translations = {
     "calendar.month": "Month",
     "calendar.quarter": "Quarter",
     "calendar.year": "Year",
+    "calendar.1week": "1 Week",
+    "calendar.2weeks": "2 Weeks", 
+    "calendar.4weeks": "4 Weeks",
+    "calendar.8weeks": "8 Weeks",
 
     // Availability statuses
     "status.available": "Available",
@@ -45,6 +49,14 @@ export const translations = {
     "bulk.startDate": "Start Date",
     "bulk.endDate": "End Date",
     "bulk.apply": "Apply Changes",
+    "bulk.selectAll": "Select All",
+    "bulk.deselectAll": "Deselect All",
+    "bulk.selectMembersAndDates": "Please select team members and dates.",
+    "bulk.description": "Select team members, dates and status to update multiple availabilities at once.",
+    "bulk.selected": "selected",
+    "bulk.datesSelected": "dates selected",
+    "bulk.updating": "Updating...",
+    "bulk.itemsToUpdate": "items to update",
 
     // Settings
     "settings.title": "Settings",
@@ -59,15 +71,20 @@ export const translations = {
     "export.format": "Export Format",
     "export.dateRange": "Date Range",
     "export.download": "Download",
+    "export.selectDateRange": "Please select a date range.",
+    "export.description": "Choose the format and date range for export.",
+    "export.fromDate": "From Date",
+    "export.toDate": "To Date",
+    "export.exporting": "Exporting...",
 
     // Days of week
-    "day.monday": "Mon",
-    "day.tuesday": "Tue",
-    "day.wednesday": "Wed",
-    "day.thursday": "Thu",
-    "day.friday": "Fri",
-    "day.saturday": "Sat",
-    "day.sunday": "Sun",
+    "day.monday": "MON",
+    "day.tuesday": "TUE",
+    "day.wednesday": "WED",
+    "day.thursday": "THU",
+    "day.friday": "FRI",
+    "day.saturday": "SAT",
+    "day.sunday": "SUN",
 
     // Months
     "month.january": "January",
@@ -91,6 +108,7 @@ export const translations = {
     "common.edit": "Edit",
     "common.loading": "Loading...",
     "common.close": "Close",
+    "common.error": "An error occurred",
   },
   nl: {
     // Navigation
@@ -120,6 +138,10 @@ export const translations = {
     "calendar.month": "Maand",
     "calendar.quarter": "Kwartaal",
     "calendar.year": "Jaar",
+    "calendar.1week": "1 Week",
+    "calendar.2weeks": "2 Weken",
+    "calendar.4weeks": "4 Weken", 
+    "calendar.8weeks": "8 Weken",
 
     // Availability statuses
     "status.available": "Beschikbaar",
@@ -136,6 +158,14 @@ export const translations = {
     "bulk.startDate": "Startdatum",
     "bulk.endDate": "Einddatum",
     "bulk.apply": "Wijzigingen Toepassen",
+    "bulk.selectAll": "Selecteer Alles",
+    "bulk.deselectAll": "Deselecteer Alles",
+    "bulk.selectMembersAndDates": "Selecteer teamleden en datums.",
+    "bulk.description": "Selecteer teamleden, datums en status om meerdere beschikbaarheden tegelijk bij te werken.",
+    "bulk.selected": "geselecteerd",
+    "bulk.datesSelected": "datums geselecteerd",
+    "bulk.updating": "Bijwerken...",
+    "bulk.itemsToUpdate": "items bijwerken",
 
     // Settings
     "settings.title": "Instellingen",
@@ -150,15 +180,20 @@ export const translations = {
     "export.format": "Exportformaat",
     "export.dateRange": "Datumbereik",
     "export.download": "Downloaden",
+    "export.selectDateRange": "Selecteer een datumbereik.",
+    "export.description": "Kies het formaat en datumbereik voor de export.",
+    "export.fromDate": "Van Datum",
+    "export.toDate": "Tot Datum",
+    "export.exporting": "Exporteren...",
 
     // Days of week
-    "day.monday": "Ma",
-    "day.tuesday": "Di",
-    "day.wednesday": "Wo",
-    "day.thursday": "Do",
-    "day.friday": "Vr",
-    "day.saturday": "Za",
-    "day.sunday": "Zo",
+    "day.monday": "MA",
+    "day.tuesday": "DI",
+    "day.wednesday": "WO",
+    "day.thursday": "DO",
+    "day.friday": "VR",
+    "day.saturday": "ZA",
+    "day.sunday": "ZO",
 
     // Months
     "month.january": "Januari",
@@ -182,6 +217,7 @@ export const translations = {
     "common.edit": "Bewerken",
     "common.loading": "Laden...",
     "common.close": "Sluiten",
+    "common.error": "Er is een fout opgetreden",
   },
   fr: {
     // Navigation
@@ -211,6 +247,10 @@ export const translations = {
     "calendar.month": "Mois",
     "calendar.quarter": "Trimestre",
     "calendar.year": "Année",
+    "calendar.1week": "1 Semaine",
+    "calendar.2weeks": "2 Semaines",
+    "calendar.4weeks": "4 Semaines",
+    "calendar.8weeks": "8 Semaines",
 
     // Availability statuses
     "status.available": "Disponible",
@@ -227,6 +267,14 @@ export const translations = {
     "bulk.startDate": "Date de Début",
     "bulk.endDate": "Date de Fin",
     "bulk.apply": "Appliquer les Modifications",
+    "bulk.selectAll": "Tout Sélectionner",
+    "bulk.deselectAll": "Tout Désélectionner",
+    "bulk.selectMembersAndDates": "Veuillez sélectionner les membres de l'équipe et les dates.",
+    "bulk.description": "Sélectionnez les membres de l'équipe, les dates et le statut pour mettre à jour plusieurs disponibilités à la fois.",
+    "bulk.selected": "sélectionné",
+    "bulk.datesSelected": "dates sélectionnées",
+    "bulk.updating": "Mise à jour...",
+    "bulk.itemsToUpdate": "éléments à mettre à jour",
 
     // Settings
     "settings.title": "Paramètres",
@@ -241,15 +289,20 @@ export const translations = {
     "export.format": "Format d'Export",
     "export.dateRange": "Plage de Dates",
     "export.download": "Télécharger",
+    "export.selectDateRange": "Veuillez sélectionner une plage de dates.",
+    "export.description": "Choisissez le format et la plage de dates pour l'export.",
+    "export.fromDate": "Date de Début",
+    "export.toDate": "Date de Fin",
+    "export.exporting": "Export en cours...",
 
     // Days of week
-    "day.monday": "Lun",
-    "day.tuesday": "Mar",
-    "day.wednesday": "Mer",
-    "day.thursday": "Jeu",
-    "day.friday": "Ven",
-    "day.saturday": "Sam",
-    "day.sunday": "Dim",
+    "day.monday": "LUN",
+    "day.tuesday": "MAR",
+    "day.wednesday": "MER",
+    "day.thursday": "JEU",
+    "day.friday": "VEN",
+    "day.saturday": "SAM",
+    "day.sunday": "DIM",
 
     // Months
     "month.january": "Janvier",
@@ -273,6 +326,7 @@ export const translations = {
     "common.edit": "Modifier",
     "common.loading": "Chargement...",
     "common.close": "Fermer",
+    "common.error": "Une erreur s'est produite",
   },
 }
 

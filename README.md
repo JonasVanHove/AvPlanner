@@ -30,7 +30,7 @@ A modern, full-stack team availability management application built with Next.js
 
 1. **Clone the repository**
    ```bash
-   git clone https://github.com/yourusername/availability-planner.git
+   git clone https://github.com/JonasVanHove/availability-planner.git
    cd availability-planner
    ```
 

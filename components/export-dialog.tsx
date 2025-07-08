@@ -19,6 +19,7 @@ import { format } from "date-fns"
 import { nl } from "date-fns/locale"
 import { cn } from "@/lib/utils"
 import { supabase } from "@/lib/supabase"
+import { useTranslation, type Locale } from "@/lib/i18n"
 
 interface Member {
   id: string
@@ -32,9 +33,10 @@ interface ExportDialogProps {
   open: boolean
   onOpenChange: (open: boolean) => void
   members: Member[]
+  locale?: Locale
 }
 
-export function ExportDialog({ open, onOpenChange, members }: ExportDialogProps) {
+export function ExportDialog({ open, onOpenChange, members, locale = "nl" }: ExportDialogProps) {
   const [exportFormat, setExportFormat] = useState<"excel" | "csv" | "json">("excel")
   const [dateRange, setDateRange] = useState<{
     from: Date | undefined
@@ -44,10 +46,11 @@ export function ExportDialog({ open, onOpenChange, members }: ExportDialogProps)
     to: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000), // 1 week from now
   })
   const [isExporting, setIsExporting] = useState(false)
+  const { t } = useTranslation(locale)
 
   const handleExport = async () => {
     if (!dateRange.from || !dateRange.to) {
-      alert("Selecteer een datumbereik.")
+      alert(t("export.selectDateRange"))
       return
     }
 
@@ -67,7 +70,7 @@ export function ExportDialog({ open, onOpenChange, members }: ExportDialogProps)
       if (error) throw error
 
       // Prepare export data
-      const exportData = []
+      const exportData: any[] = []
       const startDate = new Date(dateRange.from)
       const endDate = new Date(dateRange.to)
 
@@ -95,19 +98,15 @@ export function ExportDialog({ open, onOpenChange, members }: ExportDialogProps)
         const csvContent = convertToCSV(exportData)
         downloadFile(csvContent, "availability-export.csv", "text/csv")
       } else if (exportFormat === "excel") {
-        // For Excel, we'll create a CSV that can be opened in Excel
-        const csvContent = convertToCSV(exportData)
-        downloadFile(
-          csvContent,
-          "availability-export.xlsx",
-          "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
-        )
+        // For Excel, we'll create a proper CSV with UTF-8 BOM for Excel compatibility
+        const csvContent = convertToExcelCSV(exportData)
+        downloadFile(csvContent, "availability-export.csv", "text/csv")
       }
 
       onOpenChange(false)
     } catch (error) {
       console.error("Export error:", error)
-      alert("Er is een fout opgetreden bij het exporteren.")
+      alert(t("common.error"))
     } finally {
       setIsExporting(false)
     }
@@ -132,6 +131,32 @@ export function ExportDialog({ open, onOpenChange, members }: ExportDialogProps)
     return csvRows.join("\n")
   }
 
+  const convertToExcelCSV = (data: any[]) => {
+    if (data.length === 0) return ""
+
+    const headers = Object.keys(data[0])
+    const csvRows = [
+      headers.join(";"), // Use semicolon separator for Excel compatibility
+      ...data.map((row) =>
+        headers
+          .map((header) => {
+            const value = row[header]
+            // Properly escape values for Excel
+            if (typeof value === "string") {
+              return value.includes(";") || value.includes('"') || value.includes("\n") 
+                ? `"${value.replace(/"/g, '""')}"` 
+                : value
+            }
+            return value
+          })
+          .join(";"),
+      ),
+    ]
+
+    // Add UTF-8 BOM for proper Excel encoding
+    return "\uFEFF" + csvRows.join("\n")
+  }
+
   const downloadFile = (content: string, filename: string, mimeType: string) => {
     const blob = new Blob([content], { type: mimeType })
     const url = URL.createObjectURL(blob)
@@ -148,15 +173,15 @@ export function ExportDialog({ open, onOpenChange, members }: ExportDialogProps)
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="sm:max-w-[425px] bg-white dark:bg-gray-800">
         <DialogHeader>
-          <DialogTitle className="text-gray-900 dark:text-white">Beschikbaarheid exporteren</DialogTitle>
+          <DialogTitle className="text-gray-900 dark:text-white">{t("export.title")}</DialogTitle>
           <DialogDescription className="text-gray-600 dark:text-gray-300">
-            Kies het formaat en datumbereik voor de export.
+            {t("export.description")}
           </DialogDescription>
         </DialogHeader>
 
         <div className="space-y-6 py-4">
           <div className="space-y-3">
-            <Label className="text-sm font-medium text-gray-900 dark:text-white">Export formaat</Label>
+            <Label className="text-sm font-medium text-gray-900 dark:text-white">{t("export.format")}</Label>
             <RadioGroup value={exportFormat} onValueChange={(value: any) => setExportFormat(value)}>
               <div className="flex items-center space-x-2">
                 <RadioGroupItem value="excel" id="excel" />
@@ -189,7 +214,7 @@ export function ExportDialog({ open, onOpenChange, members }: ExportDialogProps)
                     className={cn("justify-start text-left font-normal", !dateRange.from && "text-muted-foreground")}
                   >
                     <CalendarIcon className="mr-2 h-4 w-4" />
-                    {dateRange.from ? format(dateRange.from, "dd-MM-yyyy", { locale: nl }) : "Van datum"}
+                    {dateRange.from ? format(dateRange.from, "dd-MM-yyyy", { locale: nl }) : t("export.fromDate")}
                   </Button>
                 </PopoverTrigger>
                 <PopoverContent className="w-auto p-0" align="start">
@@ -209,7 +234,7 @@ export function ExportDialog({ open, onOpenChange, members }: ExportDialogProps)
                     className={cn("justify-start text-left font-normal", !dateRange.to && "text-muted-foreground")}
                   >
                     <CalendarIcon className="mr-2 h-4 w-4" />
-                    {dateRange.to ? format(dateRange.to, "dd-MM-yyyy", { locale: nl }) : "Tot datum"}
+                    {dateRange.to ? format(dateRange.to, "dd-MM-yyyy", { locale: nl }) : t("export.toDate")}
                   </Button>
                 </PopoverTrigger>
                 <PopoverContent className="w-auto p-0" align="start">
@@ -227,7 +252,7 @@ export function ExportDialog({ open, onOpenChange, members }: ExportDialogProps)
 
         <DialogFooter>
           <Button variant="outline" onClick={() => onOpenChange(false)} className="text-gray-700 dark:text-gray-300">
-            Annuleren
+            {t("common.cancel")}
           </Button>
           <Button
             onClick={handleExport}
@@ -237,12 +262,12 @@ export function ExportDialog({ open, onOpenChange, members }: ExportDialogProps)
             {isExporting ? (
               <>
                 <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin mr-2" />
-                Exporteren...
+                {t("export.exporting")}
               </>
             ) : (
               <>
                 <Download className="mr-2 h-4 w-4" />
-                Exporteren
+                {t("export.download")}
               </>
             )}
           </Button>

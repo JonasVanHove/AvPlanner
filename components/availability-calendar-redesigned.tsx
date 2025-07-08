@@ -61,38 +61,48 @@ const AvailabilityCalendarRedesigned = ({
   const [editMode, setEditMode] = useState(false)
   const { t } = useTranslation(locale)
 
-  const dutchDayNames = ["MA", "DI", "WO", "DO", "VR", "ZA", "ZO"]
+  // Get localized day names
+  const getDayNames = () => [
+    t("day.monday"),
+    t("day.tuesday"),
+    t("day.wednesday"),
+    t("day.thursday"),
+    t("day.friday"),
+    t("day.saturday"),
+    t("day.sunday"),
+  ]
+
   const dutchMonthNames = ["JAN", "FEB", "MAR", "APR", "MEI", "JUN", "JUL", "AUG", "SEP", "OKT", "NOV", "DEC"]
 
   const statusConfig = {
     available: {
       icon: "🟢",
       color: "bg-green-50 border-green-200 dark:bg-green-900/20 dark:border-green-700/50",
-      label: "Available",
+      label: t("status.available"),
       textColor: "text-green-700 dark:text-green-300",
     },
     unavailable: {
       icon: "🔴",
       color: "bg-red-50 border-red-200 dark:bg-red-900/20 dark:border-red-700/50",
-      label: "Unavailable",
+      label: t("status.unavailable"),
       textColor: "text-red-700 dark:text-red-300",
     },
     need_to_check: {
       icon: "🔵",
       color: "bg-blue-50 border-blue-200 dark:bg-blue-900/20 dark:border-blue-700/50",
-      label: "Need to Check",
+      label: t("status.need_to_check"),
       textColor: "text-blue-700 dark:text-blue-300",
     },
     absent: {
       icon: "⚫",
       color: "bg-gray-50 border-gray-200 dark:bg-gray-800/50 dark:border-gray-600/50",
-      label: "Absent",
+      label: t("status.absent"),
       textColor: "text-gray-700 dark:text-gray-300",
     },
     holiday: {
       icon: "🟡",
       color: "bg-yellow-50 border-yellow-200 dark:bg-yellow-900/20 dark:border-yellow-700/50",
-      label: "Holiday",
+      label: t("status.holiday"),
       textColor: "text-yellow-700 dark:text-yellow-300",
     },
   }
@@ -168,7 +178,6 @@ const AvailabilityCalendarRedesigned = ({
     try {
       const { error } = await supabase.from("availability").upsert([{ member_id: memberId, date, status }], {
         onConflict: "member_id,date",
-        returning: "minimal",
       })
 
       if (error) throw error
@@ -197,6 +206,11 @@ const AvailabilityCalendarRedesigned = ({
   const getAvailabilityForDate = (memberId: string, date: Date) => {
     const dateString = date.toISOString().split("T")[0]
     return availability.find((a) => a.member_id === memberId && a.date === dateString)
+  }
+
+  const getTodayAvailability = (memberId: string) => {
+    const today = new Date()
+    return getAvailabilityForDate(memberId, today)
   }
 
   const isWeekend = (date: Date) => {
@@ -323,7 +337,7 @@ const AvailabilityCalendarRedesigned = ({
                       )}
                     >
                       <div className="text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wide">
-                        {dutchDayNames[index]}
+                        {getDayNames()[index]}
                       </div>
                       <div
                         className={cn(
@@ -351,15 +365,18 @@ const AvailabilityCalendarRedesigned = ({
                   >
                     <div className="p-3 border-r border-gray-200 dark:border-gray-600 flex items-center justify-between">
                       <div className="flex items-center gap-3 min-w-0 flex-1">
-                        <div className="relative flex-shrink-0">
+                        <div className="flex-shrink-0">
                           <MemberAvatar
                             firstName={member.first_name}
                             lastName={member.last_name}
                             profileImage={member.profile_image}
                             size="md"
                             className="ring-1 ring-gray-200 dark:ring-gray-600"
+                            statusIndicator={{
+                              show: true,
+                              status: getTodayAvailability(member.id)?.status
+                            }}
                           />
-                          <div className="absolute -bottom-0.5 -right-0.5 w-3 h-3 bg-green-400 rounded-full border-2 border-white dark:border-gray-800"></div>
                         </div>
                         <div className="min-w-0 flex-1">
                           <div className="text-sm font-medium text-gray-900 dark:text-white truncate">
@@ -550,13 +567,17 @@ const AvailabilityCalendarRedesigned = ({
           <div className="px-6 py-6">
             <div className="flex items-center justify-between flex-wrap gap-4">
               <div className="flex items-center gap-4">
-                <div className="w-12 h-12 bg-blue-600 rounded-lg flex items-center justify-center shadow-sm">
-                  <Calendar className="h-6 w-6 text-white" />
+                <div className="w-12 h-12 rounded-lg flex items-center justify-center shadow-sm">
+                  <img src="/favicon.svg" alt="Availability Planner" className="h-10 w-10" />
                 </div>
                 <div>
                   <h1 className="text-2xl font-bold text-gray-900 dark:text-white">Availability Planner</h1>
-                  <p className="text-lg font-medium text-gray-700 dark:text-gray-300">{teamName}</p>
-                  <p className="text-sm text-gray-500 dark:text-gray-400">{members.length} Team Members</p>
+                  <div className="flex items-center gap-3">
+                    <p className="text-lg font-medium text-gray-700 dark:text-gray-300">{teamName}</p>
+                    <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-200">
+                      {members.length} {members.length === 1 ? 'member' : 'members'}
+                    </span>
+                  </div>
                 </div>
               </div>
 
@@ -573,7 +594,7 @@ const AvailabilityCalendarRedesigned = ({
                         : "hover:bg-gray-200 dark:hover:bg-gray-600",
                     )}
                   >
-                    1 Week
+                    {t("calendar.1week")}
                   </Button>
                   <Button
                     variant={weeksToShow === 2 ? "default" : "ghost"}
@@ -586,7 +607,7 @@ const AvailabilityCalendarRedesigned = ({
                         : "hover:bg-gray-200 dark:hover:bg-gray-600",
                     )}
                   >
-                    2 Weeks
+                    {t("calendar.2weeks")}
                   </Button>
                   <Button
                     variant={weeksToShow === 4 ? "default" : "ghost"}
@@ -599,7 +620,7 @@ const AvailabilityCalendarRedesigned = ({
                         : "hover:bg-gray-200 dark:hover:bg-gray-600",
                     )}
                   >
-                    4 Weeks
+                    {t("calendar.4weeks")}
                   </Button>
                   <Button
                     variant={weeksToShow === 8 ? "default" : "ghost"}
@@ -612,7 +633,7 @@ const AvailabilityCalendarRedesigned = ({
                         : "hover:bg-gray-200 dark:hover:bg-gray-600",
                     )}
                   >
-                    8 Weeks
+                    {t("calendar.8weeks")}
                   </Button>
                 </div>
 

@@ -32,7 +32,7 @@ interface LocaleTeamPageProps {
 export default function LocaleTeamPage({ params }: LocaleTeamPageProps) {
   const locale = params.locale as Locale
 
-  if (!["nl", "fr"].includes(locale)) {
+  if (!["en", "nl", "fr"].includes(locale)) {
     notFound()
   }
 
