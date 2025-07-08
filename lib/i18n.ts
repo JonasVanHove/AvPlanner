@@ -10,6 +10,7 @@ export const translations = {
     "team.create": "Create Team",
     "team.name": "Team Name",
     "team.members": "Team Members",
+    "team.members_count": "team members",
     "team.addMember": "Add Member",
     "team.memberName": "Member Name",
     "team.firstName": "First Name",
@@ -19,10 +20,12 @@ export const translations = {
 
     // Calendar
     "calendar.title": "Availability Calendar",
+    "calendar.team": "Team",
     "calendar.today": "Today",
     "calendar.prevMonth": "Previous Month",
     "calendar.nextMonth": "Next Month",
     "calendar.week": "Week",
+    "calendar.weeks": "Weeks",
     "calendar.month": "Month",
     "calendar.quarter": "Quarter",
     "calendar.year": "Year",
@@ -98,6 +101,7 @@ export const translations = {
     "team.create": "Team Aanmaken",
     "team.name": "Teamnaam",
     "team.members": "Teamleden",
+    "team.members_count": "teamleden",
     "team.addMember": "Lid Toevoegen",
     "team.memberName": "Naam van Lid",
     "team.firstName": "Voornaam",
@@ -107,10 +111,12 @@ export const translations = {
 
     // Calendar
     "calendar.title": "Beschikbaarheidskalender",
+    "calendar.team": "Team",
     "calendar.today": "Vandaag",
     "calendar.prevMonth": "Vorige Maand",
     "calendar.nextMonth": "Volgende Maand",
     "calendar.week": "Week",
+    "calendar.weeks": "Weken",
     "calendar.month": "Maand",
     "calendar.quarter": "Kwartaal",
     "calendar.year": "Jaar",
@@ -186,6 +192,7 @@ export const translations = {
     "team.create": "Créer une Équipe",
     "team.name": "Nom de l'Équipe",
     "team.members": "Membres de l'Équipe",
+    "team.members_count": "membres de l'équipe",
     "team.addMember": "Ajouter un Membre",
     "team.memberName": "Nom du Membre",
     "team.firstName": "Prénom",
@@ -195,10 +202,12 @@ export const translations = {
 
     // Calendar
     "calendar.title": "Calendrier de Disponibilité",
+    "calendar.team": "Équipe",
     "calendar.today": "Aujourd'hui",
     "calendar.prevMonth": "Mois Précédent",
     "calendar.nextMonth": "Mois Suivant",
     "calendar.week": "Semaine",
+    "calendar.weeks": "Semaines",
     "calendar.month": "Mois",
     "calendar.quarter": "Trimestre",
     "calendar.year": "Année",

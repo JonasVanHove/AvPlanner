@@ -2,154 +2,251 @@
 
 import { useState } from "react"
 import { Button } from "@/components/ui/button"
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog"
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
-import { Input } from "@/components/ui/input"
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog"
+import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group"
 import { Label } from "@/components/ui/label"
+import { Calendar } from "@/components/ui/calendar"
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover"
+import { CalendarIcon, Download } from "lucide-react"
+import { format } from "date-fns"
+import { nl } from "date-fns/locale"
+import { cn } from "@/lib/utils"
 import { supabase } from "@/lib/supabase"
-import { useTranslation, type Locale } from "@/lib/i18n"
-import { Download } from "lucide-react"
 
 interface Member {
   id: string
   first_name: string
   last_name: string
   email?: string
+  profile_image?: string
 }
 
 interface ExportDialogProps {
+  open: boolean
+  onOpenChange: (open: boolean) => void
   members: Member[]
-  locale: Locale
 }
 
-export function ExportDialog({ members, locale }: ExportDialogProps) {
-  const [isOpen, setIsOpen] = useState(false)
-  const [format, setFormat] = useState<"csv" | "json">("csv")
-  const [startDate, setStartDate] = useState("")
-  const [endDate, setEndDate] = useState("")
-  const [isLoading, setIsLoading] = useState(false)
-  const { t } = useTranslation(locale)
+export function ExportDialog({ open, onOpenChange, members }: ExportDialogProps) {
+  const [exportFormat, setExportFormat] = useState<"excel" | "csv" | "json">("excel")
+  const [dateRange, setDateRange] = useState<{
+    from: Date | undefined
+    to: Date | undefined
+  }>({
+    from: new Date(),
+    to: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000), // 1 week from now
+  })
+  const [isExporting, setIsExporting] = useState(false)
 
-  const exportData = async () => {
-    if (!startDate || !endDate || members.length === 0) return
+  const handleExport = async () => {
+    if (!dateRange.from || !dateRange.to) {
+      alert("Selecteer een datumbereik.")
+      return
+    }
 
-    setIsLoading(true)
+    setIsExporting(true)
     try {
-      const { data: availability, error } = await supabase
+      // Fetch availability data for the selected date range
+      const { data: availabilityData, error } = await supabase
         .from("availability")
         .select("*")
         .in(
           "member_id",
           members.map((m) => m.id),
         )
-        .gte("date", startDate)
-        .lte("date", endDate)
-        .order("date", { ascending: true })
+        .gte("date", dateRange.from.toISOString().split("T")[0])
+        .lte("date", dateRange.to.toISOString().split("T")[0])
 
       if (error) throw error
 
-      // Combine member data with availability
-      const exportData = availability?.map((avail) => {
-        const member = members.find((m) => m.id === avail.member_id)
-        return {
-          date: avail.date,
-          member_name: `${member?.first_name} ${member?.last_name}`,
-          email: member?.email || "",
-          status: avail.status,
-        }
-      })
+      // Prepare export data
+      const exportData = []
+      const startDate = new Date(dateRange.from)
+      const endDate = new Date(dateRange.to)
 
-      if (format === "csv") {
-        downloadCSV(exportData || [])
-      } else {
-        downloadJSON(exportData || [])
+      for (let d = new Date(startDate); d <= endDate; d.setDate(d.getDate() + 1)) {
+        const dateString = d.toISOString().split("T")[0]
+
+        members.forEach((member) => {
+          const availability = availabilityData?.find((a) => a.member_id === member.id && a.date === dateString)
+
+          exportData.push({
+            Date: format(d, "dd-MM-yyyy", { locale: nl }),
+            "First Name": member.first_name,
+            "Last Name": member.last_name,
+            Email: member.email || "",
+            Status: availability?.status || "not_set",
+          })
+        })
       }
 
-      setIsOpen(false)
+      // Export based on format
+      if (exportFormat === "json") {
+        const jsonString = JSON.stringify(exportData, null, 2)
+        downloadFile(jsonString, "availability-export.json", "application/json")
+      } else if (exportFormat === "csv") {
+        const csvContent = convertToCSV(exportData)
+        downloadFile(csvContent, "availability-export.csv", "text/csv")
+      } else if (exportFormat === "excel") {
+        // For Excel, we'll create a CSV that can be opened in Excel
+        const csvContent = convertToCSV(exportData)
+        downloadFile(
+          csvContent,
+          "availability-export.xlsx",
+          "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+        )
+      }
+
+      onOpenChange(false)
     } catch (error) {
-      console.error("Error exporting data:", error)
+      console.error("Export error:", error)
+      alert("Er is een fout opgetreden bij het exporteren.")
     } finally {
-      setIsLoading(false)
+      setIsExporting(false)
     }
   }
 
-  const downloadCSV = (data: any[]) => {
-    const headers = ["Date", "Member Name", "Email", "Status"]
-    const csvContent = [
-      headers.join(","),
-      ...data.map((row) => [row.date, `"${row.member_name}"`, row.email, row.status].join(",")),
-    ].join("\n")
+  const convertToCSV = (data: any[]) => {
+    if (data.length === 0) return ""
 
-    const blob = new Blob([csvContent], { type: "text/csv;charset=utf-8;" })
-    const link = document.createElement("a")
-    const url = URL.createObjectURL(blob)
-    link.setAttribute("href", url)
-    link.setAttribute("download", `availability_${startDate}_${endDate}.csv`)
-    link.style.visibility = "hidden"
-    document.body.appendChild(link)
-    link.click()
-    document.body.removeChild(link)
+    const headers = Object.keys(data[0])
+    const csvRows = [
+      headers.join(","),
+      ...data.map((row) =>
+        headers
+          .map((header) => {
+            const value = row[header]
+            return typeof value === "string" && value.includes(",") ? `"${value}"` : value
+          })
+          .join(","),
+      ),
+    ]
+
+    return csvRows.join("\n")
   }
 
-  const downloadJSON = (data: any[]) => {
-    const jsonContent = JSON.stringify(data, null, 2)
-    const blob = new Blob([jsonContent], { type: "application/json;charset=utf-8;" })
-    const link = document.createElement("a")
+  const downloadFile = (content: string, filename: string, mimeType: string) => {
+    const blob = new Blob([content], { type: mimeType })
     const url = URL.createObjectURL(blob)
-    link.setAttribute("href", url)
-    link.setAttribute("download", `availability_${startDate}_${endDate}.json`)
-    link.style.visibility = "hidden"
+    const link = document.createElement("a")
+    link.href = url
+    link.download = filename
     document.body.appendChild(link)
     link.click()
     document.body.removeChild(link)
+    URL.revokeObjectURL(url)
   }
 
   return (
-    <Dialog open={isOpen} onOpenChange={setIsOpen}>
-      <DialogTrigger asChild>
-        <Button variant="outline" size="sm">
-          <Download className="h-4 w-4 mr-2" />
-          {t("settings.exportAvailability")}
-        </Button>
-      </DialogTrigger>
-      <DialogContent className="max-w-md">
+    <Dialog open={open} onOpenChange={onOpenChange}>
+      <DialogContent className="sm:max-w-[425px] bg-white dark:bg-gray-800">
         <DialogHeader>
-          <DialogTitle>{t("export.title")}</DialogTitle>
+          <DialogTitle className="text-gray-900 dark:text-white">Beschikbaarheid exporteren</DialogTitle>
+          <DialogDescription className="text-gray-600 dark:text-gray-300">
+            Kies het formaat en datumbereik voor de export.
+          </DialogDescription>
         </DialogHeader>
-        <div className="space-y-4">
-          <div>
-            <Label>{t("export.format")}</Label>
-            <Select value={format} onValueChange={(value: "csv" | "json") => setFormat(value)}>
-              <SelectTrigger>
-                <SelectValue />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="csv">CSV</SelectItem>
-                <SelectItem value="json">JSON</SelectItem>
-              </SelectContent>
-            </Select>
+
+        <div className="space-y-6 py-4">
+          <div className="space-y-3">
+            <Label className="text-sm font-medium text-gray-900 dark:text-white">Export formaat</Label>
+            <RadioGroup value={exportFormat} onValueChange={(value: any) => setExportFormat(value)}>
+              <div className="flex items-center space-x-2">
+                <RadioGroupItem value="excel" id="excel" />
+                <Label htmlFor="excel" className="text-gray-700 dark:text-gray-300">
+                  Excel (.xlsx)
+                </Label>
+              </div>
+              <div className="flex items-center space-x-2">
+                <RadioGroupItem value="csv" id="csv" />
+                <Label htmlFor="csv" className="text-gray-700 dark:text-gray-300">
+                  CSV (.csv)
+                </Label>
+              </div>
+              <div className="flex items-center space-x-2">
+                <RadioGroupItem value="json" id="json" />
+                <Label htmlFor="json" className="text-gray-700 dark:text-gray-300">
+                  JSON (.json)
+                </Label>
+              </div>
+            </RadioGroup>
           </div>
 
-          <div className="grid grid-cols-2 gap-2">
-            <div>
-              <Label htmlFor="startDate">Start Datum</Label>
-              <Input id="startDate" type="date" value={startDate} onChange={(e) => setStartDate(e.target.value)} />
-            </div>
-            <div>
-              <Label htmlFor="endDate">Eind Datum</Label>
-              <Input id="endDate" type="date" value={endDate} onChange={(e) => setEndDate(e.target.value)} />
-            </div>
-          </div>
+          <div className="space-y-3">
+            <Label className="text-sm font-medium text-gray-900 dark:text-white">Datumbereik</Label>
+            <div className="grid grid-cols-2 gap-2">
+              <Popover>
+                <PopoverTrigger asChild>
+                  <Button
+                    variant="outline"
+                    className={cn("justify-start text-left font-normal", !dateRange.from && "text-muted-foreground")}
+                  >
+                    <CalendarIcon className="mr-2 h-4 w-4" />
+                    {dateRange.from ? format(dateRange.from, "dd-MM-yyyy", { locale: nl }) : "Van datum"}
+                  </Button>
+                </PopoverTrigger>
+                <PopoverContent className="w-auto p-0" align="start">
+                  <Calendar
+                    mode="single"
+                    selected={dateRange.from}
+                    onSelect={(date) => setDateRange((prev) => ({ ...prev, from: date }))}
+                    initialFocus
+                  />
+                </PopoverContent>
+              </Popover>
 
-          <div className="flex gap-2 justify-end">
-            <Button variant="outline" onClick={() => setIsOpen(false)}>
-              {t("common.cancel")}
-            </Button>
-            <Button onClick={exportData} disabled={isLoading || !startDate || !endDate}>
-              {isLoading ? t("common.loading") : t("export.download")}
-            </Button>
+              <Popover>
+                <PopoverTrigger asChild>
+                  <Button
+                    variant="outline"
+                    className={cn("justify-start text-left font-normal", !dateRange.to && "text-muted-foreground")}
+                  >
+                    <CalendarIcon className="mr-2 h-4 w-4" />
+                    {dateRange.to ? format(dateRange.to, "dd-MM-yyyy", { locale: nl }) : "Tot datum"}
+                  </Button>
+                </PopoverTrigger>
+                <PopoverContent className="w-auto p-0" align="start">
+                  <Calendar
+                    mode="single"
+                    selected={dateRange.to}
+                    onSelect={(date) => setDateRange((prev) => ({ ...prev, to: date }))}
+                    initialFocus
+                  />
+                </PopoverContent>
+              </Popover>
+            </div>
           </div>
         </div>
+
+        <DialogFooter>
+          <Button variant="outline" onClick={() => onOpenChange(false)} className="text-gray-700 dark:text-gray-300">
+            Annuleren
+          </Button>
+          <Button
+            onClick={handleExport}
+            disabled={isExporting || !dateRange.from || !dateRange.to}
+            className="bg-blue-600 hover:bg-blue-700 text-white"
+          >
+            {isExporting ? (
+              <>
+                <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin mr-2" />
+                Exporteren...
+              </>
+            ) : (
+              <>
+                <Download className="mr-2 h-4 w-4" />
+                Exporteren
+              </>
+            )}
+          </Button>
+        </DialogFooter>
       </DialogContent>
     </Dialog>
   )

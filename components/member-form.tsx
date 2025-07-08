@@ -4,16 +4,25 @@ import type React from "react"
 
 import { useState, useRef } from "react"
 import { Button } from "@/components/ui/button"
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+  DialogTrigger,
+} from "@/components/ui/dialog"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog"
-import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
+import { DropdownMenuItem } from "@/components/ui/dropdown-menu"
+import { UserPlus, Edit, Upload, X } from "lucide-react"
 import { supabase } from "@/lib/supabase"
-import { useTranslation, type Locale } from "@/lib/i18n"
-import { Plus, Upload, X } from "lucide-react"
+import type { Locale } from "@/lib/i18n"
+import { MemberAvatar } from "./member-avatar"
 
 interface Member {
-  id?: string
+  id: string
   first_name: string
   last_name: string
   email?: string
@@ -29,147 +38,262 @@ interface MemberFormProps {
 }
 
 export function MemberForm({ teamId, locale, onMemberAdded, member, mode = "add" }: MemberFormProps) {
+  const [open, setOpen] = useState(false)
   const [firstName, setFirstName] = useState(member?.first_name || "")
   const [lastName, setLastName] = useState(member?.last_name || "")
   const [email, setEmail] = useState(member?.email || "")
-  const [profileImage, setProfileImage] = useState(member?.profile_image || "")
-  const [isLoading, setIsLoading] = useState(false)
-  const [isOpen, setIsOpen] = useState(false)
+  const [profileImage, setProfileImage] = useState<File | null>(null)
+  const [profileImagePreview, setProfileImagePreview] = useState(member?.profile_image || "")
+  const [isSubmitting, setIsSubmitting] = useState(false)
   const fileInputRef = useRef<HTMLInputElement>(null)
-  const { t } = useTranslation(locale)
 
-  const handleImageUpload = (event: React.ChangeEvent<HTMLInputElement>) => {
-    const file = event.target.files?.[0]
+  const handleImageChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0]
     if (file) {
-      // For demo purposes, we'll use a placeholder image service
-      // In production, you'd upload to Supabase Storage or another service
+      // Validate file size (max 5MB)
+      if (file.size > 5 * 1024 * 1024) {
+        alert("Bestand is te groot. Maximaal 5MB toegestaan.")
+        return
+      }
+
+      // Validate file type
+      if (!file.type.startsWith("image/")) {
+        alert("Alleen afbeeldingen zijn toegestaan.")
+        return
+      }
+
+      setProfileImage(file)
       const reader = new FileReader()
       reader.onload = (e) => {
-        setProfileImage(e.target?.result as string)
+        setProfileImagePreview(e.target?.result as string)
       }
       reader.readAsDataURL(file)
     }
   }
 
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault()
-    if (!firstName.trim()) return
-
-    setIsLoading(true)
-    try {
-      const memberData = {
-        team_id: teamId,
-        first_name: firstName.trim(),
-        last_name: lastName.trim(),
-        email: email.trim() || null,
-        profile_image: profileImage || null,
-      }
-
-      if (mode === "edit" && member?.id) {
-        const { error } = await supabase.from("members").update(memberData).eq("id", member.id)
-        if (error) throw error
-      } else {
-        const { error } = await supabase.from("members").insert([memberData])
-        if (error) throw error
-      }
-
-      setFirstName("")
-      setLastName("")
-      setEmail("")
-      setProfileImage("")
-      setIsOpen(false)
-      onMemberAdded()
-    } catch (error) {
-      console.error("Error saving member:", error)
-    } finally {
-      setIsLoading(false)
+  const removeImage = () => {
+    setProfileImage(null)
+    setProfileImagePreview("")
+    if (fileInputRef.current) {
+      fileInputRef.current.value = ""
     }
   }
 
-  const initials = `${firstName.charAt(0)}${lastName.charAt(0)}`.toUpperCase()
+  const uploadImage = async (file: File): Promise<string | null> => {
+    try {
+      const fileExt = file.name.split(".").pop()
+      const fileName = `${Math.random()}.${fileExt}`
+      const filePath = `profile-images/${fileName}`
+
+      const { error: uploadError } = await supabase.storage.from("profile-images").upload(filePath, file)
+
+      if (uploadError) throw uploadError
+
+      const { data } = supabase.storage.from("profile-images").getPublicUrl(filePath)
+
+      return data.publicUrl
+    } catch (error) {
+      console.error("Error uploading image:", error)
+      return null
+    }
+  }
+
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault()
+
+    if (!firstName.trim() || !lastName.trim()) {
+      alert("Voornaam en achternaam zijn verplicht.")
+      return
+    }
+
+    setIsSubmitting(true)
+    try {
+      let imageUrl = profileImagePreview
+
+      // Upload new image if selected
+      if (profileImage) {
+        const uploadedUrl = await uploadImage(profileImage)
+        if (uploadedUrl) {
+          imageUrl = uploadedUrl
+        }
+      }
+
+      const memberData = {
+        first_name: firstName.trim(),
+        last_name: lastName.trim(),
+        email: email.trim() || null,
+        profile_image: imageUrl || null,
+        team_id: teamId,
+      }
+
+      if (mode === "edit" && member) {
+        const { error } = await supabase.from("members").update(memberData).eq("id", member.id)
+
+        if (error) throw error
+      } else {
+        const { error } = await supabase.from("members").insert([memberData])
+
+        if (error) throw error
+      }
+
+      onMemberAdded()
+      setOpen(false)
+
+      // Reset form
+      if (mode === "add") {
+        setFirstName("")
+        setLastName("")
+        setEmail("")
+        setProfileImage(null)
+        setProfileImagePreview("")
+      }
+    } catch (error) {
+      console.error("Error saving member:", error)
+      alert("Er is een fout opgetreden bij het opslaan.")
+    } finally {
+      setIsSubmitting(false)
+    }
+  }
+
+  const triggerContent =
+    mode === "edit" ? (
+      <DropdownMenuItem onSelect={(e) => e.preventDefault()}>
+        <Edit className="mr-2 h-4 w-4" />
+        Bewerken
+      </DropdownMenuItem>
+    ) : (
+      <Button variant="outline" size="sm" className="rounded-lg bg-transparent">
+        <UserPlus className="h-4 w-4 mr-2" />
+        Teamlid toevoegen
+      </Button>
+    )
 
   return (
-    <Dialog open={isOpen} onOpenChange={setIsOpen}>
-      <DialogTrigger asChild>
-        {mode === "add" ? (
-          <Button className="bg-blue-600 hover:bg-blue-700">
-            <Plus className="h-4 w-4 mr-2" />
-            {t("team.addMember")}
-          </Button>
-        ) : (
-          <Button variant="ghost" size="sm">
-            Bewerken
-          </Button>
-        )}
+    <Dialog open={open} onOpenChange={setOpen}>
+      <DialogTrigger asChild onClick={() => setOpen(true)}>
+        {triggerContent}
       </DialogTrigger>
-      <DialogContent className="max-w-md">
+      <DialogContent className="sm:max-w-[425px] bg-white dark:bg-gray-800">
         <DialogHeader>
-          <DialogTitle>{mode === "add" ? t("team.addMember") : "Lid Bewerken"}</DialogTitle>
+          <DialogTitle className="text-gray-900 dark:text-white">
+            {mode === "edit" ? "Teamlid bewerken" : "Nieuw teamlid toevoegen"}
+          </DialogTitle>
+          <DialogDescription className="text-gray-600 dark:text-gray-300">
+            {mode === "edit" ? "Bewerk de gegevens van het teamlid." : "Voeg een nieuw teamlid toe aan het team."}
+          </DialogDescription>
         </DialogHeader>
+
         <form onSubmit={handleSubmit} className="space-y-4">
           {/* Profile Image */}
-          <div className="flex flex-col items-center space-y-2">
-            <Avatar className="h-20 w-20">
-              <AvatarImage src={profileImage || "/placeholder.svg"} alt="Profile" />
-              <AvatarFallback className="bg-blue-500 text-white text-lg">{initials}</AvatarFallback>
-            </Avatar>
-            <div className="flex gap-2">
-              <Button
-                type="button"
-                variant="outline"
-                size="sm"
-                onClick={() => fileInputRef.current?.click()}
-                className="text-xs"
-              >
-                <Upload className="h-3 w-3 mr-1" />
-                Upload Foto
-              </Button>
-              {profileImage && (
-                <Button type="button" variant="outline" size="sm" onClick={() => setProfileImage("")}>
-                  <X className="h-3 w-3" />
+          <div className="space-y-2">
+            <Label className="text-sm font-medium text-gray-900 dark:text-white">Profielfoto</Label>
+            <div className="flex items-center gap-4">
+              <MemberAvatar
+                firstName={firstName}
+                lastName={lastName}
+                profileImage={profileImagePreview}
+                size="lg"
+                className="ring-2 ring-gray-200 dark:ring-gray-600"
+              />
+              <div className="flex flex-col gap-2">
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="sm"
+                  onClick={() => fileInputRef.current?.click()}
+                  className="text-xs"
+                >
+                  <Upload className="h-3 w-3 mr-1" />
+                  Upload foto
                 </Button>
-              )}
+                {profileImagePreview && (
+                  <Button
+                    type="button"
+                    variant="outline"
+                    size="sm"
+                    onClick={removeImage}
+                    className="text-xs text-red-600 hover:text-red-700 bg-transparent"
+                  >
+                    <X className="h-3 w-3 mr-1" />
+                    Verwijder
+                  </Button>
+                )}
+              </div>
+              <input ref={fileInputRef} type="file" accept="image/*" onChange={handleImageChange} className="hidden" />
             </div>
-            <input ref={fileInputRef} type="file" accept="image/*" onChange={handleImageUpload} className="hidden" />
           </div>
 
-          <div>
-            <Label htmlFor="firstName">{t("team.firstName")} *</Label>
+          {/* First Name */}
+          <div className="space-y-2">
+            <Label htmlFor="firstName" className="text-sm font-medium text-gray-900 dark:text-white">
+              Voornaam *
+            </Label>
             <Input
               id="firstName"
               value={firstName}
               onChange={(e) => setFirstName(e.target.value)}
-              placeholder={t("team.firstName")}
+              placeholder="Voer voornaam in"
               required
+              className="bg-white dark:bg-gray-700 border-gray-300 dark:border-gray-600"
             />
           </div>
-          <div>
-            <Label htmlFor="lastName">{t("team.lastName")}</Label>
+
+          {/* Last Name */}
+          <div className="space-y-2">
+            <Label htmlFor="lastName" className="text-sm font-medium text-gray-900 dark:text-white">
+              Achternaam *
+            </Label>
             <Input
               id="lastName"
               value={lastName}
               onChange={(e) => setLastName(e.target.value)}
-              placeholder={t("team.lastName")}
+              placeholder="Voer achternaam in"
+              required
+              className="bg-white dark:bg-gray-700 border-gray-300 dark:border-gray-600"
             />
           </div>
-          <div>
-            <Label htmlFor="email">{t("team.email")}</Label>
+
+          {/* Email */}
+          <div className="space-y-2">
+            <Label htmlFor="email" className="text-sm font-medium text-gray-900 dark:text-white">
+              E-mail (optioneel)
+            </Label>
             <Input
               id="email"
               type="email"
               value={email}
               onChange={(e) => setEmail(e.target.value)}
-              placeholder="email@example.com"
+              placeholder="Voer e-mailadres in"
+              className="bg-white dark:bg-gray-700 border-gray-300 dark:border-gray-600"
             />
           </div>
-          <div className="flex gap-2 justify-end">
-            <Button type="button" variant="outline" onClick={() => setIsOpen(false)}>
-              {t("common.cancel")}
+
+          <DialogFooter>
+            <Button
+              type="button"
+              variant="outline"
+              onClick={() => setOpen(false)}
+              className="text-gray-700 dark:text-gray-300"
+            >
+              Annuleren
             </Button>
-            <Button type="submit" disabled={isLoading}>
-              {isLoading ? t("common.loading") : mode === "add" ? t("common.add") : t("common.save")}
+            <Button
+              type="submit"
+              disabled={isSubmitting || !firstName.trim() || !lastName.trim()}
+              className="bg-blue-600 hover:bg-blue-700 text-white"
+            >
+              {isSubmitting ? (
+                <>
+                  <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin mr-2" />
+                  {mode === "edit" ? "Bijwerken..." : "Toevoegen..."}
+                </>
+              ) : mode === "edit" ? (
+                "Bijwerken"
+              ) : (
+                "Toevoegen"
+              )}
             </Button>
-          </div>
+          </DialogFooter>
         </form>
       </DialogContent>
     </Dialog>

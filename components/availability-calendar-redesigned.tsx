@@ -1,17 +1,27 @@
 "use client"
 
 import { useState, useEffect } from "react"
-import * as React from "react"
 import { Button } from "@/components/ui/button"
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip"
-import { ChevronLeft, ChevronRight, Calendar, MoreHorizontal, ChevronDown } from "lucide-react"
+import {
+  ChevronLeft,
+  ChevronRight,
+  Calendar,
+  MoreHorizontal,
+  ChevronDown,
+  Edit3,
+  Lock,
+  Mail,
+  MessageSquare,
+} from "lucide-react"
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu"
+import { Switch } from "@/components/ui/switch"
 import { supabase } from "@/lib/supabase"
 import { useTranslation, type Locale } from "@/lib/i18n"
 import { cn } from "@/lib/utils"
 import { MemberForm } from "./member-form"
 import { BulkUpdateDialog } from "./bulk-update-dialog"
-import { SettingsDialog } from "./settings-dialog"
+import { SettingsDropdown } from "./settings-dropdown"
 import { MemberAvatar } from "./member-avatar"
 
 interface Member {
@@ -36,78 +46,85 @@ interface AvailabilityCalendarProps {
   onMembersUpdate: () => void
 }
 
-const statusConfig = {
-  available: { icon: "🟢", color: "bg-green-100 border-green-300", label: "Beschikbaar" },
-  unavailable: { icon: "🔴", color: "bg-red-100 border-red-300", label: "Niet beschikbaar" },
-  need_to_check: { icon: "🔵", color: "bg-blue-100 border-blue-300", label: "Moet nakijken" },
-  absent: { icon: "⚫", color: "bg-gray-100 border-gray-300", label: "Afwezig" },
-  holiday: { icon: "🟡", color: "bg-yellow-100 border-yellow-300", label: "Vakantie" },
-}
-
-// Helper function to get ISO week number
-const getISOWeekNumber = (date: Date): number => {
-  const d = new Date(Date.UTC(date.getFullYear(), date.getMonth(), date.getDate()))
-  const dayNum = d.getUTCDay() || 7
-  d.setUTCDate(d.getUTCDate() + 4 - dayNum)
-  const yearStart = new Date(Date.UTC(d.getUTCFullYear(), 0, 1))
-  return Math.ceil(((d.getTime() - yearStart.getTime()) / 86400000 + 1) / 7)
-}
-
-// Helper function to get Monday of the week
-const getMondayOfWeek = (date: Date): Date => {
-  const d = new Date(date)
-  const day = d.getDay()
-  const diff = d.getDate() - day + (day === 0 ? -6 : 1) // Adjust when day is Sunday
-  return new Date(d.setDate(diff))
-}
-
-// Helper function to get all weeks in a month
-const getWeeksInMonth = (year: number, month: number) => {
-  const firstDay = new Date(year, month, 1)
-  const lastDay = new Date(year, month + 1, 0)
-
-  const weeks = []
-  const currentWeekStart = getMondayOfWeek(firstDay)
-
-  while (currentWeekStart <= lastDay) {
-    const weekDays = []
-    const weekNumber = getISOWeekNumber(currentWeekStart)
-
-    for (let i = 0; i < 7; i++) {
-      const day = new Date(currentWeekStart)
-      day.setDate(currentWeekStart.getDate() + i)
-      weekDays.push(day)
-    }
-
-    weeks.push({
-      weekNumber,
-      days: weekDays,
-      startsInMonth: currentWeekStart.getMonth() === month,
-      endsInMonth: weekDays[6].getMonth() === month,
-    })
-
-    currentWeekStart.setDate(currentWeekStart.getDate() + 7)
-  }
-
-  return weeks
-}
-
-export function AvailabilityCalendarRedesigned({
+const AvailabilityCalendarRedesigned = ({
   teamId,
   teamName,
   members,
   locale,
   onMembersUpdate,
-}: AvailabilityCalendarProps) {
+}: AvailabilityCalendarProps) => {
   const [currentDate, setCurrentDate] = useState(new Date())
   const [availability, setAvailability] = useState<Availability[]>([])
   const [viewMode, setViewMode] = useState<"week">("week")
   const [weeksToShow, setWeeksToShow] = useState<1 | 2 | 4 | 8>(1)
   const [isLoading, setIsLoading] = useState(false)
+  const [editMode, setEditMode] = useState(false)
   const { t } = useTranslation(locale)
 
   const dutchDayNames = ["MA", "DI", "WO", "DO", "VR", "ZA", "ZO"]
   const dutchMonthNames = ["JAN", "FEB", "MAR", "APR", "MEI", "JUN", "JUL", "AUG", "SEP", "OKT", "NOV", "DEC"]
+
+  const statusConfig = {
+    available: {
+      icon: "🟢",
+      color: "bg-green-50 border-green-200 dark:bg-green-900/20 dark:border-green-700/50",
+      label: "Available",
+      textColor: "text-green-700 dark:text-green-300",
+    },
+    unavailable: {
+      icon: "🔴",
+      color: "bg-red-50 border-red-200 dark:bg-red-900/20 dark:border-red-700/50",
+      label: "Unavailable",
+      textColor: "text-red-700 dark:text-red-300",
+    },
+    need_to_check: {
+      icon: "🔵",
+      color: "bg-blue-50 border-blue-200 dark:bg-blue-900/20 dark:border-blue-700/50",
+      label: "Need to Check",
+      textColor: "text-blue-700 dark:text-blue-300",
+    },
+    absent: {
+      icon: "⚫",
+      color: "bg-gray-50 border-gray-200 dark:bg-gray-800/50 dark:border-gray-600/50",
+      label: "Absent",
+      textColor: "text-gray-700 dark:text-gray-300",
+    },
+    holiday: {
+      icon: "🟡",
+      color: "bg-yellow-50 border-yellow-200 dark:bg-yellow-900/20 dark:border-yellow-700/50",
+      label: "Holiday",
+      textColor: "text-yellow-700 dark:text-yellow-300",
+    },
+  }
+
+  // Helper function to get ISO week number
+  const getISOWeekNumber = (date: Date): number => {
+    const d = new Date(Date.UTC(date.getFullYear(), date.getMonth(), date.getDate()))
+    const dayNum = d.getUTCDay() || 7
+    d.setUTCDate(d.getUTCDate() + 4 - dayNum)
+    const yearStart = new Date(Date.UTC(d.getUTCFullYear(), 0, 1))
+    return Math.ceil(((d.getTime() - yearStart.getTime()) / 86400000 + 1) / 7)
+  }
+
+  // Helper function to get Monday of the week
+  const getMondayOfWeek = (date: Date): Date => {
+    const d = new Date(date)
+    const day = d.getDay()
+    const diff = d.getDate() - day + (day === 0 ? -6 : 1)
+    return new Date(d.setDate(diff))
+  }
+
+  // Calculate the maximum name width needed
+  const getMaxNameWidth = () => {
+    if (members.length === 0) return "200px"
+
+    const maxNameLength = Math.max(...members.map((member) => `${member.first_name} ${member.last_name}`.length))
+    const baseWidth = 180
+    const charWidth = 8
+    const iconSpace = 60
+
+    return `${Math.max(baseWidth, maxNameLength * charWidth + iconSpace)}px`
+  }
 
   useEffect(() => {
     fetchAvailability()
@@ -146,6 +163,8 @@ export function AvailabilityCalendarRedesigned({
     date: string,
     status: "available" | "unavailable" | "need_to_check" | "absent" | "holiday",
   ) => {
+    if (!editMode) return
+
     try {
       const { error } = await supabase.from("availability").upsert([{ member_id: memberId, date, status }], {
         onConflict: "member_id,date",
@@ -156,16 +175,22 @@ export function AvailabilityCalendarRedesigned({
       fetchAvailability()
     } catch (error) {
       console.error("Error updating availability:", error)
+      alert("Er is een fout opgetreden bij het bijwerken van de beschikbaarheid.")
     }
   }
 
   const deleteMember = async (memberId: string) => {
+    if (!editMode) return
+
+    if (!confirm("Weet je zeker dat je dit teamlid wilt verwijderen?")) return
+
     try {
       const { error } = await supabase.from("members").delete().eq("id", memberId)
       if (error) throw error
       onMembersUpdate()
     } catch (error) {
       console.error("Error deleting member:", error)
+      alert("Er is een fout opgetreden bij het verwijderen van het teamlid.")
     }
   }
 
@@ -194,6 +219,10 @@ export function AvailabilityCalendarRedesigned({
       newDate.setDate(prev.getDate() + (direction === "next" ? weeksToShow * 7 : -weeksToShow * 7))
       return newDate
     })
+  }
+
+  const goToToday = () => {
+    setCurrentDate(new Date())
   }
 
   const getMultipleWeeksDays = () => {
@@ -250,278 +279,263 @@ export function AvailabilityCalendarRedesigned({
     }
   }
 
-  // Helper function to render member availability for a specific date
-  const renderMemberAvailability = (date: Date, maxVisible: number, showNames = false) => {
-    const dayAvailability = availability.filter((a) => a.date === date.toISOString().split("T")[0])
-
-    // Group members by status and include all members (even those without availability)
-    const membersByStatus = {
-      available: [] as (Member & { hasAvailability: boolean })[],
-      unavailable: [] as (Member & { hasAvailability: boolean })[],
-      need_to_check: [] as (Member & { hasAvailability: boolean })[],
-      absent: [] as (Member & { hasAvailability: boolean })[],
-      holiday: [] as (Member & { hasAvailability: boolean })[],
-      no_status: [] as (Member & { hasAvailability: boolean })[], // Members without availability set
-    }
-
-    members.forEach((member) => {
-      const memberAvailability = dayAvailability.find((a) => a.member_id === member.id)
-      if (memberAvailability) {
-        membersByStatus[memberAvailability.status].push({ ...member, hasAvailability: true })
-      } else {
-        // Member has no availability set for this date
-        membersByStatus.no_status.push({ ...member, hasAvailability: false })
-      }
-    })
-
-    // Flatten all members with their status
-    const allMembersWithStatus = [
-      ...membersByStatus.available.map((m) => ({ ...m, status: "available" as const })),
-      ...membersByStatus.unavailable.map((m) => ({ ...m, status: "unavailable" as const })),
-      ...membersByStatus.need_to_check.map((m) => ({ ...m, status: "need_to_check" as const })),
-      ...membersByStatus.absent.map((m) => ({ ...m, status: "absent" as const })),
-      ...membersByStatus.holiday.map((m) => ({ ...m, status: "holiday" as const })),
-      ...membersByStatus.no_status.map((m) => ({ ...m, status: "no_status" as const })),
-    ]
-
-    const visibleMembers = allMembersWithStatus.slice(0, maxVisible)
-    const hiddenCount = allMembersWithStatus.length - maxVisible
+  const renderMultiWeekView = () => {
+    const weeks = getMultipleWeeksDays()
+    const nameColumnWidth = getMaxNameWidth()
 
     return (
-      <div className="flex-1 overflow-hidden">
-        <div className={cn("flex flex-wrap gap-0.5", showNames ? "space-y-0.5" : "")}>
-          {visibleMembers.map((member) => (
-            <Tooltip key={`${member.id}-${member.status}`}>
-              <TooltipTrigger asChild>
-                <div className={cn("flex items-center", showNames ? "gap-1 w-full" : "")}>
-                  <div className="relative">
-                    <MemberAvatar
-                      firstName={member.first_name}
-                      lastName={member.last_name}
-                      profileImage={member.profile_image}
-                      size="sm"
+      <div className="space-y-6">
+        {weeks.map((week, weekIndex) => (
+          <div
+            key={weekIndex}
+            className="bg-white dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700 overflow-hidden shadow-sm"
+          >
+            {/* Week Header - More subtle */}
+            <div className="bg-gray-50 dark:bg-gray-700/50 p-4 border-b border-gray-200 dark:border-gray-600">
+              <div className="flex items-center justify-between">
+                <h3 className="text-lg font-semibold text-gray-900 dark:text-white">Week {week.weekNumber}</h3>
+                <div className="text-gray-600 dark:text-gray-300 text-sm font-medium">
+                  {dutchMonthNames[week.days[0].getMonth()]} {week.days[0].getDate()} -{" "}
+                  {dutchMonthNames[week.days[6].getMonth()]} {week.days[6].getDate()}
+                </div>
+              </div>
+            </div>
+
+            {/* Responsive Table Container */}
+            <div className="overflow-x-auto">
+              <div className="min-w-full">
+                {/* Day Headers - More subtle */}
+                <div
+                  className="grid bg-gray-50/50 dark:bg-gray-700/30 border-b border-gray-200 dark:border-gray-600"
+                  style={{
+                    gridTemplateColumns: `${nameColumnWidth} repeat(7, minmax(100px, 1fr))`,
+                  }}
+                >
+                  <div className="p-3 border-r border-gray-200 dark:border-gray-600">
+                    <span className="text-sm font-medium text-gray-700 dark:text-gray-300">Team</span>
+                  </div>
+                  {week.days.map((date, index) => (
+                    <div
+                      key={index}
                       className={cn(
-                        "flex-shrink-0",
-                        viewMode === "year" ? "h-4 w-4 text-xs" : "h-6 w-6 text-xs",
-                        member.status !== "no_status" && statusConfig[member.status]?.color,
+                        "p-3 text-center border-r border-gray-200 dark:border-gray-600 last:border-r-0",
+                        isToday(date) && "bg-blue-50 dark:bg-blue-900/20",
                       )}
-                    />
-                    {member.status !== "no_status" && (
-                      <div className="absolute -bottom-0.5 -right-0.5 text-xs leading-none">
-                        {statusConfig[member.status].icon}
+                    >
+                      <div className="text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wide">
+                        {dutchDayNames[index]}
                       </div>
+                      <div
+                        className={cn(
+                          "text-lg font-semibold mt-1",
+                          isToday(date) ? "text-blue-600 dark:text-blue-400" : "text-gray-900 dark:text-white",
+                        )}
+                      >
+                        {date.getDate()}
+                      </div>
+                    </div>
+                  ))}
+                </div>
+
+                {/* Member Rows - More subtle styling */}
+                {members.map((member, memberIndex) => (
+                  <div
+                    key={member.id}
+                    className={cn(
+                      "grid border-b border-gray-100 dark:border-gray-700 last:border-b-0 hover:bg-gray-50/50 dark:hover:bg-gray-700/30 transition-colors",
+                      memberIndex % 2 === 0 ? "bg-white dark:bg-gray-800" : "bg-gray-50/30 dark:bg-gray-700/20",
                     )}
-                  </div>
-                  {showNames && (
-                    <span className="truncate text-xs font-medium text-gray-700 dark:text-gray-300">
-                      {member.first_name}
-                    </span>
-                  )}
-                </div>
-              </TooltipTrigger>
-              <TooltipContent>
-                <div className="text-center">
-                  <div className="font-medium">
-                    {member.first_name} {member.last_name}
-                  </div>
-                  <div className="text-sm">{date.toLocaleDateString("nl-NL")}</div>
-                  <div className="text-sm">
-                    {member.status === "no_status" ? "Geen status ingesteld" : statusConfig[member.status].label}
-                  </div>
-                </div>
-              </TooltipContent>
-            </Tooltip>
-          ))}
-        </div>
-        {hiddenCount > 0 && (
-          <Tooltip>
-            <TooltipTrigger asChild>
-              <div className="text-xs text-gray-500 dark:text-gray-400 mt-0.5">+{hiddenCount} meer</div>
-            </TooltipTrigger>
-            <TooltipContent>
-              <div className="max-w-xs">
-                <div className="font-medium mb-1">Overige teamleden:</div>
-                {allMembersWithStatus.slice(maxVisible).map((member) => (
-                  <div key={member.id} className="text-sm">
-                    {member.first_name} {member.last_name} -{" "}
-                    {member.status === "no_status" ? "Geen status" : statusConfig[member.status].label}
+                    style={{
+                      gridTemplateColumns: `${nameColumnWidth} repeat(7, minmax(100px, 1fr))`,
+                    }}
+                  >
+                    <div className="p-3 border-r border-gray-200 dark:border-gray-600 flex items-center justify-between">
+                      <div className="flex items-center gap-3 min-w-0 flex-1">
+                        <div className="relative flex-shrink-0">
+                          <MemberAvatar
+                            firstName={member.first_name}
+                            lastName={member.last_name}
+                            profileImage={member.profile_image}
+                            size="md"
+                            className="ring-1 ring-gray-200 dark:ring-gray-600"
+                          />
+                          <div className="absolute -bottom-0.5 -right-0.5 w-3 h-3 bg-green-400 rounded-full border-2 border-white dark:border-gray-800"></div>
+                        </div>
+                        <div className="min-w-0 flex-1">
+                          <div className="text-sm font-medium text-gray-900 dark:text-white truncate">
+                            {member.first_name} {member.last_name}
+                          </div>
+                          <div className="flex items-center gap-2 mt-1">
+                            {member.email && (
+                              <Tooltip>
+                                <TooltipTrigger asChild>
+                                  <a
+                                    href={`mailto:${member.email}`}
+                                    className="text-blue-500 hover:text-blue-600 dark:text-blue-400 dark:hover:text-blue-300 transition-colors"
+                                    onClick={(e) => e.stopPropagation()}
+                                  >
+                                    <Mail className="h-3 w-3" />
+                                  </a>
+                                </TooltipTrigger>
+                                <TooltipContent>
+                                  <p>Email: {member.email}</p>
+                                </TooltipContent>
+                              </Tooltip>
+                            )}
+                            {member.email && (
+                              <Tooltip>
+                                <TooltipTrigger asChild>
+                                  <a
+                                    href={`https://teams.microsoft.com/l/chat/0/0?users=${member.email}`}
+                                    target="_blank"
+                                    rel="noopener noreferrer"
+                                    className="text-purple-500 hover:text-purple-600 dark:text-purple-400 dark:hover:text-purple-300 transition-colors"
+                                    onClick={(e) => e.stopPropagation()}
+                                  >
+                                    <MessageSquare className="h-3 w-3" />
+                                  </a>
+                                </TooltipTrigger>
+                                <TooltipContent>
+                                  <p>Chat in Microsoft Teams</p>
+                                </TooltipContent>
+                              </Tooltip>
+                            )}
+                          </div>
+                        </div>
+                      </div>
+                      {editMode && (
+                        <DropdownMenu>
+                          <DropdownMenuTrigger asChild>
+                            <Button
+                              variant="ghost"
+                              size="sm"
+                              className="h-8 w-8 p-0 rounded-full hover:bg-gray-100 dark:hover:bg-gray-600 flex-shrink-0"
+                            >
+                              <MoreHorizontal className="h-4 w-4" />
+                            </Button>
+                          </DropdownMenuTrigger>
+                          <DropdownMenuContent
+                            align="end"
+                            className="bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700"
+                          >
+                            <MemberForm
+                              teamId={teamId}
+                              locale={locale}
+                              onMemberAdded={onMembersUpdate}
+                              member={member}
+                              mode="edit"
+                            />
+                            <DropdownMenuItem
+                              onClick={() => deleteMember(member.id)}
+                              className="text-red-600 hover:bg-red-50 dark:hover:bg-red-900/20"
+                            >
+                              Verwijderen
+                            </DropdownMenuItem>
+                          </DropdownMenuContent>
+                        </DropdownMenu>
+                      )}
+                    </div>
+                    {week.days.map((date, dayIndex) => {
+                      const availability = getAvailabilityForDate(member.id, date)
+                      const isWeekendDay = isWeekend(date)
+                      const isTodayCell = isToday(date)
+
+                      return (
+                        <div
+                          key={dayIndex}
+                          className={cn(
+                            "p-3 border-r border-gray-200 dark:border-gray-600 last:border-r-0",
+                            isTodayCell && "bg-blue-50/50 dark:bg-blue-900/10",
+                          )}
+                        >
+                          {isWeekendDay ? (
+                            <div className="h-10 flex items-center justify-center text-gray-400">
+                              <span className="text-lg opacity-50">×</span>
+                            </div>
+                          ) : (
+                            <div className="h-10 flex items-center gap-1">
+                              <button
+                                className={cn(
+                                  "flex-1 h-full rounded-lg text-sm font-medium transition-all duration-200 border",
+                                  editMode && "hover:shadow-sm",
+                                  !editMode && "cursor-default",
+                                  availability
+                                    ? statusConfig[availability.status].color
+                                    : "bg-gray-50 dark:bg-gray-700 border-gray-200 dark:border-gray-600",
+                                  editMode && !availability && "hover:bg-gray-100 dark:hover:bg-gray-600",
+                                )}
+                                onClick={() => {
+                                  if (!editMode) return
+                                  const current = availability
+                                  const statuses: Availability["status"][] = [
+                                    "available",
+                                    "unavailable",
+                                    "need_to_check",
+                                    "absent",
+                                    "holiday",
+                                  ]
+                                  const currentIndex = current ? statuses.indexOf(current.status) : -1
+                                  const nextStatus = statuses[(currentIndex + 1) % statuses.length]
+                                  updateAvailability(member.id, date.toISOString().split("T")[0], nextStatus)
+                                }}
+                              >
+                                {availability ? statusConfig[availability.status].icon : ""}
+                              </button>
+                              <DropdownMenu>
+                                <DropdownMenuTrigger asChild>
+                                  <Button
+                                    variant="ghost"
+                                    size="sm"
+                                    className={cn(
+                                      "h-8 w-6 p-0 rounded-md flex-shrink-0",
+                                      editMode
+                                        ? "hover:bg-gray-100 dark:hover:bg-gray-600"
+                                        : "opacity-50 cursor-not-allowed",
+                                    )}
+                                    disabled={!editMode}
+                                  >
+                                    <ChevronDown className="h-3 w-3" />
+                                  </Button>
+                                </DropdownMenuTrigger>
+                                <DropdownMenuContent
+                                  align="end"
+                                  className="bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700"
+                                >
+                                  {Object.entries(statusConfig).map(([status, config]) => (
+                                    <DropdownMenuItem
+                                      key={status}
+                                      onClick={() => {
+                                        if (editMode) {
+                                          updateAvailability(
+                                            member.id,
+                                            date.toISOString().split("T")[0],
+                                            status as Availability["status"],
+                                          )
+                                        }
+                                      }}
+                                      className={cn(
+                                        "hover:bg-gray-50 dark:hover:bg-gray-700",
+                                        availability?.status === status && "bg-gray-50 dark:bg-gray-700",
+                                      )}
+                                      disabled={!editMode}
+                                    >
+                                      <div className="flex items-center gap-3">
+                                        <span className="text-lg">{config.icon}</span>
+                                        <span className="font-medium">{config.label}</span>
+                                      </div>
+                                    </DropdownMenuItem>
+                                  ))}
+                                </DropdownMenuContent>
+                              </DropdownMenu>
+                            </div>
+                          )}
+                        </div>
+                      )
+                    })}
                   </div>
                 ))}
               </div>
-            </TooltipContent>
-          </Tooltip>
-        )}
-      </div>
-    )
-  }
-
-  const renderMultiWeekView = () => {
-    const weeks = getMultipleWeeksDays()
-    const totalColumns = 1 + weeksToShow * 7 // 1 voor member naam + 7 dagen per week
-
-    return (
-      <div className="bg-white dark:bg-gray-800 rounded-lg border dark:border-gray-700 overflow-hidden">
-        {/* Header */}
-        <div
-          className={`grid border-b dark:border-gray-700 bg-gray-50 dark:bg-gray-700`}
-          style={{ gridTemplateColumns: `200px repeat(${weeksToShow * 7}, 1fr)` }}
-        >
-          <div className="p-3 border-r dark:border-gray-600">
-            <span className="text-sm font-medium text-gray-700 dark:text-gray-300">Teamlid</span>
-          </div>
-          {weeks.map((week) => (
-            <React.Fragment key={week.weekNumber}>
-              {week.days.map((date, dayIndex) => (
-                <div
-                  key={`${week.weekNumber}-${dayIndex}`}
-                  className={cn(
-                    "p-2 text-center border-r dark:border-gray-600",
-                    dayIndex === 6 && "border-r-2 border-gray-300 dark:border-gray-500",
-                    isToday(date) && "bg-blue-100 dark:bg-blue-900",
-                  )}
-                >
-                  <div className="text-xs text-gray-500 dark:text-gray-400 uppercase">
-                    {dayIndex === 0 && `W${week.weekNumber}`}
-                  </div>
-                  <div className="text-xs text-gray-500 dark:text-gray-400 uppercase">{dutchDayNames[dayIndex]}</div>
-                  <div
-                    className={cn(
-                      "text-sm font-semibold",
-                      isToday(date) ? "text-blue-600 dark:text-blue-300" : "text-gray-900 dark:text-white",
-                    )}
-                  >
-                    {date.getDate()}
-                  </div>
-                </div>
-              ))}
-            </React.Fragment>
-          ))}
-        </div>
-
-        {/* Member Rows */}
-        {members.map((member, memberIndex) => (
-          <div
-            key={member.id}
-            className={cn(
-              "grid border-b dark:border-gray-700 last:border-b-0",
-              memberIndex % 2 === 0 ? "bg-white dark:bg-gray-800" : "bg-gray-50 dark:bg-gray-750",
-            )}
-            style={{ gridTemplateColumns: `200px repeat(${weeksToShow * 7}, 1fr)` }}
-          >
-            <div className="p-3 border-r dark:border-gray-600 flex items-center justify-between">
-              <div className="flex items-center gap-2">
-                <MemberAvatar
-                  firstName={member.first_name}
-                  lastName={member.last_name}
-                  profileImage={member.profile_image}
-                  size="sm"
-                />
-                <div className="min-w-0">
-                  <div className="text-sm font-medium text-gray-900 dark:text-white truncate">
-                    {member.first_name} {member.last_name}
-                  </div>
-                </div>
-              </div>
-              <DropdownMenu>
-                <DropdownMenuTrigger asChild>
-                  <Button variant="ghost" size="sm" className="h-6 w-6 p-0">
-                    <MoreHorizontal className="h-3 w-3" />
-                  </Button>
-                </DropdownMenuTrigger>
-                <DropdownMenuContent align="end">
-                  <MemberForm
-                    teamId={teamId}
-                    locale={locale}
-                    onMemberAdded={onMembersUpdate}
-                    member={member}
-                    mode="edit"
-                  />
-                  <DropdownMenuItem onClick={() => deleteMember(member.id)} className="text-red-600">
-                    Verwijderen
-                  </DropdownMenuItem>
-                </DropdownMenuContent>
-              </DropdownMenu>
             </div>
-            {weeks.map((week) => (
-              <React.Fragment key={`${member.id}-${week.weekNumber}`}>
-                {week.days.map((date, dayIndex) => {
-                  const availability = getAvailabilityForDate(member.id, date)
-                  const isWeekendDay = isWeekend(date)
-                  const isTodayCell = isToday(date)
-
-                  return (
-                    <div
-                      key={`${member.id}-${week.weekNumber}-${dayIndex}`}
-                      className={cn(
-                        "p-2 border-r dark:border-gray-600 relative",
-                        dayIndex === 6 && "border-r-2 border-gray-300 dark:border-gray-500",
-                        isTodayCell && "bg-blue-50 dark:bg-blue-900/20",
-                      )}
-                    >
-                      {isWeekendDay ? (
-                        <div className="h-8 flex items-center justify-center text-gray-400">
-                          <span className="text-sm">×</span>
-                        </div>
-                      ) : (
-                        <div className="h-8 flex items-center gap-1">
-                          {/* Click to cycle functionality */}
-                          <button
-                            className={cn(
-                              "flex-1 h-full rounded text-xs font-medium transition-colors border",
-                              availability
-                                ? statusConfig[availability.status].color
-                                : "bg-white dark:bg-gray-800 border-gray-200 dark:border-gray-600 hover:bg-gray-50 dark:hover:bg-gray-700",
-                            )}
-                            onClick={() => {
-                              const current = availability
-                              const statuses: Availability["status"][] = [
-                                "available",
-                                "unavailable",
-                                "need_to_check",
-                                "absent",
-                                "holiday",
-                              ]
-                              const currentIndex = current ? statuses.indexOf(current.status) : -1
-                              const nextStatus = statuses[(currentIndex + 1) % statuses.length]
-                              updateAvailability(member.id, date.toISOString().split("T")[0], nextStatus)
-                            }}
-                          >
-                            {availability ? statusConfig[availability.status].icon : ""}
-                          </button>
-                          {/* Dropdown functionality */}
-                          <DropdownMenu>
-                            <DropdownMenuTrigger asChild>
-                              <Button variant="ghost" size="sm" className="h-6 w-4 p-0">
-                                <ChevronDown className="h-3 w-3" />
-                              </Button>
-                            </DropdownMenuTrigger>
-                            <DropdownMenuContent align="end">
-                              {Object.entries(statusConfig).map(([status, config]) => (
-                                <DropdownMenuItem
-                                  key={status}
-                                  onClick={() =>
-                                    updateAvailability(
-                                      member.id,
-                                      date.toISOString().split("T")[0],
-                                      status as Availability["status"],
-                                    )
-                                  }
-                                >
-                                  <div className="flex items-center gap-2">
-                                    <span>{config.icon}</span>
-                                    <span>{config.label}</span>
-                                  </div>
-                                </DropdownMenuItem>
-                              ))}
-                            </DropdownMenuContent>
-                          </DropdownMenu>
-                        </div>
-                      )}
-                    </div>
-                  )
-                })}
-              </React.Fragment>
-            ))}
           </div>
         ))}
       </div>
@@ -531,84 +545,135 @@ export function AvailabilityCalendarRedesigned({
   return (
     <TooltipProvider>
       <div className="min-h-screen bg-gray-50 dark:bg-gray-900">
-        {/* Header */}
-        <div className="bg-white dark:bg-gray-800 border-b dark:border-gray-700 px-6 py-4">
-          <div className="flex items-center justify-between">
-            <div className="flex items-center gap-3">
-              <div className="w-8 h-8 bg-blue-600 rounded flex items-center justify-center">
-                <Calendar className="h-4 w-4 text-white" />
-              </div>
-              <div>
-                <h1 className="text-xl font-semibold text-gray-900 dark:text-white">{teamName}</h1>
-                <p className="text-sm text-gray-500 dark:text-gray-400">{members.length} teamleden</p>
-              </div>
-            </div>
-
-            <div className="flex items-center gap-2">
-              <div className="flex bg-gray-100 dark:bg-gray-700 rounded-lg p-1">
-                <Button
-                  variant={weeksToShow === 1 ? "default" : "ghost"}
-                  size="sm"
-                  onClick={() => setWeeksToShow(1)}
-                  className="text-xs px-2 sm:px-3"
-                >
-                  1 Week
-                </Button>
-                <Button
-                  variant={weeksToShow === 2 ? "default" : "ghost"}
-                  size="sm"
-                  onClick={() => setWeeksToShow(2)}
-                  className="text-xs px-2 sm:px-3"
-                >
-                  2 Weken
-                </Button>
-                <Button
-                  variant={weeksToShow === 4 ? "default" : "ghost"}
-                  size="sm"
-                  onClick={() => setWeeksToShow(4)}
-                  className="text-xs px-2 sm:px-3"
-                >
-                  4 Weken
-                </Button>
-                <Button
-                  variant={weeksToShow === 8 ? "default" : "ghost"}
-                  size="sm"
-                  onClick={() => setWeeksToShow(8)}
-                  className="text-xs px-2 sm:px-3"
-                >
-                  8 Weken
-                </Button>
+        {/* Header - More subtle */}
+        <div className="bg-white dark:bg-gray-800 border-b border-gray-200 dark:border-gray-700">
+          <div className="px-6 py-6">
+            <div className="flex items-center justify-between flex-wrap gap-4">
+              <div className="flex items-center gap-4">
+                <div className="w-12 h-12 bg-blue-600 rounded-lg flex items-center justify-center shadow-sm">
+                  <Calendar className="h-6 w-6 text-white" />
+                </div>
+                <div>
+                  <h1 className="text-2xl font-bold text-gray-900 dark:text-white">Availability Planner</h1>
+                  <p className="text-lg font-medium text-gray-700 dark:text-gray-300">{teamName}</p>
+                  <p className="text-sm text-gray-500 dark:text-gray-400">{members.length} Team Members</p>
+                </div>
               </div>
 
-              <BulkUpdateDialog members={members} locale={locale} onUpdate={fetchAvailability} />
+              <div className="flex items-center gap-4 flex-wrap">
+                <div className="flex bg-gray-100 dark:bg-gray-700 rounded-lg p-1">
+                  <Button
+                    variant={weeksToShow === 1 ? "default" : "ghost"}
+                    size="sm"
+                    onClick={() => setWeeksToShow(1)}
+                    className={cn(
+                      "text-xs px-3 py-2 rounded-md font-medium",
+                      weeksToShow === 1
+                        ? "bg-blue-600 text-white shadow-sm"
+                        : "hover:bg-gray-200 dark:hover:bg-gray-600",
+                    )}
+                  >
+                    1 Week
+                  </Button>
+                  <Button
+                    variant={weeksToShow === 2 ? "default" : "ghost"}
+                    size="sm"
+                    onClick={() => setWeeksToShow(2)}
+                    className={cn(
+                      "text-xs px-3 py-2 rounded-md font-medium",
+                      weeksToShow === 2
+                        ? "bg-blue-600 text-white shadow-sm"
+                        : "hover:bg-gray-200 dark:hover:bg-gray-600",
+                    )}
+                  >
+                    2 Weeks
+                  </Button>
+                  <Button
+                    variant={weeksToShow === 4 ? "default" : "ghost"}
+                    size="sm"
+                    onClick={() => setWeeksToShow(4)}
+                    className={cn(
+                      "text-xs px-3 py-2 rounded-md font-medium",
+                      weeksToShow === 4
+                        ? "bg-blue-600 text-white shadow-sm"
+                        : "hover:bg-gray-200 dark:hover:bg-gray-600",
+                    )}
+                  >
+                    4 Weeks
+                  </Button>
+                  <Button
+                    variant={weeksToShow === 8 ? "default" : "ghost"}
+                    size="sm"
+                    onClick={() => setWeeksToShow(8)}
+                    className={cn(
+                      "text-xs px-3 py-2 rounded-md font-medium",
+                      weeksToShow === 8
+                        ? "bg-blue-600 text-white shadow-sm"
+                        : "hover:bg-gray-200 dark:hover:bg-gray-600",
+                    )}
+                  >
+                    8 Weeks
+                  </Button>
+                </div>
 
-              <MemberForm teamId={teamId} locale={locale} onMemberAdded={onMembersUpdate} />
+                {editMode && (
+                  <>
+                    <BulkUpdateDialog members={members} locale={locale} onUpdate={fetchAvailability} />
+                    <MemberForm teamId={teamId} locale={locale} onMemberAdded={onMembersUpdate} />
+                  </>
+                )}
 
-              <SettingsDialog currentLocale={locale} members={members} />
+                {/* Edit Mode Toggle - More subtle */}
+                <div className="flex items-center gap-3 bg-white dark:bg-gray-800 rounded-lg p-3 border border-gray-200 dark:border-gray-700">
+                  <div
+                    className={cn(
+                      "flex items-center gap-2 px-3 py-1.5 rounded-md",
+                      editMode
+                        ? "bg-orange-50 dark:bg-orange-900/20 text-orange-700 dark:text-orange-300"
+                        : "bg-green-50 dark:bg-green-900/20 text-green-700 dark:text-green-300",
+                    )}
+                  >
+                    {editMode ? <Edit3 className="h-4 w-4" /> : <Lock className="h-4 w-4" />}
+                    <span className="text-sm font-medium">{editMode ? "Edit Mode" : "View Mode"}</span>
+                  </div>
+                  <Switch checked={editMode} onCheckedChange={setEditMode} />
+                </div>
+
+                <SettingsDropdown currentLocale={locale} members={members} />
+              </div>
             </div>
           </div>
         </div>
 
-        {/* Date Navigation */}
-        <div className="bg-white dark:bg-gray-800 border-b dark:border-gray-700 px-6 py-3">
-          <div className="flex items-center justify-between">
-            <div className="flex items-center gap-4">
-              <div className="flex items-center gap-2">
-                <Calendar className="h-4 w-4 text-gray-500 dark:text-gray-400" />
-                <span className="font-medium dark:text-white">{formatDateRange()}</span>
-                <span className="text-sm text-blue-600 bg-blue-50 dark:bg-blue-900 dark:text-blue-300 px-2 py-1 rounded">
-                  {t("calendar.today")}
-                </span>
+        {/* Date Navigation - More subtle */}
+        <div className="bg-white dark:bg-gray-800 border-b border-gray-200 dark:border-gray-700">
+          <div className="px-6 py-4">
+            <div className="flex items-center justify-between flex-wrap gap-4">
+              <div className="flex items-center gap-4 flex-wrap">
+                <div className="flex items-center gap-3">
+                  <div className="w-8 h-8 bg-blue-500 rounded-md flex items-center justify-center">
+                    <Calendar className="h-4 w-4 text-white" />
+                  </div>
+                  <span className="font-semibold text-lg text-gray-900 dark:text-white">{formatDateRange()}</span>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={goToToday}
+                    className="text-sm bg-blue-100 dark:bg-blue-900/30 text-blue-700 dark:text-blue-300 border-blue-200 dark:border-blue-700 hover:bg-blue-200 dark:hover:bg-blue-800/50 font-medium rounded-full px-3 py-1"
+                  >
+                    Today
+                  </Button>
+                </div>
               </div>
-            </div>
 
-            <div className="flex items-center gap-2">
-              <Button variant="outline" size="sm" onClick={() => navigateDate("prev")}>
-                <ChevronLeft className="h-4 w-4" />
-              </Button>
-              <Button variant="outline" size="sm" onClick={() => navigateDate("next")}>
-                <ChevronRight className="h-4 w-4" />
-              </Button>
+              <div className="flex items-center gap-2">
+                <Button variant="outline" size="sm" onClick={() => navigateDate("prev")} className="rounded-md">
+                  <ChevronLeft className="h-4 w-4" />
+                </Button>
+                <Button variant="outline" size="sm" onClick={() => navigateDate("next")} className="rounded-md">
+                  <ChevronRight className="h-4 w-4" />
+                </Button>
+              </div>
             </div>
           </div>
         </div>
@@ -616,17 +681,38 @@ export function AvailabilityCalendarRedesigned({
         {/* Calendar Grid */}
         <div className="p-6">
           {isLoading ? (
-            <div className="text-center py-8 dark:text-white">{t("common.loading")}</div>
+            <div className="text-center py-12">
+              <div className="inline-flex items-center gap-3 bg-white dark:bg-gray-800 rounded-lg px-6 py-4 shadow-sm border border-gray-200 dark:border-gray-700">
+                <div className="w-6 h-6 bg-blue-600 rounded-full animate-pulse"></div>
+                <span className="font-medium text-gray-900 dark:text-white">Loading...</span>
+              </div>
+            </div>
           ) : (
             renderMultiWeekView()
           )}
         </div>
 
+        {/* Status Legend */}
+        <div className="text-center py-4">
+          <div className="inline-flex items-center gap-4 text-xs text-gray-500 dark:text-gray-400">
+            {Object.entries(statusConfig).map(([status, config]) => (
+              <div key={status} className="flex items-center gap-1">
+                <span>{config.icon}</span>
+                <span>{config.label}</span>
+              </div>
+            ))}
+          </div>
+        </div>
+
         {/* Footer */}
-        <div className="text-center py-4 text-sm text-gray-500 dark:text-gray-400">
-          Developed with {"<3"} by Jonas Van Hove
+        <div className="text-center py-4 border-t border-gray-200 dark:border-gray-700">
+          <div className="text-sm text-gray-600 dark:text-gray-400">
+            Developed with <span className="text-red-500">♥</span> by Jonas Van Hove
+          </div>
         </div>
       </div>
     </TooltipProvider>
   )
 }
+
+export { AvailabilityCalendarRedesigned }

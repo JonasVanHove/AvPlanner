@@ -2,19 +2,32 @@
 
 import { useState } from "react"
 import { Button } from "@/components/ui/button"
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog"
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
-import { Input } from "@/components/ui/input"
-import { Label } from "@/components/ui/label"
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+  DialogTrigger,
+} from "@/components/ui/dialog"
 import { Checkbox } from "@/components/ui/checkbox"
+import { Label } from "@/components/ui/label"
+import { Calendar } from "@/components/ui/calendar"
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover"
+import { CalendarIcon, Users } from "lucide-react"
+import { format } from "date-fns"
+import { nl } from "date-fns/locale"
 import { supabase } from "@/lib/supabase"
-import { useTranslation, type Locale } from "@/lib/i18n"
+import type { Locale } from "@/lib/i18n"
+import { MemberAvatar } from "./member-avatar"
 
 interface Member {
   id: string
   first_name: string
   last_name: string
   email?: string
+  profile_image?: string
 }
 
 interface BulkUpdateDialogProps {
@@ -23,22 +36,28 @@ interface BulkUpdateDialogProps {
   onUpdate: () => void
 }
 
-type AvailabilityStatus = "available" | "unavailable" | "need_to_check" | "absent" | "holiday"
-
 export function BulkUpdateDialog({ members, locale, onUpdate }: BulkUpdateDialogProps) {
-  const [isOpen, setIsOpen] = useState(false)
+  const [open, setOpen] = useState(false)
   const [selectedMembers, setSelectedMembers] = useState<string[]>([])
-  const [startDate, setStartDate] = useState("")
-  const [endDate, setEndDate] = useState("")
-  const [status, setStatus] = useState<AvailabilityStatus>("available")
-  const [isLoading, setIsLoading] = useState(false)
-  const { t } = useTranslation(locale)
+  const [selectedDates, setSelectedDates] = useState<Date[]>([])
+  const [selectedStatus, setSelectedStatus] = useState<
+    "available" | "unavailable" | "need_to_check" | "absent" | "holiday"
+  >("available")
+  const [isUpdating, setIsUpdating] = useState(false)
+
+  const statusOptions = [
+    { value: "available", label: "Beschikbaar", icon: "🟢" },
+    { value: "unavailable", label: "Niet beschikbaar", icon: "🔴" },
+    { value: "need_to_check", label: "Moet checken", icon: "🔵" },
+    { value: "absent", label: "Afwezig", icon: "⚫" },
+    { value: "holiday", label: "Vakantie", icon: "🟡" },
+  ]
 
   const handleMemberToggle = (memberId: string) => {
     setSelectedMembers((prev) => (prev.includes(memberId) ? prev.filter((id) => id !== memberId) : [...prev, memberId]))
   }
 
-  const handleSelectAll = () => {
+  const handleSelectAllMembers = () => {
     if (selectedMembers.length === members.length) {
       setSelectedMembers([])
     } else {
@@ -46,82 +65,83 @@ export function BulkUpdateDialog({ members, locale, onUpdate }: BulkUpdateDialog
     }
   }
 
-  const applyBulkUpdate = async () => {
-    if (!startDate || !endDate || selectedMembers.length === 0) return
+  const handleBulkUpdate = async () => {
+    if (selectedMembers.length === 0 || selectedDates.length === 0) {
+      alert("Selecteer teamleden en datums.")
+      return
+    }
 
-    setIsLoading(true)
+    setIsUpdating(true)
     try {
-      const start = new Date(startDate)
-      const end = new Date(endDate)
       const updates = []
-
-      // Generate all dates in range
-      for (let d = new Date(start); d <= end; d.setDate(d.getDate() + 1)) {
-        // Skip weekends
-        if (d.getDay() === 0 || d.getDay() === 6) continue
-
-        for (const memberId of selectedMembers) {
+      for (const memberId of selectedMembers) {
+        for (const date of selectedDates) {
           updates.push({
             member_id: memberId,
-            date: d.toISOString().split("T")[0],
-            status,
+            date: date.toISOString().split("T")[0],
+            status: selectedStatus,
           })
         }
       }
 
-      const { error } = await supabase.from("availability").upsert(updates, {
-        onConflict: "member_id,date", // ← tell Supabase which composite key to target
-        returning: "minimal", // optional: keeps payload small
-      })
+      const { error } = await supabase.from("availability").upsert(updates, { onConflict: "member_id,date" })
 
       if (error) throw error
 
-      setIsOpen(false)
-      setSelectedMembers([])
-      setStartDate("")
-      setEndDate("")
       onUpdate()
+      setOpen(false)
+      setSelectedMembers([])
+      setSelectedDates([])
     } catch (error) {
-      console.error("Error applying bulk update:", error)
+      console.error("Bulk update error:", error)
+      alert("Er is een fout opgetreden bij het bijwerken.")
     } finally {
-      setIsLoading(false)
+      setIsUpdating(false)
     }
   }
 
   return (
-    <Dialog open={isOpen} onOpenChange={setIsOpen}>
+    <Dialog open={open} onOpenChange={setOpen}>
       <DialogTrigger asChild>
-        <Button variant="outline" className="bg-purple-600 text-white hover:bg-purple-700">
-          {t("bulk.title")}
+        <Button variant="outline" size="sm" className="rounded-lg bg-transparent">
+          <Users className="h-4 w-4 mr-2" />
+          Bulk Update
         </Button>
       </DialogTrigger>
-      <DialogContent className="max-w-md">
+      <DialogContent className="sm:max-w-[600px] bg-white dark:bg-gray-800 max-h-[80vh] overflow-y-auto">
         <DialogHeader>
-          <DialogTitle>{t("bulk.title")}</DialogTitle>
+          <DialogTitle className="text-gray-900 dark:text-white">Bulk beschikbaarheid bijwerken</DialogTitle>
+          <DialogDescription className="text-gray-600 dark:text-gray-300">
+            Selecteer teamleden, datums en status om meerdere beschikbaarheden tegelijk bij te werken.
+          </DialogDescription>
         </DialogHeader>
-        <div className="space-y-4">
+
+        <div className="space-y-6 py-4">
           {/* Member Selection */}
-          <div>
-            <Label className="text-sm font-medium">{t("bulk.selectMembers")}</Label>
-            <div className="mt-2 space-y-2 max-h-40 overflow-y-auto border rounded p-2">
-              <div className="flex items-center space-x-2">
-                <Checkbox
-                  id="select-all"
-                  checked={selectedMembers.length === members.length}
-                  onCheckedChange={handleSelectAll}
-                />
-                <Label htmlFor="select-all" className="text-sm font-medium">
-                  Selecteer Alles
-                </Label>
-              </div>
+          <div className="space-y-3">
+            <div className="flex items-center justify-between">
+              <Label className="text-sm font-medium text-gray-900 dark:text-white">
+                Teamleden ({selectedMembers.length}/{members.length})
+              </Label>
+              <Button variant="outline" size="sm" onClick={handleSelectAllMembers} className="text-xs bg-transparent">
+                {selectedMembers.length === members.length ? "Deselecteer alles" : "Selecteer alles"}
+              </Button>
+            </div>
+            <div className="grid grid-cols-1 gap-2 max-h-40 overflow-y-auto border border-gray-200 dark:border-gray-700 rounded-lg p-3">
               {members.map((member) => (
-                <div key={member.id} className="flex items-center space-x-2">
+                <div key={member.id} className="flex items-center space-x-3">
                   <Checkbox
                     id={member.id}
                     checked={selectedMembers.includes(member.id)}
                     onCheckedChange={() => handleMemberToggle(member.id)}
                   />
-                  <Label htmlFor={member.id} className="text-sm">
+                  <MemberAvatar
+                    firstName={member.first_name}
+                    lastName={member.last_name}
+                    profileImage={member.profile_image}
+                    size="sm"
+                  />
+                  <Label htmlFor={member.id} className="text-sm text-gray-700 dark:text-gray-300 cursor-pointer flex-1">
                     {member.first_name} {member.last_name}
                   </Label>
                 </div>
@@ -129,48 +149,86 @@ export function BulkUpdateDialog({ members, locale, onUpdate }: BulkUpdateDialog
             </div>
           </div>
 
-          {/* Date Range */}
-          <div className="grid grid-cols-2 gap-2">
-            <div>
-              <Label htmlFor="startDate">{t("bulk.startDate")}</Label>
-              <Input id="startDate" type="date" value={startDate} onChange={(e) => setStartDate(e.target.value)} />
-            </div>
-            <div>
-              <Label htmlFor="endDate">{t("bulk.endDate")}</Label>
-              <Input id="endDate" type="date" value={endDate} onChange={(e) => setEndDate(e.target.value)} />
-            </div>
+          {/* Date Selection */}
+          <div className="space-y-3">
+            <Label className="text-sm font-medium text-gray-900 dark:text-white">
+              Datums ({selectedDates.length} geselecteerd)
+            </Label>
+            <Popover>
+              <PopoverTrigger asChild>
+                <Button variant="outline" className="w-full justify-start text-left font-normal bg-transparent">
+                  <CalendarIcon className="mr-2 h-4 w-4" />
+                  {selectedDates.length > 0
+                    ? `${selectedDates.length} datum${selectedDates.length > 1 ? "s" : ""} geselecteerd`
+                    : "Selecteer datums"}
+                </Button>
+              </PopoverTrigger>
+              <PopoverContent className="w-auto p-0" align="start">
+                <Calendar
+                  mode="multiple"
+                  selected={selectedDates}
+                  onSelect={(dates) => setSelectedDates(dates || [])}
+                  initialFocus
+                />
+              </PopoverContent>
+            </Popover>
+            {selectedDates.length > 0 && (
+              <div className="text-xs text-gray-500 dark:text-gray-400 max-h-20 overflow-y-auto">
+                {selectedDates
+                  .sort((a, b) => a.getTime() - b.getTime())
+                  .map((date) => format(date, "dd-MM-yyyy", { locale: nl }))
+                  .join(", ")}
+              </div>
+            )}
           </div>
 
           {/* Status Selection */}
-          <div>
-            <Label>{t("bulk.selectStatus")}</Label>
-            <Select value={status} onValueChange={(value: AvailabilityStatus) => setStatus(value)}>
-              <SelectTrigger>
-                <SelectValue />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="available">{t("status.available")}</SelectItem>
-                <SelectItem value="unavailable">{t("status.unavailable")}</SelectItem>
-                <SelectItem value="need_to_check">{t("status.need_to_check")}</SelectItem>
-                <SelectItem value="absent">{t("status.absent")}</SelectItem>
-                <SelectItem value="holiday">{t("status.holiday")}</SelectItem>
-              </SelectContent>
-            </Select>
-          </div>
-
-          {/* Actions */}
-          <div className="flex gap-2 justify-end">
-            <Button variant="outline" onClick={() => setIsOpen(false)}>
-              {t("common.cancel")}
-            </Button>
-            <Button
-              onClick={applyBulkUpdate}
-              disabled={isLoading || !startDate || !endDate || selectedMembers.length === 0}
-            >
-              {isLoading ? t("common.loading") : t("bulk.apply")}
-            </Button>
+          <div className="space-y-3">
+            <Label className="text-sm font-medium text-gray-900 dark:text-white">Status</Label>
+            <div className="grid grid-cols-1 gap-2">
+              {statusOptions.map((option) => (
+                <div key={option.value} className="flex items-center space-x-2">
+                  <input
+                    type="radio"
+                    id={option.value}
+                    name="status"
+                    value={option.value}
+                    checked={selectedStatus === option.value}
+                    onChange={(e) => setSelectedStatus(e.target.value as any)}
+                    className="text-blue-600"
+                  />
+                  <Label
+                    htmlFor={option.value}
+                    className="text-sm text-gray-700 dark:text-gray-300 cursor-pointer flex items-center gap-2"
+                  >
+                    <span className="text-lg">{option.icon}</span>
+                    {option.label}
+                  </Label>
+                </div>
+              ))}
+            </div>
           </div>
         </div>
+
+        <DialogFooter>
+          <Button variant="outline" onClick={() => setOpen(false)} className="text-gray-700 dark:text-gray-300">
+            Annuleren
+          </Button>
+          <Button
+            onClick={handleBulkUpdate}
+            disabled={isUpdating || selectedMembers.length === 0 || selectedDates.length === 0}
+            className="bg-blue-600 hover:bg-blue-700 text-white"
+          >
+            {isUpdating ? (
+              <>
+                <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin mr-2" />
+                Bijwerken...
+              </>
+            ) : (
+              `${selectedMembers.length * selectedDates.length} items bijwerken`
+            )}
+          </Button>
+        </DialogFooter>
       </DialogContent>
     </Dialog>
   )
