@@ -2,7 +2,6 @@
 
 import { useState } from "react"
 import { Button } from "@/components/ui/button"
-import { Switch } from "@/components/ui/switch"
 import { Label } from "@/components/ui/label"
 import {
   DropdownMenu,
@@ -11,7 +10,8 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu"
-import { Settings, Download, Moon, Sun, Globe, Bell } from "lucide-react"
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
+import { Settings, Download, Moon, Sun, Globe, Bell, ChevronDown, Monitor } from "lucide-react"
 import { ExportDialog } from "./export-dialog"
 import { useTheme } from "next-themes"
 import { useTranslation, type Locale } from "@/lib/i18n"
@@ -126,57 +126,76 @@ export function SettingsDropdown({ currentLocale, members }: SettingsDropdownPro
 
           <DropdownMenuSeparator className="bg-gray-200 dark:bg-gray-600" />
 
-          {/* Dark Mode Toggle */}
-          <div className="flex items-center justify-between px-2 py-2 hover:bg-gray-50 dark:hover:bg-gray-700">
-            <div className="flex items-center">
-              {theme === "dark" ? (
-                <Moon className="mr-2 h-4 w-4" />
-              ) : (
-                <Sun className="mr-2 h-4 w-4" />
-              )}
-              <Label htmlFor="dark-mode-toggle" className="text-sm font-medium cursor-pointer">
-                {t("settings.darkMode")}
-              </Label>
+          {/* Theme Selection */}
+          <div className="px-2 py-2">
+            <div className="flex items-center justify-between mb-2">
+              <div className="flex items-center">
+                {theme === "dark" ? (
+                  <Moon className="mr-2 h-4 w-4" />
+                ) : theme === "light" ? (
+                  <Sun className="mr-2 h-4 w-4" />
+                ) : (
+                  <Monitor className="mr-2 h-4 w-4" />
+                )}
+                <Label className="text-sm font-medium">
+                  {currentLocale === "en" ? "Theme" : currentLocale === "nl" ? "Thema" : "Thème"}
+                </Label>
+              </div>
             </div>
-            <Switch
-              id="dark-mode-toggle"
-              checked={theme === "dark"}
-              onCheckedChange={(checked) => setTheme(checked ? "dark" : "light")}
-            />
+            <Select value={theme || "system"} onValueChange={setTheme}>
+              <SelectTrigger className="w-full h-8 text-sm bg-gray-50 dark:bg-gray-700 border-gray-200 dark:border-gray-600">
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent className="bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700">
+                <SelectItem value="system" className="text-sm cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-700">
+                  <div className="flex items-center">
+                    <Monitor className="mr-2 h-3 w-3" />
+                    {currentLocale === "en" ? "System" : currentLocale === "nl" ? "Systeem" : "Système"}
+                  </div>
+                </SelectItem>
+                <SelectItem value="light" className="text-sm cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-700">
+                  <div className="flex items-center">
+                    <Sun className="mr-2 h-3 w-3" />
+                    {currentLocale === "en" ? "Light" : currentLocale === "nl" ? "Licht" : "Clair"}
+                  </div>
+                </SelectItem>
+                <SelectItem value="dark" className="text-sm cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-700">
+                  <div className="flex items-center">
+                    <Moon className="mr-2 h-3 w-3" />
+                    {currentLocale === "en" ? "Dark" : currentLocale === "nl" ? "Donker" : "Sombre"}
+                  </div>
+                </SelectItem>
+              </SelectContent>
+            </Select>
           </div>
 
           <DropdownMenuSeparator className="bg-gray-200 dark:bg-gray-600" />
 
-          {/* Language Options */}
-          <DropdownMenuItem
-            onClick={() => handleLanguageChange("en")}
-            className={`cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-700 ${
-              currentLocale === "en" ? "bg-blue-50 dark:bg-blue-900/20" : ""
-            }`}
-          >
-            <Globe className="mr-2 h-4 w-4" />
-            <span>English</span>
-          </DropdownMenuItem>
-
-          <DropdownMenuItem
-            onClick={() => handleLanguageChange("nl")}
-            className={`cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-700 ${
-              currentLocale === "nl" ? "bg-blue-50 dark:bg-blue-900/20" : ""
-            }`}
-          >
-            <Globe className="mr-2 h-4 w-4" />
-            <span>Nederlands</span>
-          </DropdownMenuItem>
-
-          <DropdownMenuItem
-            onClick={() => handleLanguageChange("fr")}
-            className={`cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-700 ${
-              currentLocale === "fr" ? "bg-blue-50 dark:bg-blue-900/20" : ""
-            }`}
-          >
-            <Globe className="mr-2 h-4 w-4" />
-            <span>Français</span>
-          </DropdownMenuItem>
+          {/* Language Selection */}
+          <div className="px-2 py-2">
+            <div className="flex items-center justify-between mb-2">
+              <div className="flex items-center">
+                <Globe className="mr-2 h-4 w-4" />
+                <Label className="text-sm font-medium">{t("settings.language")}</Label>
+              </div>
+            </div>
+            <Select value={currentLocale} onValueChange={handleLanguageChange}>
+              <SelectTrigger className="w-full h-8 text-sm bg-gray-50 dark:bg-gray-700 border-gray-200 dark:border-gray-600">
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent className="bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700">
+                <SelectItem value="en" className="text-sm cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-700">
+                  🇺🇸 English
+                </SelectItem>
+                <SelectItem value="nl" className="text-sm cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-700">
+                  🇳🇱 Nederlands
+                </SelectItem>
+                <SelectItem value="fr" className="text-sm cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-700">
+                  🇫🇷 Français
+                </SelectItem>
+              </SelectContent>
+            </Select>
+          </div>
 
           <DropdownMenuSeparator className="bg-gray-200 dark:bg-gray-600" />
 

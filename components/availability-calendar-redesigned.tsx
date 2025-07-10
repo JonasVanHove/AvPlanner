@@ -13,14 +13,17 @@ import {
   Lock,
   Mail,
   MessageSquare,
+  BarChart3,
+  Users,
 } from "lucide-react"
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu"
 import { Switch } from "@/components/ui/switch"
+import { Progress } from "@/components/ui/progress"
 import { supabase } from "@/lib/supabase"
 import { useTranslation, type Locale } from "@/lib/i18n"
 import { cn } from "@/lib/utils"
 import { MemberForm } from "./member-form"
-import { BulkUpdateDialog } from "./bulk-update-dialog"
+import { BulkUpdateDialog, AnalyticsButton } from "./bulk-update-dialog"
 import { SettingsDropdown } from "./settings-dropdown"
 import { MemberAvatar } from "./member-avatar"
 
@@ -224,6 +227,31 @@ const AvailabilityCalendarRedesigned = ({
     return getAvailabilityForDate(memberId, today)
   }
 
+  // Get availability for the current week being viewed (prefer today if in range, otherwise first workday)
+  const getCurrentWeekAvailability = (memberId: string, weekDays: Date[]) => {
+    const today = new Date()
+    
+    // Check if today is within the current week view
+    const todayInCurrentWeek = weekDays.some(day => 
+      day.getDate() === today.getDate() &&
+      day.getMonth() === today.getMonth() &&
+      day.getFullYear() === today.getFullYear()
+    )
+    
+    if (todayInCurrentWeek) {
+      return getAvailabilityForDate(memberId, today)
+    }
+    
+    // Find the first workday in the current week
+    const firstWorkday = weekDays.find(day => !isWeekend(day))
+    if (firstWorkday) {
+      return getAvailabilityForDate(memberId, firstWorkday)
+    }
+    
+    // Fallback to first day if no workdays found
+    return getAvailabilityForDate(memberId, weekDays[0])
+  }
+
   const isWeekend = (date: Date) => {
     const day = date.getDay()
     return day === 0 || day === 6
@@ -248,6 +276,63 @@ const AvailabilityCalendarRedesigned = ({
 
   const goToToday = () => {
     setCurrentDate(new Date())
+  }
+
+  // Calculate availability score for a member in a specific week
+  const calculateMemberWeeklyScore = (member: Member, weekDays: Date[]) => {
+    const workdays = weekDays.filter(day => !isWeekend(day))
+    const availableStatuses = ['available', 'remote']
+    
+    let availableDays = 0
+    let totalDays = 0
+
+    workdays.forEach(day => {
+      const availability = getAvailabilityForDate(member.id, day)
+      totalDays++
+      if (availability && availableStatuses.includes(availability.status)) {
+        availableDays++
+      } else if (!availability) {
+        // No status set, assume available for calculation
+        availableDays++
+      }
+    })
+
+    return totalDays > 0 ? Math.round((availableDays / totalDays) * 100) : 0
+  }
+
+  // Calculate team availability score for a specific week
+  const calculateTeamWeeklyScore = (weekDays: Date[]) => {
+    if (members.length === 0) return 0
+    
+    const memberScores = members.map(member => calculateMemberWeeklyScore(member, weekDays))
+    const averageScore = memberScores.reduce((sum, score) => sum + score, 0) / memberScores.length
+    
+    return Math.round(averageScore)
+  }
+
+  // Get availability stats for a member in a specific week
+  const getMemberWeeklyStats = (member: Member, weekDays: Date[]) => {
+    const workdays = weekDays.filter(day => !isWeekend(day))
+    const stats = {
+      available: 0,
+      remote: 0,
+      unavailable: 0,
+      need_to_check: 0,
+      absent: 0,
+      holiday: 0,
+      unset: 0
+    }
+
+    workdays.forEach(day => {
+      const availability = getAvailabilityForDate(member.id, day)
+      if (availability) {
+        stats[availability.status]++
+      } else {
+        stats.unset++
+      }
+    })
+
+    return stats
   }
 
   const getMultipleWeeksDays = () => {
@@ -318,7 +403,131 @@ const AvailabilityCalendarRedesigned = ({
             {/* Week Header - More subtle */}
             <div className="bg-gray-50 dark:bg-gray-700/50 p-4 border-b border-gray-200 dark:border-gray-600">
               <div className="flex items-center justify-between">
-                <h3 className="text-lg font-semibold text-gray-900 dark:text-white">Week {week.weekNumber}</h3>
+                <div className="flex items-center gap-4">
+                  <h3 className="text-lg font-semibold text-gray-900 dark:text-white">Week {week.weekNumber}</h3>
+                  
+                  {/* Availability Score Dropdown */}
+                  <DropdownMenu>
+                    <DropdownMenuTrigger asChild>
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        className="flex items-center gap-2 bg-blue-50 dark:bg-blue-900/20 border-blue-200 dark:border-blue-700 text-blue-700 dark:text-blue-300 hover:bg-blue-100 dark:hover:bg-blue-800/30"
+                      >
+                        <BarChart3 className="h-4 w-4" />
+                        <span className="font-medium">{calculateTeamWeeklyScore(week.days)}%</span>
+                        <ChevronDown className="h-3 w-3" />
+                      </Button>
+                    </DropdownMenuTrigger>
+                    <DropdownMenuContent 
+                      align="start" 
+                      className="w-80 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 shadow-lg"
+                    >
+                      <div className="p-4 space-y-4">
+                        {/* Team Score Header */}
+                        <div className="flex items-center gap-2 pb-2 border-b border-gray-200 dark:border-gray-600">
+                          <Users className="h-4 w-4 text-blue-600 dark:text-blue-400" />
+                          <span className="font-semibold text-gray-900 dark:text-white">Team Availability</span>
+                          <span className="ml-auto text-lg font-bold text-blue-600 dark:text-blue-400">
+                            {calculateTeamWeeklyScore(week.days)}%
+                          </span>
+                        </div>
+                        
+                        {/* Progress Bar */}
+                        <div className="space-y-2">
+                          <Progress 
+                            value={calculateTeamWeeklyScore(week.days)} 
+                            className="h-2"
+                          />
+                          <div className="flex justify-between text-xs text-gray-500 dark:text-gray-400">
+                            <span>0%</span>
+                            <span>100%</span>
+                          </div>
+                        </div>
+
+                        {/* Individual Member Stats */}
+                        <div className="space-y-3">
+                          <div className="text-sm font-medium text-gray-700 dark:text-gray-300">
+                            Member Breakdown:
+                          </div>
+                          <div className="space-y-2 max-h-64 overflow-y-auto">
+                            {members.map(member => {
+                              const memberScore = calculateMemberWeeklyScore(member, week.days)
+                              const memberStats = getMemberWeeklyStats(member, week.days)
+                              
+                              return (
+                                <div key={member.id} className="flex items-center justify-between p-2 rounded-lg bg-gray-50 dark:bg-gray-700/50">
+                                  <div className="flex items-center gap-2 min-w-0 flex-1">
+                                    <MemberAvatar
+                                      firstName={member.first_name}
+                                      lastName={member.last_name}
+                                      profileImage={member.profile_image}
+                                      size="sm"
+                                      statusIndicator={{
+                                        show: true,
+                                        status: getTodayAvailability(member.id)?.status
+                                      }}
+                                    />
+                                    <div className="min-w-0 flex-1">
+                                      <div className="text-sm font-medium text-gray-900 dark:text-white truncate">
+                                        {member.first_name} {member.last_name}
+                                      </div>
+                                      <div className="flex items-center gap-1 text-xs text-gray-500 dark:text-gray-400">
+                                        {memberStats.available > 0 && (
+                                          <span className="flex items-center gap-1">
+                                            🟢 {memberStats.available}
+                                          </span>
+                                        )}
+                                        {memberStats.remote > 0 && (
+                                          <span className="flex items-center gap-1">
+                                            🟣 {memberStats.remote}
+                                          </span>
+                                        )}
+                                        {memberStats.unavailable > 0 && (
+                                          <span className="flex items-center gap-1">
+                                            🔴 {memberStats.unavailable}
+                                          </span>
+                                        )}
+                                        {memberStats.need_to_check > 0 && (
+                                          <span className="flex items-center gap-1">
+                                            🔵 {memberStats.need_to_check}
+                                          </span>
+                                        )}
+                                        {memberStats.absent > 0 && (
+                                          <span className="flex items-center gap-1">
+                                            ⚫ {memberStats.absent}
+                                          </span>
+                                        )}
+                                        {memberStats.holiday > 0 && (
+                                          <span className="flex items-center gap-1">
+                                            🟡 {memberStats.holiday}
+                                          </span>
+                                        )}
+                                      </div>
+                                    </div>
+                                  </div>
+                                  <div className="flex items-center gap-2">
+                                    <div className="text-right">
+                                      <div className={cn(
+                                        "text-sm font-bold",
+                                        memberScore >= 80 ? "text-green-600 dark:text-green-400" :
+                                        memberScore >= 60 ? "text-yellow-600 dark:text-yellow-400" :
+                                        "text-red-600 dark:text-red-400"
+                                      )}>
+                                        {memberScore}%
+                                      </div>
+                                    </div>
+                                  </div>
+                                </div>
+                              )
+                            })}
+                          </div>
+                        </div>
+                      </div>
+                    </DropdownMenuContent>
+                  </DropdownMenu>
+                </div>
+                
                 <div className="text-gray-600 dark:text-gray-300 text-sm font-medium">
                   {dutchMonthNames[week.days[0].getMonth()]} {week.days[0].getDate()} -{" "}
                   {dutchMonthNames[week.days[6].getMonth()]} {week.days[6].getDate()}
@@ -648,6 +857,9 @@ const AvailabilityCalendarRedesigned = ({
                     {t("calendar.8weeks")}
                   </Button>
                 </div>
+
+                {/* Analytics Button - Always visible */}
+                <AnalyticsButton members={members} locale={locale} />
 
                 {editMode && (
                   <>
