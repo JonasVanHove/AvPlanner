@@ -62,21 +62,21 @@ export type Database = {
           id: string
           member_id: string
           date: string
-          status: "available" | "unavailable" | "need_to_check" | "absent" | "holiday"
+          status: "available" | "remote" | "unavailable" | "need_to_check" | "absent" | "holiday" | "maybe"
           created_at: string
         }
         Insert: {
           id?: string
           member_id: string
           date: string
-          status: "available" | "unavailable" | "need_to_check" | "absent" | "holiday"
+          status: "available" | "remote" | "unavailable" | "need_to_check" | "absent" | "holiday" | "maybe"
           created_at?: string
         }
         Update: {
           id?: string
           member_id?: string
           date?: string
-          status?: "available" | "unavailable" | "need_to_check" | "absent" | "holiday"
+          status?: "available" | "remote" | "unavailable" | "need_to_check" | "absent" | "holiday" | "maybe"
           created_at?: string
         }
       }

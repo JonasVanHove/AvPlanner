@@ -19,7 +19,7 @@ CREATE TABLE IF NOT EXISTS availability (
   id UUID DEFAULT gen_random_uuid() PRIMARY KEY,
   member_id UUID REFERENCES members(id) ON DELETE CASCADE,
   date DATE NOT NULL,
-  status TEXT NOT NULL CHECK (status IN ('available', 'maybe', 'unavailable', 'holiday')),
+  status TEXT NOT NULL CHECK (status IN ('available', 'remote', 'maybe', 'unavailable', 'holiday')),
   created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
   UNIQUE(member_id, date)
 );

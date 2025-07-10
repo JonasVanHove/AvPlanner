@@ -17,7 +17,7 @@ interface Member {
 interface Availability {
   member_id: string
   date: string
-  status: "available" | "maybe" | "unavailable" | "holiday"
+  status: "available" | "maybe" | "unavailable" | "holiday" | "remote"
 }
 
 interface AvailabilityCalendarProps {
@@ -28,6 +28,7 @@ interface AvailabilityCalendarProps {
 
 const statusColors = {
   available: "bg-green-500",
+  remote: "bg-purple-500",
   maybe: "bg-orange-500",
   unavailable: "bg-red-500",
   holiday: "bg-yellow-500",
@@ -237,6 +238,7 @@ export function AvailabilityCalendar({ teamId, members, locale }: AvailabilityCa
                                   const current = getAvailabilityForDate(member.id, date)
                                   const statuses: Availability["status"][] = [
                                     "available",
+                                    "remote",
                                     "maybe",
                                     "unavailable",
                                     "holiday",
@@ -255,11 +257,7 @@ export function AvailabilityCalendar({ teamId, members, locale }: AvailabilityCa
                                 <div className="text-sm">{date.toLocaleDateString(locale)}</div>
                                 <div className="text-sm">
                                   {getAvailabilityForDate(member.id, date)
-                                    ? t(
-                                        `status.${getAvailabilityForDate(member.id, date)!.status}` as keyof typeof import(
-                                          "@/lib/i18n",
-                                        ).translations.en,
-                                      )
+                                    ? t(`status.${getAvailabilityForDate(member.id, date)!.status}` as any)
                                     : t("status.unavailable")}
                                 </div>
                               </div>

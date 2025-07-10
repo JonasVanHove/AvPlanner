@@ -10,7 +10,7 @@ interface MemberAvatarProps {
   className?: string
   statusIndicator?: {
     show: boolean
-    status?: "available" | "unavailable" | "need_to_check" | "absent" | "holiday"
+    status?: "available" | "unavailable" | "need_to_check" | "absent" | "holiday" | "remote"
   }
 }
 
@@ -23,6 +23,7 @@ export function MemberAvatar({ firstName, lastName, profileImage, size = "md", c
 
   const statusColors = {
     available: "bg-green-400",
+    remote: "bg-purple-400",
     unavailable: "bg-red-400", 
     need_to_check: "bg-blue-400",
     absent: "bg-gray-400",

@@ -41,13 +41,14 @@ export function BulkUpdateDialog({ members, locale, onUpdate }: BulkUpdateDialog
   const [selectedMembers, setSelectedMembers] = useState<string[]>([])
   const [selectedDates, setSelectedDates] = useState<Date[]>([])
   const [selectedStatus, setSelectedStatus] = useState<
-    "available" | "unavailable" | "need_to_check" | "absent" | "holiday"
+    "available" | "unavailable" | "need_to_check" | "absent" | "holiday" | "remote"
   >("available")
   const [isUpdating, setIsUpdating] = useState(false)
   const { t } = useTranslation(locale)
 
   const statusOptions = [
     { value: "available", label: t("status.available"), icon: "🟢" },
+    { value: "remote", label: t("status.remote"), icon: "🟣" },
     { value: "unavailable", label: t("status.unavailable"), icon: "🔴" },
     { value: "need_to_check", label: t("status.need_to_check"), icon: "🔵" },
     { value: "absent", label: t("status.absent"), icon: "⚫" },

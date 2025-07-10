@@ -35,7 +35,7 @@ interface Member {
 interface Availability {
   member_id: string
   date: string
-  status: "available" | "unavailable" | "need_to_check" | "absent" | "holiday"
+  status: "available" | "unavailable" | "need_to_check" | "absent" | "holiday" | "remote"
 }
 
 interface AvailabilityCalendarProps {
@@ -80,6 +80,12 @@ const AvailabilityCalendarRedesigned = ({
       color: "bg-green-50 border-green-200 dark:bg-green-900/20 dark:border-green-700/50",
       label: t("status.available"),
       textColor: "text-green-700 dark:text-green-300",
+    },
+    remote: {
+      icon: "🟣",
+      color: "bg-purple-50 border-purple-200 dark:bg-purple-900/20 dark:border-purple-700/50",
+      label: t("status.remote"),
+      textColor: "text-purple-700 dark:text-purple-300",
     },
     unavailable: {
       icon: "🔴",
@@ -171,16 +177,21 @@ const AvailabilityCalendarRedesigned = ({
   const updateAvailability = async (
     memberId: string,
     date: string,
-    status: "available" | "unavailable" | "need_to_check" | "absent" | "holiday",
+    status: "available" | "unavailable" | "need_to_check" | "absent" | "holiday" | "remote",
   ) => {
     if (!editMode) return
 
     try {
+      console.log('Updating availability:', { memberId, date, status })
       const { error } = await supabase.from("availability").upsert([{ member_id: memberId, date, status }], {
         onConflict: "member_id,date",
       })
 
-      if (error) throw error
+      if (error) {
+        console.error('Supabase error details:', error)
+        throw error
+      }
+      console.log('Availability updated successfully')
       fetchAvailability()
     } catch (error) {
       console.error("Error updating availability:", error)
@@ -486,6 +497,7 @@ const AvailabilityCalendarRedesigned = ({
                                   const current = availability
                                   const statuses: Availability["status"][] = [
                                     "available",
+                                    "remote",
                                     "unavailable",
                                     "need_to_check",
                                     "absent",
