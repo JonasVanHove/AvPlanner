@@ -49,6 +49,8 @@ export function AnalyticsButton({ members, locale, weeksToShow, currentDate }: {
   const [showAnalytics, setShowAnalytics] = useState(false)
   const [analyticsData, setAnalyticsData] = useState<any>(null)
   const [simplifiedMode, setSimplifiedMode] = useState(false)
+  const [showPersonalCharts, setShowPersonalCharts] = useState(false)
+  const [selectedMemberForChart, setSelectedMemberForChart] = useState<string | null>(null)
   const { t } = useTranslation(locale)
 
   // Check for simplified mode preference
@@ -71,6 +73,12 @@ export function AnalyticsButton({ members, locale, weeksToShow, currentDate }: {
     return () => {
       window.removeEventListener('simplifiedModeChanged', handleSimplifiedModeChange as EventListener)
     }
+  }, [])
+
+  // Check for personal charts preference
+  useEffect(() => {
+    const savedShowPersonalCharts = localStorage.getItem("showPersonalCharts") === "true"
+    setShowPersonalCharts(savedShowPersonalCharts)
   }, [])
 
   // Process analytics data with unique member counting per day
@@ -191,6 +199,23 @@ export function AnalyticsButton({ members, locale, weeksToShow, currentDate }: {
     }
     if (Object.keys(memberStats).length === 0) {
       fetchMemberStats()
+    }
+  }
+
+  const handleTogglePersonalCharts = () => {
+    const newValue = !showPersonalCharts
+    setShowPersonalCharts(newValue)
+    localStorage.setItem("showPersonalCharts", newValue.toString())
+    if (!newValue) {
+      setSelectedMemberForChart(null) // Reset selection when hiding charts
+    }
+  }
+
+  const handleMemberClick = (memberId: string) => {
+    if (selectedMemberForChart === memberId) {
+      setSelectedMemberForChart(null) // Deselect if already selected
+    } else {
+      setSelectedMemberForChart(memberId) // Select new member
     }
   }
 
@@ -344,6 +369,37 @@ export function AnalyticsButton({ members, locale, weeksToShow, currentDate }: {
     return `${format(startDate, 'dd MMM', { locale: nl })} - ${format(endDate, 'dd MMM', { locale: nl })}`
   }
 
+  // Get general status distribution for the entire team over the selected period
+  const getGeneralStatusDistribution = () => {
+    if (!analyticsData || !analyticsData.timeData) return {}
+    
+    const totalDays = analyticsData.timeData.length
+    const statusTotals: Record<string, number> = {}
+    
+    analyticsData.timeData.forEach((item: any) => {
+      Object.keys(item).forEach(key => {
+        if (key !== 'date') {
+          statusTotals[key] = (statusTotals[key] || 0) + (item[key] || 0)
+        }
+      })
+    })
+    
+    // Calculate percentages
+    const totalEntries = Object.values(statusTotals).reduce((sum, count) => sum + count, 0)
+    const statusPercentages: Record<string, { count: number, percentage: number }> = {}
+    
+    Object.entries(statusTotals).forEach(([status, count]) => {
+      if (count > 0) {
+        statusPercentages[status] = {
+          count,
+          percentage: totalEntries > 0 ? Math.round((count / totalEntries) * 100) : 0
+        }
+      }
+    })
+    
+    return statusPercentages
+  }
+
   return (
     <>
       <Button 
@@ -393,6 +449,62 @@ export function AnalyticsButton({ members, locale, weeksToShow, currentDate }: {
               </div>
             )}
 
+            {/* General Team Status Distribution Bar Chart */}
+            {analyticsData && analyticsData.timeData && analyticsData.timeData.length > 0 && (
+              <div className="bg-gray-50 dark:bg-gray-900 rounded-lg p-3">
+                <h4 className="text-sm font-medium text-gray-900 dark:text-white mb-3 flex items-center gap-2">
+                  <BarChart3 className="h-3 w-3" />
+                  <span className="truncate">Algemene Team Status Verdeling - {getPeriodDescription()}</span>
+                </h4>
+                <div className="space-y-3">
+                  {['available', 'remote', 'unavailable', 'need_to_check', 'absent', 'holiday']
+                    .filter(status => getGeneralStatusDistribution()[status])
+                    .map(status => {
+                      const data = getGeneralStatusDistribution()[status]
+                      return (
+                        <div key={status} className="space-y-2">
+                          <div className="flex items-center justify-between text-xs">
+                            <div className="flex items-center gap-2">
+                              <span className="text-sm">{getStatusIcon(status)}</span>
+                              <span className="text-gray-700 dark:text-gray-300 font-medium">
+                                {getStatusLabel(status)}
+                              </span>
+                            </div>
+                            <div className="flex items-center gap-2 text-xs text-gray-600 dark:text-gray-400">
+                              <span>{data.count} entries</span>
+                              <span>({data.percentage}%)</span>
+                            </div>
+                          </div>
+                          <div className="w-full bg-gray-200 dark:bg-gray-700 rounded-full h-2">
+                            <div 
+                              className={`h-2 rounded-full transition-all duration-500 ${getStatusColor(status)}`}
+                              style={{ width: `${data.percentage}%` }}
+                            />
+                          </div>
+                        </div>
+                      )
+                    })
+                  }
+                </div>
+                <div className="mt-3 pt-3 border-t border-gray-200 dark:border-gray-600">
+                  <div className="flex justify-between items-center">
+                    <div className="text-xs text-gray-500 dark:text-gray-400">
+                      {Object.values(getGeneralStatusDistribution()).reduce((sum, data) => sum + data.count, 0)} totale entries • {members.length} teamleden • {analyticsData.timeData.length} dagen
+                    </div>
+                    <Button
+                      variant={showPersonalCharts ? "default" : "outline"}
+                      size="sm"
+                      onClick={handleTogglePersonalCharts}
+                      className={`h-7 text-xs ${showPersonalCharts ? 'bg-blue-600 hover:bg-blue-700 text-white' : ''}`}
+                      title={showPersonalCharts ? 'Verberg interactieve persoonlijke charts' : 'Toon interactieve persoonlijke charts per teamlid'}
+                    >
+                      {showPersonalCharts ? '📊 Verberg' : '👤 Toon'} Interactieve Charts
+                    </Button>
+                  </div>
+                </div>
+              </div>
+            )}
+
             {/* Chart */}
             {analyticsData && analyticsData.timeData && analyticsData.timeData.length > 0 && (
               <div className="bg-gray-50 dark:bg-gray-900 rounded-lg p-3">
@@ -420,6 +532,197 @@ export function AnalyticsButton({ members, locale, weeksToShow, currentDate }: {
                       </div>
                     </div>
                   ))}
+                </div>
+              </div>
+            )}
+
+            {/* Info when personal charts are hidden */}
+            {!showPersonalCharts && analyticsData && analyticsData.timeData && analyticsData.timeData.length > 0 && (
+              <div className="bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-700 rounded-lg p-3">
+                <div className="flex items-center gap-2 text-sm text-blue-800 dark:text-blue-200">
+                  <span className="text-base">👤</span>
+                  <span>Interactieve persoonlijke charts zijn verborgen. Klik op "👤 Toon Interactieve Charts" om klikbare statistieken per teamlid te bekijken.</span>
+                </div>
+              </div>
+            )}
+
+            {/* Interactive Personal Charts */}
+            {showPersonalCharts && analyticsData && analyticsData.timeData && analyticsData.timeData.length > 0 && (
+              <div className="bg-gray-50 dark:bg-gray-900 rounded-lg p-3">
+                <h4 className="text-sm font-medium text-gray-900 dark:text-white mb-3 flex items-center gap-2">
+                  <BarChart3 className="h-3 w-3" />
+                  <span className="truncate">👤 Interactieve Persoonlijke Charts - {getPeriodDescription()}</span>
+                </h4>
+                
+                {/* Member Selection Grid */}
+                <div className="mb-4">
+                  <p className="text-xs text-gray-600 dark:text-gray-400 mb-2">
+                    📌 Klik op een teamlid om hun persoonlijke statistieken te bekijken:
+                  </p>
+                  <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6 gap-2">
+                    {members.map(member => {
+                      // Check if member has data
+                      const hasData = analyticsData.memberData && analyticsData.memberData[member.id] && analyticsData.memberData[member.id].length > 0
+                      const isSelected = selectedMemberForChart === member.id
+                      
+                      return (
+                        <button
+                          key={member.id}
+                          onClick={() => handleMemberClick(member.id)}
+                          className={cn(
+                            "p-2 rounded-lg border-2 transition-all duration-200 text-center cursor-pointer hover:shadow-md",
+                            isSelected 
+                              ? "border-blue-500 bg-blue-50 dark:bg-blue-900/30 shadow-md" 
+                              : hasData
+                                ? "border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 hover:border-blue-300 hover:bg-blue-50 dark:hover:bg-blue-900/20"
+                                : "border-gray-100 dark:border-gray-800 bg-gray-50 dark:bg-gray-900 opacity-50 cursor-not-allowed",
+                            !hasData && "pointer-events-none"
+                          )}
+                          disabled={!hasData}
+                        >
+                          <div className="flex flex-col items-center gap-1">
+                            <MemberAvatar
+                              firstName={member.first_name}
+                              lastName={member.last_name}
+                              profileImage={member.profile_image}
+                              size="sm"
+                            />
+                            <div className="text-xs">
+                              <p className={cn(
+                                "font-medium truncate",
+                                isSelected ? "text-blue-700 dark:text-blue-300" : "text-gray-700 dark:text-gray-300"
+                              )}>
+                                {member.first_name}
+                              </p>
+                              <p className={cn(
+                                "text-xs",
+                                hasData 
+                                  ? isSelected 
+                                    ? "text-blue-600 dark:text-blue-400" 
+                                    : "text-gray-500 dark:text-gray-400"
+                                  : "text-gray-400 dark:text-gray-600"
+                              )}>
+                                {hasData ? "📊 Data" : "❌ Geen data"}
+                              </p>
+                            </div>
+                          </div>
+                        </button>
+                      )
+                    })}
+                  </div>
+                </div>
+
+                {/* Selected Member Chart */}
+                {selectedMemberForChart && (() => {
+                  const member = members.find(m => m.id === selectedMemberForChart)
+                  if (!member) return null
+
+                  // Calculate member status counts for the selected period
+                  const memberStatusCounts = {
+                    available: 0,
+                    remote: 0,
+                    unavailable: 0,
+                    need_to_check: 0,
+                    absent: 0,
+                    holiday: 0
+                  }
+                  
+                  // Count statuses for this member in the analytics period
+                  if (analyticsData.memberData && analyticsData.memberData[member.id]) {
+                    analyticsData.memberData[member.id].forEach((entry: any) => {
+                      const status = entry.status || 'available'
+                      if (memberStatusCounts.hasOwnProperty(status)) {
+                        memberStatusCounts[status as keyof typeof memberStatusCounts]++
+                      }
+                    })
+                  }
+                  
+                  const totalDays = Object.values(memberStatusCounts).reduce((sum, count) => sum + count, 0)
+                  const hasData = totalDays > 0
+
+                  return (
+                    <div className="bg-white dark:bg-gray-800 rounded-lg p-4 border-2 border-blue-200 dark:border-blue-700">
+                      <div className="flex items-center gap-3 mb-4">
+                        <MemberAvatar
+                          firstName={member.first_name}
+                          lastName={member.last_name}
+                          profileImage={member.profile_image}
+                          size="md"
+                        />
+                        <div className="flex-1">
+                          <h5 className="text-lg font-bold text-gray-900 dark:text-white">
+                            {member.first_name} {member.last_name}
+                          </h5>
+                          <p className="text-sm text-gray-600 dark:text-gray-400">
+                            {hasData ? `📊 ${totalDays} dagen data in ${getPeriodDescription()}` : 'Geen data voor deze periode'}
+                          </p>
+                        </div>
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          onClick={() => setSelectedMemberForChart(null)}
+                          className="text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200"
+                        >
+                          ✕
+                        </Button>
+                      </div>
+                      
+                      {hasData ? (
+                        <div className="space-y-3">
+                          {['available', 'remote', 'unavailable', 'need_to_check', 'absent', 'holiday']
+                            .filter(status => memberStatusCounts[status as keyof typeof memberStatusCounts] > 0)
+                            .map(status => {
+                              const count = memberStatusCounts[status as keyof typeof memberStatusCounts]
+                              const percentage = totalDays > 0 ? Math.round((count / totalDays) * 100) : 0
+                              
+                              return (
+                                <div key={status} className="space-y-2">
+                                  <div className="flex items-center justify-between">
+                                    <div className="flex items-center gap-2">
+                                      <span className="text-lg">{getStatusIcon(status)}</span>
+                                      <span className="text-sm font-medium text-gray-700 dark:text-gray-300">
+                                        {getStatusLabel(status)}
+                                      </span>
+                                    </div>
+                                    <div className="flex items-center gap-2 text-sm text-gray-600 dark:text-gray-400">
+                                      <span className="font-semibold">{count} {count === 1 ? 'dag' : 'dagen'}</span>
+                                      <span className="text-xs">({percentage}%)</span>
+                                    </div>
+                                  </div>
+                                  <div className="w-full bg-gray-200 dark:bg-gray-700 rounded-full h-3">
+                                    <div 
+                                      className={`h-3 rounded-full transition-all duration-500 ${getStatusColor(status)}`}
+                                      style={{ width: `${percentage}%` }}
+                                    />
+                                  </div>
+                                </div>
+                              )
+                            })}
+                        </div>
+                      ) : (
+                        <div className="text-center py-8 text-gray-500 dark:text-gray-400">
+                          <div className="text-4xl mb-2">📭</div>
+                          <p className="text-sm">Geen beschikbaarheidsdata voor de geselecteerde periode</p>
+                        </div>
+                      )}
+                    </div>
+                  )
+                })()}
+
+                {!selectedMemberForChart && (
+                  <div className="bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-700 rounded-lg p-4 text-center">
+                    <div className="text-2xl mb-2">👆</div>
+                    <p className="text-sm text-blue-800 dark:text-blue-200">
+                      Selecteer een teamlid hierboven om hun persoonlijke statusverdeling te bekijken
+                    </p>
+                  </div>
+                )}
+
+                <div className="mt-4 pt-3 border-t border-gray-200 dark:border-gray-600">
+                  <div className="text-xs text-gray-500 dark:text-gray-400 text-center">
+                    👤 {members.filter(m => analyticsData.memberData && analyticsData.memberData[m.id]).length}/{members.length} teamleden hebben data • 
+                    Periode: {getPeriodDescription()} • Klik op een persoon voor details
+                  </div>
                 </div>
               </div>
             )}
@@ -544,6 +847,7 @@ export function BulkUpdateDialog({ members, locale, onUpdate }: BulkUpdateDialog
   const [analyticsLevel, setAnalyticsLevel] = useState<"day" | "week" | "month">("week")
   const [simplifiedMode, setSimplifiedMode] = useState(false)
   const [todayAvailability, setTodayAvailability] = useState<Record<string, string>>({})
+  const [existingAvailability, setExistingAvailability] = useState<Record<string, Record<string, string>>>({})
   const { t } = useTranslation(locale)
 
   // Check for simplified mode preference
@@ -587,6 +891,47 @@ export function BulkUpdateDialog({ members, locale, onUpdate }: BulkUpdateDialog
     }
   }
 
+  // Fetch existing availability for selected members and dates
+  const fetchExistingAvailability = async () => {
+    if (selectedMembers.length === 0 || selectedDates.length === 0) {
+      setExistingAvailability({})
+      return
+    }
+
+    try {
+      const dateStrings = selectedDates.map(date => date.toISOString().split('T')[0])
+      
+      const { data, error } = await supabase
+        .from('availability')
+        .select('member_id, date, status')
+        .in('member_id', selectedMembers)
+        .in('date', dateStrings)
+
+      if (error) {
+        console.error('Error fetching existing availability:', error)
+        return
+      }
+
+      const existingData: Record<string, Record<string, string>> = {}
+      selectedMembers.forEach(memberId => {
+        existingData[memberId] = {}
+        dateStrings.forEach(date => {
+          existingData[memberId][date] = 'not_set' // Default value
+        })
+      })
+
+      data?.forEach(item => {
+        if (existingData[item.member_id]) {
+          existingData[item.member_id][item.date] = item.status
+        }
+      })
+
+      setExistingAvailability(existingData)
+    } catch (error) {
+      console.error('Error fetching existing availability:', error)
+    }
+  }
+
   // Fetch today's availability when dialog opens
   useEffect(() => {
     if (open) {
@@ -594,7 +939,15 @@ export function BulkUpdateDialog({ members, locale, onUpdate }: BulkUpdateDialog
     }
   }, [open])
 
+  // Fetch existing availability when members or dates change
+  useEffect(() => {
+    if (open && (selectedMembers.length > 0 || selectedDates.length > 0)) {
+      fetchExistingAvailability()
+    }
+  }, [selectedMembers, selectedDates, open])
+
   const statusOptions = [
+    { value: "not_set", label: "Niet ingesteld", icon: "⚪" },
     { value: "available", label: t("status.available"), icon: "🟢" },
     { value: "remote", label: t("status.remote"), icon: "🟣" },
     { value: "unavailable", label: t("status.unavailable"), icon: "🔴" },
@@ -898,21 +1251,18 @@ export function BulkUpdateDialog({ members, locale, onUpdate }: BulkUpdateDialog
                   onMonthChange={(month) => {
                     // Optional: auto-select month when navigating
                   }}
-                  components={{
-                    Caption: ({ displayMonth, ...props }) => (
-                      <div className="flex justify-center items-center py-2">
-                        <button
-                          type="button"
-                          onClick={() => handleMonthSelect(displayMonth)}
-                          className="text-sm font-semibold hover:bg-gray-100 dark:hover:bg-gray-700 px-3 py-1 rounded-md transition-colors"
-                          title="Klik om hele maand te selecteren"
-                        >
-                          {format(displayMonth, 'MMMM yyyy', { locale: nl })}
-                        </button>
-                      </div>
-                    )
-                  }}
                 />
+                <div className="mt-2 mb-3 flex gap-2">
+                  <Button
+                    type="button"
+                    variant="outline"
+                    size="sm"
+                    onClick={() => handleMonthSelect(new Date())}
+                    className="text-xs"
+                  >
+                    Hele maand selecteren
+                  </Button>
+                </div>
                 <div className="mt-3 text-xs text-gray-500 dark:text-gray-400 space-y-1">
                   <div className="flex items-center gap-2">
                     <div className="w-3 h-3 bg-green-50 border border-green-200 rounded"></div>
@@ -955,7 +1305,7 @@ export function BulkUpdateDialog({ members, locale, onUpdate }: BulkUpdateDialog
             <div>
               <Label className="text-sm font-medium mb-3 block">{t("bulk.selectStatus")}</Label>
               <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-2">
-                {statusOptions.map(option => (
+                {statusOptions.filter(option => option.value !== 'not_set').map(option => (
                   <div
                     key={option.value}
                     className={cn(
@@ -976,6 +1326,63 @@ export function BulkUpdateDialog({ members, locale, onUpdate }: BulkUpdateDialog
                 ))}
               </div>
             </div>
+
+            {/* Changes Preview */}
+            {selectedMembers.length > 0 && selectedDates.length > 0 && (
+              <div className="bg-yellow-50 dark:bg-yellow-900/20 border border-yellow-200 dark:border-yellow-700 rounded-lg p-4">
+                <h4 className="text-sm font-medium text-yellow-900 dark:text-yellow-100 mb-3 flex items-center gap-2">
+                  <span className="text-lg">📋</span>
+                  Wijzigingen overzicht
+                </h4>
+                <div className="max-h-64 overflow-y-auto space-y-2">
+                  {selectedMembers.map(memberId => {
+                    const member = members.find(m => m.id === memberId)
+                    if (!member) return null
+                    
+                    return (
+                      <div key={memberId} className="border-b border-yellow-200 dark:border-yellow-700 pb-2 last:border-b-0">
+                        <div className="text-sm font-medium text-yellow-900 dark:text-yellow-100 mb-1">
+                          {member.first_name} {member.last_name}
+                        </div>
+                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-1 text-xs">
+                          {selectedDates.filter(date => !isWeekendDay(date)).map(date => {
+                            const dateStr = date.toISOString().split('T')[0]
+                            const oldStatus = existingAvailability[memberId]?.[dateStr] || 'not_set'
+                            const newStatus = selectedStatus
+                            const oldStatusData = statusOptions.find(s => s.value === oldStatus) || 
+                              { value: 'not_set', label: 'Niet ingesteld', icon: '⚪' }
+                            const newStatusData = statusOptions.find(s => s.value === newStatus)!
+                            
+                            return (
+                              <div key={dateStr} className="flex items-center justify-between bg-white dark:bg-gray-800 rounded px-2 py-1 border">
+                                <span className="text-gray-700 dark:text-gray-300">
+                                  {date.toLocaleDateString('nl-NL', { day: '2-digit', month: '2-digit' })}
+                                </span>
+                                <div className="flex items-center gap-2">
+                                  <div className="flex items-center gap-1">
+                                    <span className="text-xs">{oldStatusData.icon}</span>
+                                    <span className="text-xs text-gray-600 dark:text-gray-400">
+                                      {oldStatusData.label}
+                                    </span>
+                                  </div>
+                                  <span className="text-gray-400">→</span>
+                                  <div className="flex items-center gap-1">
+                                    <span className="text-xs">{newStatusData.icon}</span>
+                                    <span className="text-xs font-medium text-gray-900 dark:text-gray-100">
+                                      {newStatusData.label}
+                                    </span>
+                                  </div>
+                                </div>
+                              </div>
+                            )
+                          })}
+                        </div>
+                      </div>
+                    )
+                  })}
+                </div>
+              </div>
+            )}
 
             {/* Summary */}
             {selectedMembers.length > 0 && selectedDates.length > 0 && (
