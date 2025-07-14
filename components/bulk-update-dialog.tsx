@@ -227,6 +227,7 @@ export function AnalyticsButton({ members, locale, weeksToShow, currentDate }: {
       case 'need_to_check': return t("status.need_to_check")
       case 'absent': return t("status.absent")
       case 'holiday': return t("status.holiday")
+      case 'not_set': return t("status.not_set")
       default: return status
     }
   }
@@ -454,7 +455,7 @@ export function AnalyticsButton({ members, locale, weeksToShow, currentDate }: {
               <div className="bg-gray-50 dark:bg-gray-900 rounded-lg p-3">
                 <h4 className="text-sm font-medium text-gray-900 dark:text-white mb-3 flex items-center gap-2">
                   <BarChart3 className="h-3 w-3" />
-                  <span className="truncate">Algemene Team Status Verdeling - {getPeriodDescription()}</span>
+                  <span className="truncate">{t("analytics.generalTeamStatus")} - {getPeriodDescription()}</span>
                 </h4>
                 <div className="space-y-3">
                   {['available', 'remote', 'unavailable', 'need_to_check', 'absent', 'holiday']
@@ -489,16 +490,16 @@ export function AnalyticsButton({ members, locale, weeksToShow, currentDate }: {
                 <div className="mt-3 pt-3 border-t border-gray-200 dark:border-gray-600">
                   <div className="flex justify-between items-center">
                     <div className="text-xs text-gray-500 dark:text-gray-400">
-                      {Object.values(getGeneralStatusDistribution()).reduce((sum, data) => sum + data.count, 0)} totale entries • {members.length} teamleden • {analyticsData.timeData.length} dagen
+                      {Object.values(getGeneralStatusDistribution()).reduce((sum, data) => sum + data.count, 0)} {t("analytics.totalEntriesCount")} • {members.length} {t("analytics.teamMembersCount")} • {analyticsData.timeData.length} {t("analytics.daysCount")}
                     </div>
                     <Button
                       variant={showPersonalCharts ? "default" : "outline"}
                       size="sm"
                       onClick={handleTogglePersonalCharts}
                       className={`h-7 text-xs ${showPersonalCharts ? 'bg-blue-600 hover:bg-blue-700 text-white' : ''}`}
-                      title={showPersonalCharts ? 'Verberg interactieve persoonlijke charts' : 'Toon interactieve persoonlijke charts per teamlid'}
+                      title={showPersonalCharts ? t("analytics.hidePersonalChartsTooltip") : t("analytics.showPersonalChartsTooltip")}
                     >
-                      {showPersonalCharts ? '📊 Verberg' : '👤 Toon'} Interactieve Charts
+                      {showPersonalCharts ? `📊 ${t("analytics.hidePersonalCharts")}` : `👤 ${t("analytics.showPersonalCharts")}`}
                     </Button>
                   </div>
                 </div>
@@ -541,7 +542,7 @@ export function AnalyticsButton({ members, locale, weeksToShow, currentDate }: {
               <div className="bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-700 rounded-lg p-3">
                 <div className="flex items-center gap-2 text-sm text-blue-800 dark:text-blue-200">
                   <span className="text-base">👤</span>
-                  <span>Interactieve persoonlijke charts zijn verborgen. Klik op "👤 Toon Interactieve Charts" om klikbare statistieken per teamlid te bekijken.</span>
+                  <span>{t("analytics.personalChartsHiddenInfo")}</span>
                 </div>
               </div>
             )}
@@ -551,13 +552,13 @@ export function AnalyticsButton({ members, locale, weeksToShow, currentDate }: {
               <div className="bg-gray-50 dark:bg-gray-900 rounded-lg p-3">
                 <h4 className="text-sm font-medium text-gray-900 dark:text-white mb-3 flex items-center gap-2">
                   <BarChart3 className="h-3 w-3" />
-                  <span className="truncate">👤 Interactieve Persoonlijke Charts - {getPeriodDescription()}</span>
+                  <span className="truncate">👤 {t("analytics.interactivePersonalCharts")} - {getPeriodDescription()}</span>
                 </h4>
                 
                 {/* Member Selection Grid */}
                 <div className="mb-4">
                   <p className="text-xs text-gray-600 dark:text-gray-400 mb-2">
-                    📌 Klik op een teamlid om hun persoonlijke statistieken te bekijken:
+                    📌 {t("analytics.clickMemberToView")}
                   </p>
                   <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6 gap-2">
                     {members.map(member => {
@@ -602,7 +603,7 @@ export function AnalyticsButton({ members, locale, weeksToShow, currentDate }: {
                                     : "text-gray-500 dark:text-gray-400"
                                   : "text-gray-400 dark:text-gray-600"
                               )}>
-                                {hasData ? "📊 Data" : "❌ Geen data"}
+                                {hasData ? `📊 ${t("analytics.data")}` : `❌ ${t("analytics.noData")}`}
                               </p>
                             </div>
                           </div>
@@ -654,7 +655,7 @@ export function AnalyticsButton({ members, locale, weeksToShow, currentDate }: {
                             {member.first_name} {member.last_name}
                           </h5>
                           <p className="text-sm text-gray-600 dark:text-gray-400">
-                            {hasData ? `📊 ${totalDays} dagen data in ${getPeriodDescription()}` : 'Geen data voor deze periode'}
+                            {hasData ? `📊 ${totalDays} ${t("analytics.daysCount")} ${t("analytics.data")} ${t("analytics.periodLabel")} ${getPeriodDescription()}` : t("analytics.noDataForPeriod")}
                           </p>
                         </div>
                         <Button
@@ -685,7 +686,7 @@ export function AnalyticsButton({ members, locale, weeksToShow, currentDate }: {
                                       </span>
                                     </div>
                                     <div className="flex items-center gap-2 text-sm text-gray-600 dark:text-gray-400">
-                                      <span className="font-semibold">{count} {count === 1 ? 'dag' : 'dagen'}</span>
+                                      <span className="font-semibold">{count} {count === 1 ? t("analytics.dayCount") : t("analytics.daysCount")}</span>
                                       <span className="text-xs">({percentage}%)</span>
                                     </div>
                                   </div>
@@ -702,7 +703,7 @@ export function AnalyticsButton({ members, locale, weeksToShow, currentDate }: {
                       ) : (
                         <div className="text-center py-8 text-gray-500 dark:text-gray-400">
                           <div className="text-4xl mb-2">📭</div>
-                          <p className="text-sm">Geen beschikbaarheidsdata voor de geselecteerde periode</p>
+                          <p className="text-sm">{t("analytics.noDataForPeriod")}</p>
                         </div>
                       )}
                     </div>
@@ -713,15 +714,15 @@ export function AnalyticsButton({ members, locale, weeksToShow, currentDate }: {
                   <div className="bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-700 rounded-lg p-4 text-center">
                     <div className="text-2xl mb-2">👆</div>
                     <p className="text-sm text-blue-800 dark:text-blue-200">
-                      Selecteer een teamlid hierboven om hun persoonlijke statusverdeling te bekijken
+                      {t("analytics.selectMemberAbove")}
                     </p>
                   </div>
                 )}
 
                 <div className="mt-4 pt-3 border-t border-gray-200 dark:border-gray-600">
                   <div className="text-xs text-gray-500 dark:text-gray-400 text-center">
-                    👤 {members.filter(m => analyticsData.memberData && analyticsData.memberData[m.id]).length}/{members.length} teamleden hebben data • 
-                    Periode: {getPeriodDescription()} • Klik op een persoon voor details
+                    👤 {members.filter(m => analyticsData.memberData && analyticsData.memberData[m.id]).length}/{members.length} {t("analytics.membersHaveData")} • 
+                    {t("analytics.periodLabel")} {getPeriodDescription()} • {t("analytics.clickForDetails")}
                   </div>
                 </div>
               </div>
@@ -947,7 +948,7 @@ export function BulkUpdateDialog({ members, locale, onUpdate }: BulkUpdateDialog
   }, [selectedMembers, selectedDates, open])
 
   const statusOptions = [
-    { value: "not_set", label: "Niet ingesteld", icon: "⚪" },
+    { value: "not_set", label: t("status.not_set"), icon: "⚪" },
     { value: "available", label: t("status.available"), icon: "🟢" },
     { value: "remote", label: t("status.remote"), icon: "🟣" },
     { value: "unavailable", label: t("status.unavailable"), icon: "🔴" },
@@ -1062,7 +1063,7 @@ export function BulkUpdateDialog({ members, locale, onUpdate }: BulkUpdateDialog
       }
 
       // Success
-      alert("Update successful!")
+      alert(t("bulk.updateSuccess"))
       onUpdate()
       setOpen(false)
       setSelectedMembers([])
@@ -1083,6 +1084,7 @@ export function BulkUpdateDialog({ members, locale, onUpdate }: BulkUpdateDialog
       case 'need_to_check': return t("status.need_to_check")
       case 'absent': return t("status.absent")
       case 'holiday': return t("status.holiday")
+      case 'not_set': return t("status.not_set")
       default: return status
     }
   }
@@ -1266,15 +1268,15 @@ export function BulkUpdateDialog({ members, locale, onUpdate }: BulkUpdateDialog
                 <div className="mt-3 text-xs text-gray-500 dark:text-gray-400 space-y-1">
                   <div className="flex items-center gap-2">
                     <div className="w-3 h-3 bg-green-50 border border-green-200 rounded"></div>
-                    <span>Weekdagen (groen)</span>
+                    <span>{t("bulk.weekdaysGreen")}</span>
                   </div>
                   <div className="flex items-center gap-2">
                     <div className="w-3 h-3 bg-red-50 border border-red-200 rounded"></div>
-                    <span>Weekenddagen (rood)</span>
+                    <span>{t("bulk.weekendsRed")}</span>
                   </div>
                   <div className="flex items-center gap-2">
                     <div className="w-3 h-3 bg-blue-500 rounded"></div>
-                    <span>Geselecteerde dagen</span>
+                    <span>{t("bulk.selectedDays")}</span>
                   </div>
                 </div>
               </div>
@@ -1350,7 +1352,7 @@ export function BulkUpdateDialog({ members, locale, onUpdate }: BulkUpdateDialog
                             const oldStatus = existingAvailability[memberId]?.[dateStr] || 'not_set'
                             const newStatus = selectedStatus
                             const oldStatusData = statusOptions.find(s => s.value === oldStatus) || 
-                              { value: 'not_set', label: 'Niet ingesteld', icon: '⚪' }
+                              { value: 'not_set', label: t("status.not_set"), icon: '⚪' }
                             const newStatusData = statusOptions.find(s => s.value === newStatus)!
                             
                             return (

@@ -42,6 +42,7 @@ export const translations = {
     "status.need_to_check": "Need to check",
     "status.absent": "Absent",
     "status.holiday": "Holiday",
+    "status.not_set": "Not set",
 
     // Bulk update
     "bulk.title": "Bulk Update",
@@ -178,6 +179,31 @@ export const translations = {
     "analytics.totalDays": "Total Days",
     "analytics.availabilityRate": "Availability Rate",
     "analytics.memberStatsNote": "Member statistics are based on all available data, not limited to the current view period",
+    "analytics.generalTeamStatus": "General Team Status Distribution",
+    "analytics.hidePersonalCharts": "Hide Interactive Charts",
+    "analytics.showPersonalCharts": "Show Interactive Charts",
+    "analytics.hidePersonalChartsTooltip": "Hide interactive personal charts",
+    "analytics.showPersonalChartsTooltip": "Show interactive personal charts per team member",
+    "analytics.personalChartsHiddenInfo": "Interactive personal charts are hidden. Click 'Show Interactive Charts' to view clickable statistics per team member.",
+    "analytics.interactivePersonalCharts": "Interactive Personal Charts",
+    "analytics.clickMemberToView": "Click on a team member to view their personal statistics:",
+    "analytics.selectMemberAbove": "Select a team member above to view their personal status distribution",
+    "analytics.noDataForPeriod": "No availability data for the selected period",
+    "analytics.totalEntriesCount": "total entries",
+    "analytics.teamMembersCount": "team members",
+    "analytics.daysCount": "days",
+    "analytics.dayCount": "day",
+    "analytics.membersHaveData": "members have data",
+    "analytics.periodLabel": "Period:",
+    "analytics.clickForDetails": "Click on a person for details",
+    "analytics.data": "Data",
+    "analytics.noData": "No data",
+
+    // Bulk update additional
+    "bulk.updateSuccess": "Update successful!",
+    "bulk.weekdaysGreen": "Weekdays (green)",
+    "bulk.weekendsRed": "Weekends (red)",
+    "bulk.selectedDays": "Selected days",
 
     // Planner
     "planner.title": "Team Planner",
@@ -308,6 +334,7 @@ export const translations = {
     "status.need_to_check": "Moet Nakijken",
     "status.absent": "Afwezig",
     "status.holiday": "Vakantie",
+    "status.not_set": "Niet ingesteld",
 
     // Bulk update
     "bulk.title": "Bulk Aanpassing",
@@ -444,6 +471,31 @@ export const translations = {
     "analytics.totalDays": "Totaal Dagen",
     "analytics.availabilityRate": "Beschikbaarheidspercentage",
     "analytics.memberStatsNote": "Lid statistieken zijn gebaseerd op alle beschikbare data, niet beperkt tot de huidige weergave periode",
+    "analytics.generalTeamStatus": "Algemene Team Status Verdeling",
+    "analytics.hidePersonalCharts": "Verberg Interactieve Charts",
+    "analytics.showPersonalCharts": "Toon Interactieve Charts",
+    "analytics.hidePersonalChartsTooltip": "Verberg interactieve persoonlijke charts",
+    "analytics.showPersonalChartsTooltip": "Toon interactieve persoonlijke charts per teamlid",
+    "analytics.personalChartsHiddenInfo": "Interactieve persoonlijke charts zijn verborgen. Klik op 'Toon Interactieve Charts' om klikbare statistieken per teamlid te bekijken.",
+    "analytics.interactivePersonalCharts": "Interactieve Persoonlijke Charts",
+    "analytics.clickMemberToView": "Klik op een teamlid om hun persoonlijke statistieken te bekijken:",
+    "analytics.selectMemberAbove": "Selecteer een teamlid hierboven om hun persoonlijke statusverdeling te bekijken",
+    "analytics.noDataForPeriod": "Geen beschikbaarheidsdata voor de geselecteerde periode",
+    "analytics.totalEntriesCount": "totale entries",
+    "analytics.teamMembersCount": "teamleden",
+    "analytics.daysCount": "dagen",
+    "analytics.dayCount": "dag",
+    "analytics.membersHaveData": "teamleden hebben data",
+    "analytics.periodLabel": "Periode:",
+    "analytics.clickForDetails": "Klik op een persoon voor details",
+    "analytics.data": "Data",
+    "analytics.noData": "Geen data",
+
+    // Bulk update additional
+    "bulk.updateSuccess": "Update succesvol!",
+    "bulk.weekdaysGreen": "Weekdagen (groen)",
+    "bulk.weekendsRed": "Weekenddagen (rood)",
+    "bulk.selectedDays": "Geselecteerde dagen",
 
     // Planner
     "planner.title": "Team Planner",
@@ -574,6 +626,7 @@ export const translations = {
     "status.need_to_check": "À Vérifier",
     "status.absent": "Absent",
     "status.holiday": "Vacances",
+    "status.not_set": "Non défini",
 
     // Bulk update
     "bulk.title": "Mise à Jour en Lot",
@@ -710,8 +763,33 @@ export const translations = {
     "analytics.totalDays": "Jours Totaux",
     "analytics.availabilityRate": "Taux de Disponibilité",
     "analytics.memberStatsNote": "Les statistiques des membres sont basées sur toutes les données disponibles, non limitées à la période d'affichage actuelle",
+    "analytics.generalTeamStatus": "Distribution Générale du Statut de l'Équipe",
+    "analytics.hidePersonalCharts": "Masquer les Graphiques Interactifs",
+    "analytics.showPersonalCharts": "Afficher les Graphiques Interactifs",
+    "analytics.hidePersonalChartsTooltip": "Masquer les graphiques personnels interactifs",
+    "analytics.showPersonalChartsTooltip": "Afficher les graphiques personnels interactifs par membre d'équipe",
+    "analytics.personalChartsHiddenInfo": "Les graphiques personnels interactifs sont masqués. Cliquez sur 'Afficher les Graphiques Interactifs' pour voir les statistiques cliquables par membre d'équipe.",
+    "analytics.interactivePersonalCharts": "Graphiques Personnels Interactifs",
+    "analytics.clickMemberToView": "Cliquez sur un membre d'équipe pour voir ses statistiques personnelles:",
+    "analytics.selectMemberAbove": "Sélectionnez un membre d'équipe ci-dessus pour voir sa distribution de statut personnel",
+    "analytics.noDataForPeriod": "Aucune donnée de disponibilité pour la période sélectionnée",
+    "analytics.totalEntriesCount": "entrées totales",
+    "analytics.teamMembersCount": "membres d'équipe",
+    "analytics.daysCount": "jours",
+    "analytics.dayCount": "jour",
+    "analytics.membersHaveData": "membres ont des données",
+    "analytics.periodLabel": "Période:",
+    "analytics.clickForDetails": "Cliquez sur une personne pour les détails",
+    "analytics.data": "Données",
+    "analytics.noData": "Aucune donnée",
 
-    // Planner
+    // Bulk update additional
+    "bulk.updateSuccess": "Mise à jour réussie!",
+    "bulk.weekdaysGreen": "Jours ouvrables (vert)",
+    "bulk.weekendsRed": "Jours de weekend (rouge)",
+    "bulk.selectedDays": "Jours sélectionnés",
+
+    // Settings
     "planner.title": "Planificateur d'Équipe",
     "planner.description": "Trouvez les meilleurs jours pour les activités d'équipe basées sur les modèles de disponibilité",
     "planner.suggestedDays": "Jours Suggérés",
