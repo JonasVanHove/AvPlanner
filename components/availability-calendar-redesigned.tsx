@@ -808,26 +808,21 @@ const AvailabilityCalendarRedesigned = ({
                               >
                                 {availability ? getStatusConfig(availability.status).icon : ""}
                               </button>
-                              <DropdownMenu>
-                                <DropdownMenuTrigger asChild>
-                                  <Button
-                                    variant="ghost"
-                                    size="sm"
-                                    className={cn(
-                                      "h-8 w-6 p-0 rounded-md flex-shrink-0",
-                                      editMode
-                                        ? "hover:bg-gray-100 dark:hover:bg-gray-600"
-                                        : "opacity-50 cursor-not-allowed",
-                                    )}
-                                    disabled={!editMode}
+                              {editMode && (
+                                <DropdownMenu>
+                                  <DropdownMenuTrigger asChild>
+                                    <Button
+                                      variant="ghost"
+                                      size="sm"
+                                      className="h-8 w-6 p-0 rounded-md flex-shrink-0 hover:bg-gray-100 dark:hover:bg-gray-600"
+                                    >
+                                      <ChevronDown className="h-3 w-3" />
+                                    </Button>
+                                  </DropdownMenuTrigger>
+                                  <DropdownMenuContent
+                                    align="end"
+                                    className="bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700"
                                   >
-                                    <ChevronDown className="h-3 w-3" />
-                                  </Button>
-                                </DropdownMenuTrigger>
-                                <DropdownMenuContent
-                                  align="end"
-                                  className="bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700"
-                                >
                                   {["available", "remote", "unavailable", "need_to_check", "absent", "holiday"].map((status) => {
                                     const config = getRealStatusConfig(status) // Use real config for dropdown
                                     return (
@@ -856,6 +851,7 @@ const AvailabilityCalendarRedesigned = ({
                                   })}
                                 </DropdownMenuContent>
                               </DropdownMenu>
+                              )}
                             </div>
                           )}
                         </div>
