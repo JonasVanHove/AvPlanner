@@ -2,7 +2,7 @@
 
 import { cn } from "@/lib/utils"
 
-import { useState, useEffect } from "react"
+import { useState, useEffect, useRef } from "react"
 import { Button } from "@/components/ui/button"
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
@@ -12,7 +12,7 @@ import { Input } from "@/components/ui/input"
 import { Textarea } from "@/components/ui/textarea"
 import { Separator } from "@/components/ui/separator"
 import { ScrollArea } from "@/components/ui/scroll-area"
-import { Globe, Moon, Bell, Download, Send, FileSpreadsheet, FileText, Braces } from "lucide-react"
+import { Globe, Moon, Bell, Download, Send, FileSpreadsheet, FileText, Braces, Share2, Copy, QrCode, Eye, EyeOff } from "lucide-react"
 import { useTranslation, type Locale } from "@/lib/i18n"
 import { useRouter, usePathname } from "next/navigation"
 import { supabase } from "@/lib/supabase"
@@ -42,6 +42,11 @@ export function SettingsDialog({ currentLocale, members = [], isOpen, onOpenChan
   const [exportFormat, setExportFormat] = useState<"excel" | "csv" | "json">("excel")
   const [startDate, setStartDate] = useState("")
   const [endDate, setEndDate] = useState("")
+  const [shareUrl, setShareUrl] = useState("")
+  const [showQR, setShowQR] = useState(false)
+  const [qrDataUrl, setQrDataUrl] = useState("")
+  const [isGeneratingQR, setIsGeneratingQR] = useState(false)
+  const canvasRef = useRef<HTMLCanvasElement>(null)
   const { t } = useTranslation(currentLocale)
   const router = useRouter()
   const pathname = usePathname()
@@ -72,6 +77,11 @@ export function SettingsDialog({ currentLocale, members = [], isOpen, onOpenChan
     const lastDay = new Date(now.getFullYear(), now.getMonth() + 1, 0)
     setStartDate(firstDay.toISOString().split("T")[0])
     setEndDate(lastDay.toISOString().split("T")[0])
+
+    // Generate share URL
+    const currentUrl = window.location.href
+    const baseUrl = currentUrl.split('?')[0]
+    setShareUrl(`${baseUrl}?view=readonly`)
   }, [])
 
   const handleLanguageChange = (newLocale: Locale) => {
@@ -221,6 +231,41 @@ export function SettingsDialog({ currentLocale, members = [], isOpen, onOpenChan
     document.body.removeChild(link)
   }
 
+  const copyShareUrl = async () => {
+    try {
+      await navigator.clipboard.writeText(shareUrl)
+      alert(t("settings.linkCopied"))
+    } catch (err) {
+      // Fallback for older browsers
+      const textArea = document.createElement("textarea")
+      textArea.value = shareUrl
+      document.body.appendChild(textArea)
+      textArea.select()
+      document.execCommand("copy")
+      document.body.removeChild(textArea)
+      alert(t("settings.linkCopied"))
+    }
+  }
+
+  const generateQRCode = () => {
+    setIsGeneratingQR(true)
+    
+    // Simple QR code generation using QR Server API
+    const qrUrl = `https://api.qrserver.com/v1/create-qr-code/?size=200x200&data=${encodeURIComponent(shareUrl)}`
+    setQrDataUrl(qrUrl)
+    setShowQR(true)
+    setIsGeneratingQR(false)
+  }
+
+  const downloadQRCode = () => {
+    if (qrDataUrl) {
+      const link = document.createElement("a")
+      link.href = qrDataUrl
+      link.download = "team-calendar-qr.png"
+      link.click()
+    }
+  }
+
   return (
     <Dialog open={isOpen} onOpenChange={onOpenChange}>
       <DialogContent className="max-w-md w-full mx-4 max-h-[90vh] bg-gradient-to-br from-white via-blue-50/30 to-purple-50/30 dark:from-gray-800 dark:via-blue-900/20 dark:to-purple-900/20 border border-gray-200/50 dark:border-gray-700/50">
@@ -308,7 +353,11 @@ export function SettingsDialog({ currentLocale, members = [], isOpen, onOpenChan
             {/* View Mode Settings */}
             <div className="flex items-center justify-between">
               <div className="flex items-center gap-2">
-                <div className="h-4 w-4 rounded-full bg-gradient-to-r from-green-500 to-red-500"></div>
+                {simplifiedMode ? (
+                  <EyeOff className="h-4 w-4 text-gray-600 dark:text-gray-400" />
+                ) : (
+                  <Eye className="h-4 w-4 text-gray-600 dark:text-gray-400" />
+                )}
                 <div className="space-y-1">
                   <Label className="text-sm font-medium">{t('settings.simplifiedMode')}</Label>
                   <p className="text-xs text-gray-600 dark:text-gray-400">{t('settings.simplifiedModeDescription')}</p>
@@ -317,8 +366,79 @@ export function SettingsDialog({ currentLocale, members = [], isOpen, onOpenChan
               <Switch
                 checked={simplifiedMode}
                 onCheckedChange={handleSimplifiedModeToggle}
-                className="data-[state=checked]:bg-gradient-to-r data-[state=checked]:from-green-500 data-[state=checked]:to-red-500"
+                className="data-[state=checked]:bg-gradient-to-r data-[state=checked]:from-gray-500 data-[state=checked]:to-gray-600"
               />
+            </div>
+
+            <Separator />
+
+            {/* Share Settings */}
+            <div className="space-y-3">
+              <div className="flex items-center gap-2">
+                <Share2 className="h-4 w-4 text-blue-600 dark:text-blue-400" />
+                <Label className="text-sm font-medium">{t('settings.share')}</Label>
+              </div>
+              
+              <div className="space-y-2">
+                <Label className="text-xs text-gray-600 dark:text-gray-400">{t('settings.shareDescription')}</Label>
+                
+                <div className="bg-gray-50 dark:bg-gray-800/50 border border-gray-200 dark:border-gray-600 rounded-lg p-3 space-y-2">
+                  <div className="flex items-center gap-2">
+                    <Input
+                      value={shareUrl}
+                      readOnly
+                      className="flex-1 text-xs bg-white dark:bg-gray-700 border-gray-200 dark:border-gray-600"
+                    />
+                    <Button
+                      onClick={copyShareUrl}
+                      size="sm"
+                      className="bg-gradient-to-r from-blue-600 to-blue-700 hover:from-blue-700 hover:to-blue-800 text-white px-3"
+                    >
+                      <Copy className="h-3 w-3 mr-1" />
+                      {t('settings.copyLink')}
+                    </Button>
+                  </div>
+                  
+                  <div className="flex gap-2">
+                    <Button
+                      onClick={generateQRCode}
+                      disabled={isGeneratingQR}
+                      size="sm"
+                      variant="outline"
+                      className="flex-1 text-xs"
+                    >
+                      <QrCode className="h-3 w-3 mr-1" />
+                      {isGeneratingQR ? "Generating..." : t('settings.generateQR')}
+                    </Button>
+                  </div>
+                  
+                  {showQR && qrDataUrl && (
+                    <div className="bg-white dark:bg-gray-700 rounded-lg p-3 text-center space-y-2">
+                      <p className="text-xs text-gray-600 dark:text-gray-400">{t('settings.qrCodeDescription')}</p>
+                      <img 
+                        src={qrDataUrl} 
+                        alt="QR Code" 
+                        className="mx-auto border border-gray-200 dark:border-gray-600 rounded"
+                      />
+                      <Button
+                        onClick={downloadQRCode}
+                        size="sm"
+                        variant="outline"
+                        className="text-xs"
+                      >
+                        <Download className="h-3 w-3 mr-1" />
+                        {t('settings.downloadQR')}
+                      </Button>
+                    </div>
+                  )}
+                  
+                  <div className="bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-700 rounded p-2">
+                    <p className="text-xs text-blue-800 dark:text-blue-200">
+                      ℹ️ {t('settings.readOnlyDescription')}
+                    </p>
+                  </div>
+                </div>
+              </div>
             </div>
 
             <Separator />

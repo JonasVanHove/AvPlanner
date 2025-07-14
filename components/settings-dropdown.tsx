@@ -12,7 +12,8 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
-import { Settings, Download, Moon, Sun, Globe, Bell, ChevronDown, Monitor } from "lucide-react"
+import { Input } from "@/components/ui/input"
+import { Settings, Download, Moon, Sun, Globe, Bell, ChevronDown, Monitor, Share2, Copy, QrCode, Eye, EyeOff } from "lucide-react"
 import { ExportDialog } from "./export-dialog"
 import { useTheme } from "next-themes"
 import { useTranslation, type Locale } from "@/lib/i18n"
@@ -35,6 +36,11 @@ export function SettingsDropdown({ currentLocale, members }: SettingsDropdownPro
   const [notificationDialogOpen, setNotificationDialogOpen] = useState(false)
   const [notifications, setNotifications] = useState(true)
   const [simplifiedMode, setSimplifiedMode] = useState(false)
+  const [shareUrl, setShareUrl] = useState("")
+  const [showQR, setShowQR] = useState(false)
+  const [qrDataUrl, setQrDataUrl] = useState("")
+  const [isGeneratingQR, setIsGeneratingQR] = useState(false)
+  const [testNotificationMessage, setTestNotificationMessage] = useState("")
   const { theme, setTheme } = useTheme()
   const { t } = useTranslation(currentLocale)
 
@@ -44,6 +50,11 @@ export function SettingsDropdown({ currentLocale, members }: SettingsDropdownPro
     const savedSimplifiedMode = localStorage.getItem("simplifiedMode") === "true"
     setNotifications(savedNotifications)
     setSimplifiedMode(savedSimplifiedMode)
+    
+    // Generate share URL
+    const currentUrl = window.location.href
+    const baseUrl = currentUrl.split('?')[0]
+    setShareUrl(`${baseUrl}?view=readonly`)
   }, [])
 
   const handleNotificationsToggle = (enabled: boolean) => {
@@ -90,22 +101,21 @@ export function SettingsDropdown({ currentLocale, members }: SettingsDropdownPro
         return
       }
 
+      const message = testNotificationMessage.trim() || 
+        (currentLocale === "en" ? "Test notification from AvPlanner!" :
+         currentLocale === "nl" ? "Test notificatie van AvPlanner!" :
+         "Notification de test d'AvPlanner!")
+
       if (Notification.permission === "granted") {
         new Notification("Availability Planner", {
-          body: currentLocale === "en" ? "Notifications are enabled for AvPlanner!" :
-                currentLocale === "nl" ? "Notificaties zijn ingeschakeld voor AvPlanner!" :
-                "Les notifications sont activées pour AvPlanner!",
+          body: message,
           icon: "/placeholder-logo.png",
         })
       } else if (Notification.permission !== "denied") {
         const permission = await Notification.requestPermission()
         if (permission === "granted") {
-          new Notification(currentLocale === "en" ? "Notifications enabled" :
-                          currentLocale === "nl" ? "Notificaties ingeschakeld" :
-                          "Notifications activées", {
-            body: currentLocale === "en" ? "You will now receive notifications from AvPlanner!" :
-                  currentLocale === "nl" ? "Je ontvangt nu notificaties van AvPlanner!" :
-                  "Vous recevrez maintenant des notifications d'AvPlanner!",
+          new Notification("Availability Planner", {
+            body: message,
             icon: "/placeholder-logo.png",
           })
         } else {
@@ -124,6 +134,53 @@ export function SettingsDropdown({ currentLocale, members }: SettingsDropdownPro
             currentLocale === "nl" ? "Er is een fout opgetreden bij het instellen van notificaties." :
             "Une erreur s'est produite lors de la configuration des notifications.")
     }
+  }
+
+  const copyToClipboard = async (text: string) => {
+    try {
+      await navigator.clipboard.writeText(text)
+      alert(currentLocale === "en" ? "Link copied to clipboard!" :
+            currentLocale === "nl" ? "Link gekopieerd naar klembord!" :
+            "Lien copié dans le presse-papiers!")
+    } catch (error) {
+      console.error("Failed to copy:", error)
+      alert(currentLocale === "en" ? "Failed to copy link" :
+            currentLocale === "nl" ? "Kopiëren mislukt" :
+            "Échec de la copie du lien")
+    }
+  }
+
+  const generateQR = async () => {
+    setIsGeneratingQR(true)
+    try {
+      const QRCode = (await import("qrcode")).default
+      const qrDataUrl = await QRCode.toDataURL(shareUrl, {
+        width: 256,
+        margin: 1,
+        color: {
+          dark: "#000000",
+          light: "#FFFFFF"
+        }
+      })
+      setQrDataUrl(qrDataUrl)
+      setShowQR(true)
+    } catch (error) {
+      console.error("Error generating QR code:", error)
+      alert(currentLocale === "en" ? "Failed to generate QR code" :
+            currentLocale === "nl" ? "QR-code genereren mislukt" :
+            "Échec de la génération du code QR")
+    } finally {
+      setIsGeneratingQR(false)
+    }
+  }
+
+  const downloadQR = () => {
+    if (!qrDataUrl) return
+    
+    const link = document.createElement("a")
+    link.download = "availability-planner-qr.png"
+    link.href = qrDataUrl
+    link.click()
   }
 
   return (
@@ -149,6 +206,83 @@ export function SettingsDropdown({ currentLocale, members }: SettingsDropdownPro
             <Download className="mr-2 h-4 w-4" />
             <span>{t("settings.export")}</span>
           </DropdownMenuItem>
+
+          <DropdownMenuSeparator className="bg-gray-200 dark:bg-gray-600" />
+
+          {/* Share Section */}
+          <div className="px-2 py-2">
+            <div className="flex items-center mb-2">
+              <Share2 className="mr-2 h-4 w-4" />
+              <Label className="text-sm font-medium">
+                {currentLocale === "en" ? "Share" : currentLocale === "nl" ? "Delen" : "Partager"}
+              </Label>
+            </div>
+            
+            {/* Share URL input */}
+            <div className="flex items-center gap-2 mb-2">
+              <Input
+                value={shareUrl}
+                readOnly
+                className="flex-1 h-8 text-xs bg-gray-50 dark:bg-gray-700 border-gray-200 dark:border-gray-600"
+                placeholder={currentLocale === "en" ? "Share URL" : currentLocale === "nl" ? "Deel URL" : "URL de partage"}
+              />
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => copyToClipboard(shareUrl)}
+                className="h-8 w-8 p-0 border-gray-200 dark:border-gray-600"
+              >
+                <Copy className="h-3 w-3" />
+              </Button>
+            </div>
+
+            {/* QR Code buttons */}
+            <div className="flex gap-2">
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={generateQR}
+                disabled={isGeneratingQR}
+                className="flex-1 h-8 text-xs border-gray-200 dark:border-gray-600"
+              >
+                <QrCode className="mr-1 h-3 w-3" />
+                {isGeneratingQR ? 
+                  (currentLocale === "en" ? "Generating..." : currentLocale === "nl" ? "Genereren..." : "Génération...") :
+                  (currentLocale === "en" ? "QR Code" : currentLocale === "nl" ? "QR-code" : "Code QR")
+                }
+              </Button>
+              
+              {qrDataUrl && (
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={downloadQR}
+                  className="h-8 w-8 p-0 border-gray-200 dark:border-gray-600"
+                >
+                  <Download className="h-3 w-3" />
+                </Button>
+              )}
+            </div>
+
+            {/* QR Code display */}
+            {showQR && qrDataUrl && (
+              <div className="mt-3 flex flex-col items-center">
+                <img 
+                  src={qrDataUrl} 
+                  alt="QR Code" 
+                  className="w-32 h-32 border border-gray-200 dark:border-gray-600 rounded"
+                />
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  onClick={() => setShowQR(false)}
+                  className="mt-2 h-6 text-xs text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200"
+                >
+                  {currentLocale === "en" ? "Hide" : currentLocale === "nl" ? "Verbergen" : "Masquer"}
+                </Button>
+              </div>
+            )}
+          </div>
 
           <DropdownMenuSeparator className="bg-gray-200 dark:bg-gray-600" />
 
@@ -225,9 +359,9 @@ export function SettingsDropdown({ currentLocale, members }: SettingsDropdownPro
 
           <DropdownMenuSeparator className="bg-gray-200 dark:bg-gray-600" />
 
-          {/* Notifications Toggle */}
+          {/* Notifications Section */}
           <div className="px-2 py-2">
-            <div className="flex items-center justify-between">
+            <div className="flex items-center justify-between mb-2">
               <div className="flex items-center">
                 <Bell className="mr-2 h-4 w-4" />
                 <Label className="text-sm font-medium">{t("settings.notifications")}</Label>
@@ -238,13 +372,46 @@ export function SettingsDropdown({ currentLocale, members }: SettingsDropdownPro
                 className="h-4 w-7"
               />
             </div>
+            
+            {/* Test notification section (only visible when notifications are enabled) */}
+            {notifications && (
+              <div className="mt-3 space-y-2">
+                <div className="flex items-center gap-2">
+                  <Input
+                    value={testNotificationMessage}
+                    onChange={(e) => setTestNotificationMessage(e.target.value)}
+                    placeholder={currentLocale === "en" ? "Enter test message..." : 
+                                currentLocale === "nl" ? "Voer testbericht in..." : 
+                                "Entrez un message de test..."}
+                    className="flex-1 h-8 text-xs bg-gray-50 dark:bg-gray-700 border-gray-200 dark:border-gray-600"
+                  />
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={handleNotifications}
+                    className="h-8 text-xs border-gray-200 dark:border-gray-600"
+                  >
+                    {currentLocale === "en" ? "Test" : currentLocale === "nl" ? "Test" : "Test"}
+                  </Button>
+                </div>
+                <p className="text-xs text-gray-500 dark:text-gray-400">
+                  {currentLocale === "en" ? "Send a test notification to check if notifications work" :
+                   currentLocale === "nl" ? "Stuur een testnotificatie om te controleren of notificaties werken" :
+                   "Envoyez une notification de test pour vérifier si les notifications fonctionnent"}
+                </p>
+              </div>
+            )}
           </div>
 
           {/* Simplified Mode Toggle */}
           <div className="px-2 py-2">
             <div className="flex items-center justify-between">
               <div className="flex items-center">
-                <div className="mr-2 h-4 w-4 rounded-full bg-gradient-to-r from-green-500 to-red-500"></div>
+                {simplifiedMode ? (
+                  <EyeOff className="mr-2 h-4 w-4" />
+                ) : (
+                  <Eye className="mr-2 h-4 w-4" />
+                )}
                 <Label className="text-sm font-medium">{t("settings.simplifiedMode")}</Label>
               </div>
               <Switch
@@ -255,18 +422,6 @@ export function SettingsDropdown({ currentLocale, members }: SettingsDropdownPro
             </div>
           </div>
 
-          <DropdownMenuSeparator className="bg-gray-200 dark:bg-gray-600" />
-
-          {/* Test notification button (only visible when notifications are enabled) */}
-          {notifications && (
-            <DropdownMenuItem
-              onClick={handleNotifications}
-              className="cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-700"
-            >
-              <Bell className="mr-2 h-4 w-4" />
-              <span>Test Notification</span>
-            </DropdownMenuItem>
-          )}
         </DropdownMenuContent>
       </DropdownMenu>
 

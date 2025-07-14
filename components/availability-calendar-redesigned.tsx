@@ -1075,6 +1075,7 @@ const AvailabilityCalendarRedesigned = ({
             Developed with <span className="text-red-500">♥</span> by Jonas Van Hove
           </div>
         </div>
+
       </div>
     </TooltipProvider>
   )
