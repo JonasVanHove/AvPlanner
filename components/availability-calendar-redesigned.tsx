@@ -23,7 +23,7 @@ import { supabase } from "@/lib/supabase"
 import { useTranslation, type Locale } from "@/lib/i18n"
 import { cn } from "@/lib/utils"
 import { MemberForm } from "./member-form"
-import { BulkUpdateDialog, AnalyticsButton } from "./bulk-update-dialog"
+import { BulkUpdateDialog, AnalyticsButton, PlannerButton } from "./bulk-update-dialog"
 import { SettingsDropdown } from "./settings-dropdown"
 import { MemberAvatar } from "./member-avatar"
 
@@ -62,7 +62,30 @@ const AvailabilityCalendarRedesigned = ({
   const [weeksToShow, setWeeksToShow] = useState<1 | 2 | 4 | 8>(1)
   const [isLoading, setIsLoading] = useState(false)
   const [editMode, setEditMode] = useState(false)
+  const [simplifiedMode, setSimplifiedMode] = useState(false)
   const { t } = useTranslation(locale)
+
+  // Check for simplified mode preference
+  useEffect(() => {
+    const checkSimplifiedMode = () => {
+      const savedSimplifiedMode = localStorage.getItem("simplifiedMode") === "true"
+      setSimplifiedMode(savedSimplifiedMode)
+    }
+
+    // Check on mount
+    checkSimplifiedMode()
+
+    // Listen for simplified mode changes
+    const handleSimplifiedModeChange = (event: CustomEvent) => {
+      setSimplifiedMode(event.detail)
+    }
+
+    window.addEventListener('simplifiedModeChanged', handleSimplifiedModeChange as EventListener)
+
+    return () => {
+      window.removeEventListener('simplifiedModeChanged', handleSimplifiedModeChange as EventListener)
+    }
+  }, [])
 
   // Get localized day names
   const getDayNames = () => [
@@ -77,43 +100,109 @@ const AvailabilityCalendarRedesigned = ({
 
   const dutchMonthNames = ["JAN", "FEB", "MAR", "APR", "MEI", "JUN", "JUL", "AUG", "SEP", "OKT", "NOV", "DEC"]
 
-  const statusConfig = {
-    available: {
-      icon: "🟢",
-      color: "bg-green-50 border-green-200 dark:bg-green-900/20 dark:border-green-700/50",
-      label: t("status.available"),
-      textColor: "text-green-700 dark:text-green-300",
-    },
-    remote: {
-      icon: "🟣",
-      color: "bg-purple-50 border-purple-200 dark:bg-purple-900/20 dark:border-purple-700/50",
-      label: t("status.remote"),
-      textColor: "text-purple-700 dark:text-purple-300",
-    },
-    unavailable: {
-      icon: "🔴",
-      color: "bg-red-50 border-red-200 dark:bg-red-900/20 dark:border-red-700/50",
-      label: t("status.unavailable"),
-      textColor: "text-red-700 dark:text-red-300",
-    },
-    need_to_check: {
-      icon: "🔵",
-      color: "bg-blue-50 border-blue-200 dark:bg-blue-900/20 dark:border-blue-700/50",
-      label: t("status.need_to_check"),
-      textColor: "text-blue-700 dark:text-blue-300",
-    },
-    absent: {
-      icon: "⚫",
-      color: "bg-gray-50 border-gray-200 dark:bg-gray-800/50 dark:border-gray-600/50",
-      label: t("status.absent"),
-      textColor: "text-gray-700 dark:text-gray-300",
-    },
-    holiday: {
-      icon: "🟡",
-      color: "bg-yellow-50 border-yellow-200 dark:bg-yellow-900/20 dark:border-yellow-700/50",
-      label: t("status.holiday"),
-      textColor: "text-yellow-700 dark:text-yellow-300",
-    },
+  const getStatusConfig = (status: string) => {
+    if (simplifiedMode) {
+      // Simplified mode: only green and red
+      if (status === "available" || status === "remote") {
+        return {
+          icon: "🟢",
+          color: "bg-green-50 border-green-200 dark:bg-green-900/20 dark:border-green-700/50",
+          label: t("status.available"),
+          textColor: "text-green-700 dark:text-green-300",
+        }
+      } else {
+        return {
+          icon: "🔴",
+          color: "bg-red-50 border-red-200 dark:bg-red-900/20 dark:border-red-700/50",
+          label: t("status.unavailable"),
+          textColor: "text-red-700 dark:text-red-300",
+        }
+      }
+    } else {
+      // Full mode: all status types
+      const statusConfig = {
+        available: {
+          icon: "🟢",
+          color: "bg-green-50 border-green-200 dark:bg-green-900/20 dark:border-green-700/50",
+          label: t("status.available"),
+          textColor: "text-green-700 dark:text-green-300",
+        },
+        remote: {
+          icon: "🟣",
+          color: "bg-purple-50 border-purple-200 dark:bg-purple-900/20 dark:border-purple-700/50",
+          label: t("status.remote"),
+          textColor: "text-purple-700 dark:text-purple-300",
+        },
+        unavailable: {
+          icon: "🔴",
+          color: "bg-red-50 border-red-200 dark:bg-red-900/20 dark:border-red-700/50",
+          label: t("status.unavailable"),
+          textColor: "text-red-700 dark:text-red-300",
+        },
+        need_to_check: {
+          icon: "🔵",
+          color: "bg-blue-50 border-blue-200 dark:bg-blue-900/20 dark:border-blue-700/50",
+          label: t("status.need_to_check"),
+          textColor: "text-blue-700 dark:text-blue-300",
+        },
+        absent: {
+          icon: "⚫",
+          color: "bg-gray-50 border-gray-200 dark:bg-gray-900/20 dark:border-gray-700/50",
+          label: t("status.absent"),
+          textColor: "text-gray-700 dark:text-gray-300",
+        },
+        holiday: {
+          icon: "🟡",
+          color: "bg-yellow-50 border-yellow-200 dark:bg-yellow-900/20 dark:border-yellow-700/50",
+          label: t("status.holiday"),
+          textColor: "text-yellow-700 dark:text-yellow-300",
+        },
+      }
+      return statusConfig[status as keyof typeof statusConfig] || statusConfig.need_to_check
+    }
+  }
+
+  // For dropdowns, always show real status icons and labels
+  const getRealStatusConfig = (status: string) => {
+    const statusConfig = {
+      available: {
+        icon: "🟢",
+        color: "bg-green-50 border-green-200 dark:bg-green-900/20 dark:border-green-700/50",
+        label: t("status.available"),
+        textColor: "text-green-700 dark:text-green-300",
+      },
+      remote: {
+        icon: "🟣",
+        color: "bg-purple-50 border-purple-200 dark:bg-purple-900/20 dark:border-purple-700/50",
+        label: t("status.remote"),
+        textColor: "text-purple-700 dark:text-purple-300",
+      },
+      unavailable: {
+        icon: "🔴",
+        color: "bg-red-50 border-red-200 dark:bg-red-900/20 dark:border-red-700/50",
+        label: t("status.unavailable"),
+        textColor: "text-red-700 dark:text-red-300",
+      },
+      need_to_check: {
+        icon: "🔵",
+        color: "bg-blue-50 border-blue-200 dark:bg-blue-900/20 dark:border-blue-700/50",
+        label: t("status.need_to_check"),
+        textColor: "text-blue-700 dark:text-blue-300",
+      },
+      absent: {
+        icon: "⚫",
+        color: "bg-gray-50 border-gray-200 dark:bg-gray-900/20 dark:border-gray-700/50",
+        label: t("status.absent"),
+        textColor: "text-gray-700 dark:text-gray-300",
+      },
+      holiday: {
+        icon: "🟡",
+        color: "bg-yellow-50 border-yellow-200 dark:bg-yellow-900/20 dark:border-yellow-700/50",
+        label: t("status.holiday"),
+        textColor: "text-yellow-700 dark:text-yellow-300",
+      },
+    }
+    return statusConfig[status as keyof typeof statusConfig] || statusConfig.need_to_check
   }
 
   // Helper function to get ISO week number
@@ -394,17 +483,17 @@ const AvailabilityCalendarRedesigned = ({
     const nameColumnWidth = getMaxNameWidth()
 
     return (
-      <div className="space-y-6">
+      <div className="space-y-4 sm:space-y-6">
         {weeks.map((week, weekIndex) => (
           <div
             key={weekIndex}
             className="bg-white dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700 overflow-hidden shadow-sm"
           >
             {/* Week Header - More subtle */}
-            <div className="bg-gray-50 dark:bg-gray-700/50 p-4 border-b border-gray-200 dark:border-gray-600">
-              <div className="flex items-center justify-between">
+            <div className="bg-gray-50 dark:bg-gray-700/50 p-3 sm:p-4 border-b border-gray-200 dark:border-gray-600">
+              <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-2">
                 <div className="flex items-center gap-4">
-                  <h3 className="text-lg font-semibold text-gray-900 dark:text-white">Week {week.weekNumber}</h3>
+                  <h3 className="text-base sm:text-lg font-semibold text-gray-900 dark:text-white">Week {week.weekNumber}</h3>
                   
                   {/* Availability Score Dropdown */}
                   <DropdownMenu>
@@ -697,7 +786,7 @@ const AvailabilityCalendarRedesigned = ({
                                   editMode && "hover:shadow-sm",
                                   !editMode && "cursor-default",
                                   availability
-                                    ? statusConfig[availability.status].color
+                                    ? getStatusConfig(availability.status).color
                                     : "bg-gray-50 dark:bg-gray-700 border-gray-200 dark:border-gray-600",
                                   editMode && !availability && "hover:bg-gray-100 dark:hover:bg-gray-600",
                                 )}
@@ -717,7 +806,7 @@ const AvailabilityCalendarRedesigned = ({
                                   updateAvailability(member.id, date.toISOString().split("T")[0], nextStatus)
                                 }}
                               >
-                                {availability ? statusConfig[availability.status].icon : ""}
+                                {availability ? getStatusConfig(availability.status).icon : ""}
                               </button>
                               <DropdownMenu>
                                 <DropdownMenuTrigger asChild>
@@ -739,7 +828,9 @@ const AvailabilityCalendarRedesigned = ({
                                   align="end"
                                   className="bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700"
                                 >
-                                  {Object.entries(statusConfig).map(([status, config]) => (
+                                  {["available", "remote", "unavailable", "need_to_check", "absent", "holiday"].map((status) => {
+                                    const config = getRealStatusConfig(status) // Use real config for dropdown
+                                    return (
                                     <DropdownMenuItem
                                       key={status}
                                       onClick={() => {
@@ -760,9 +851,9 @@ const AvailabilityCalendarRedesigned = ({
                                       <div className="flex items-center gap-3">
                                         <span className="text-lg">{config.icon}</span>
                                         <span className="font-medium">{config.label}</span>
-                                      </div>
-                                    </DropdownMenuItem>
-                                  ))}
+                                      </div>                                      </DropdownMenuItem>
+                                    )
+                                  })}
                                 </DropdownMenuContent>
                               </DropdownMenu>
                             </div>
@@ -785,106 +876,119 @@ const AvailabilityCalendarRedesigned = ({
       <div className="min-h-screen bg-gray-50 dark:bg-gray-900">
         {/* Header - More subtle */}
         <div className="bg-white dark:bg-gray-800 border-b border-gray-200 dark:border-gray-700">
-          <div className="px-6 py-6">
-            <div className="flex items-center justify-between flex-wrap gap-4">
+          <div className="px-4 sm:px-6 py-4 sm:py-6">
+            <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
               <div className="flex items-center gap-4">
-                <div className="w-12 h-12 rounded-lg flex items-center justify-center shadow-sm">
-                  <img src="/favicon.svg" alt="Availability Planner" className="h-10 w-10" />
+                <div className="w-10 h-10 sm:w-12 sm:h-12 rounded-lg flex items-center justify-center shadow-sm">
+                  <img src="/favicon.svg" alt="Availability Planner" className="h-8 w-8 sm:h-10 sm:w-10" />
                 </div>
-                <div>
-                  <h1 className="text-2xl font-bold text-gray-900 dark:text-white">Availability Planner</h1>
-                  <div className="flex items-center gap-3">
-                    <p className="text-lg font-medium text-gray-700 dark:text-gray-300">{teamName}</p>
-                    <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-200">
+                <div className="min-w-0 flex-1">
+                  <h1 className="text-xl sm:text-2xl font-bold text-gray-900 dark:text-white truncate">Availability Planner</h1>
+                  <div className="flex items-center gap-3 flex-wrap">
+                    <p className="text-base sm:text-lg font-medium text-gray-700 dark:text-gray-300 truncate">{teamName}</p>
+                    <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-200 flex-shrink-0">
                       {members.length} {members.length === 1 ? 'member' : 'members'}
                     </span>
                   </div>
                 </div>
               </div>
 
-              <div className="flex items-center gap-4 flex-wrap">
-                <div className="flex bg-gray-100 dark:bg-gray-700 rounded-lg p-1">
+              <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-4 w-full sm:w-auto">
+                <div className="flex bg-gray-100 dark:bg-gray-700 rounded-lg p-1 flex-wrap sm:flex-nowrap">
                   <Button
                     variant={weeksToShow === 1 ? "default" : "ghost"}
                     size="sm"
                     onClick={() => setWeeksToShow(1)}
                     className={cn(
-                      "text-xs px-3 py-2 rounded-md font-medium",
+                      "text-xs px-2 sm:px-3 py-2 rounded-md font-medium flex-1 sm:flex-none",
                       weeksToShow === 1
                         ? "bg-blue-600 text-white shadow-sm"
                         : "hover:bg-gray-200 dark:hover:bg-gray-600",
                     )}
                   >
-                    {t("calendar.1week")}
+                    <span className="truncate">{t("calendar.1week")}</span>
                   </Button>
                   <Button
                     variant={weeksToShow === 2 ? "default" : "ghost"}
                     size="sm"
                     onClick={() => setWeeksToShow(2)}
                     className={cn(
-                      "text-xs px-3 py-2 rounded-md font-medium",
+                      "text-xs px-2 sm:px-3 py-2 rounded-md font-medium flex-1 sm:flex-none",
                       weeksToShow === 2
                         ? "bg-blue-600 text-white shadow-sm"
                         : "hover:bg-gray-200 dark:hover:bg-gray-600",
                     )}
                   >
-                    {t("calendar.2weeks")}
+                    <span className="truncate">{t("calendar.2weeks")}</span>
                   </Button>
                   <Button
                     variant={weeksToShow === 4 ? "default" : "ghost"}
                     size="sm"
                     onClick={() => setWeeksToShow(4)}
                     className={cn(
-                      "text-xs px-3 py-2 rounded-md font-medium",
+                      "text-xs px-2 sm:px-3 py-2 rounded-md font-medium flex-1 sm:flex-none",
                       weeksToShow === 4
                         ? "bg-blue-600 text-white shadow-sm"
                         : "hover:bg-gray-200 dark:hover:bg-gray-600",
                     )}
                   >
-                    {t("calendar.4weeks")}
+                    <span className="truncate">{t("calendar.4weeks")}</span>
                   </Button>
                   <Button
                     variant={weeksToShow === 8 ? "default" : "ghost"}
                     size="sm"
                     onClick={() => setWeeksToShow(8)}
                     className={cn(
-                      "text-xs px-3 py-2 rounded-md font-medium",
+                      "text-xs px-2 sm:px-3 py-2 rounded-md font-medium flex-1 sm:flex-none",
                       weeksToShow === 8
                         ? "bg-blue-600 text-white shadow-sm"
                         : "hover:bg-gray-200 dark:hover:bg-gray-600",
                     )}
                   >
-                    {t("calendar.8weeks")}
+                    <span className="truncate">{t("calendar.8weeks")}</span>
                   </Button>
                 </div>
 
-                {/* Analytics Button - Always visible */}
-                <AnalyticsButton members={members} locale={locale} />
+                {/* Analytics and Planner Buttons - Always visible */}
+                <div className="flex flex-col sm:flex-row gap-2 w-full sm:w-auto">
+                  <AnalyticsButton 
+                    members={members} 
+                    locale={locale} 
+                    weeksToShow={weeksToShow}
+                    currentDate={currentDate}
+                  />
+                  <PlannerButton 
+                    members={members} 
+                    locale={locale} 
+                  />
+                </div>
 
                 {editMode && (
-                  <>
+                  <div className="flex flex-col sm:flex-row gap-2 w-full sm:w-auto">
                     <BulkUpdateDialog members={members} locale={locale} onUpdate={fetchAvailability} />
                     <MemberForm teamId={teamId} locale={locale} onMemberAdded={onMembersUpdate} />
-                  </>
+                  </div>
                 )}
 
                 {/* Edit Mode Toggle - More subtle */}
-                <div className="flex items-center gap-3 bg-white dark:bg-gray-800 rounded-lg p-3 border border-gray-200 dark:border-gray-700">
+                <div className="flex items-center gap-3 bg-white dark:bg-gray-800 rounded-lg p-3 border border-gray-200 dark:border-gray-700 w-full sm:w-auto">
                   <div
                     className={cn(
-                      "flex items-center gap-2 px-3 py-1.5 rounded-md",
+                      "flex items-center gap-2 px-3 py-1.5 rounded-md flex-1 sm:flex-none",
                       editMode
                         ? "bg-orange-50 dark:bg-orange-900/20 text-orange-700 dark:text-orange-300"
                         : "bg-green-50 dark:bg-green-900/20 text-green-700 dark:text-green-300",
                     )}
                   >
-                    {editMode ? <Edit3 className="h-4 w-4" /> : <Lock className="h-4 w-4" />}
+                    {editMode ? <Edit3 className="h-4 w-4 flex-shrink-0" /> : <Lock className="h-4 w-4 flex-shrink-0" />}
                     <span className="text-sm font-medium">{editMode ? "Edit Mode" : "View Mode"}</span>
                   </div>
                   <Switch checked={editMode} onCheckedChange={setEditMode} />
                 </div>
 
-                <SettingsDropdown currentLocale={locale} members={members} />
+                <div className="w-full sm:w-auto">
+                  <SettingsDropdown currentLocale={locale} members={members} />
+                </div>
               </div>
             </div>
           </div>
@@ -892,14 +996,14 @@ const AvailabilityCalendarRedesigned = ({
 
         {/* Date Navigation - More subtle */}
         <div className="bg-white dark:bg-gray-800 border-b border-gray-200 dark:border-gray-700">
-          <div className="px-6 py-4">
-            <div className="flex items-center justify-between flex-wrap gap-4">
+          <div className="px-4 sm:px-6 py-4">
+            <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
               <div className="flex items-center gap-4 flex-wrap">
                 <div className="flex items-center gap-3">
-                  <div className="w-8 h-8 bg-blue-500 rounded-md flex items-center justify-center">
+                  <div className="w-8 h-8 bg-blue-500 rounded-md flex items-center justify-center flex-shrink-0">
                     <Calendar className="h-4 w-4 text-white" />
                   </div>
-                  <span className="font-semibold text-lg text-gray-900 dark:text-white">{formatDateRange()}</span>
+                  <span className="font-semibold text-base sm:text-lg text-gray-900 dark:text-white">{formatDateRange()}</span>
                   <Button
                     variant="outline"
                     size="sm"
@@ -911,7 +1015,7 @@ const AvailabilityCalendarRedesigned = ({
                 </div>
               </div>
 
-              <div className="flex items-center gap-2">
+              <div className="flex items-center gap-2 w-full sm:w-auto justify-end">
                 <Button variant="outline" size="sm" onClick={() => navigateDate("prev")} className="rounded-md">
                   <ChevronLeft className="h-4 w-4" />
                 </Button>
@@ -924,7 +1028,7 @@ const AvailabilityCalendarRedesigned = ({
         </div>
 
         {/* Calendar Grid */}
-        <div className="p-6">
+        <div className="p-4 sm:p-6">
           {isLoading ? (
             <div className="text-center py-12">
               <div className="inline-flex items-center gap-3 bg-white dark:bg-gray-800 rounded-lg px-6 py-4 shadow-sm border border-gray-200 dark:border-gray-700">
@@ -938,19 +1042,39 @@ const AvailabilityCalendarRedesigned = ({
         </div>
 
         {/* Status Legend */}
-        <div className="text-center py-4">
-          <div className="inline-flex items-center gap-4 text-xs text-gray-500 dark:text-gray-400">
-            {Object.entries(statusConfig).map(([status, config]) => (
-              <div key={status} className="flex items-center gap-1">
-                <span>{config.icon}</span>
-                <span>{config.label}</span>
-              </div>
-            ))}
+        <div className="text-center py-4 px-4 sm:px-6">
+          <div className="flex flex-wrap items-center justify-center gap-2 sm:gap-4 text-xs text-gray-500 dark:text-gray-400">
+            {simplifiedMode ? (
+              <>
+                {/* Simplified legend: only 2 options */}
+                <div className="flex items-center gap-1">
+                  <span>🟢</span>
+                  <span>{t("status.available")} ({t("analytics.includesRemote")})</span>
+                </div>
+                <div className="flex items-center gap-1">
+                  <span>🔴</span>
+                  <span>{t("analytics.notAvailable")}</span>
+                </div>
+              </>
+            ) : (
+              <>
+                {/* Full legend: all status options */}
+                {["available", "remote", "unavailable", "need_to_check", "absent", "holiday"].map((status) => {
+                  const config = getStatusConfig(status)
+                  return (
+                  <div key={status} className="flex items-center gap-1">
+                    <span>{config.icon}</span>
+                    <span>{config.label}</span>
+                  </div>
+                )
+                })}
+              </>
+            )}
           </div>
         </div>
 
         {/* Footer */}
-        <div className="text-center py-4 border-t border-gray-200 dark:border-gray-700">
+        <div className="text-center py-4 px-4 sm:px-6 border-t border-gray-200 dark:border-gray-700">
           <div className="text-sm text-gray-600 dark:text-gray-400">
             Developed with <span className="text-red-500">♥</span> by Jonas Van Hove
           </div>

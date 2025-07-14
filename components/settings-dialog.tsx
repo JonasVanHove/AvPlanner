@@ -35,6 +35,7 @@ interface SettingsDialogProps {
 export function SettingsDialog({ currentLocale, members = [], isOpen, onOpenChange }: SettingsDialogProps) {
   const [darkMode, setDarkMode] = useState(false)
   const [notifications, setNotifications] = useState(true)
+  const [simplifiedMode, setSimplifiedMode] = useState(false)
   const [notificationMessage, setNotificationMessage] = useState("")
   const [isExporting, setIsExporting] = useState(false)
   const [isSendingNotification, setIsSendingNotification] = useState(false)
@@ -60,6 +61,10 @@ export function SettingsDialog({ currentLocale, members = [], isOpen, onOpenChan
     // Check for saved notifications preference
     const savedNotifications = localStorage.getItem("notifications") !== "false"
     setNotifications(savedNotifications)
+
+    // Check for saved simplified mode preference
+    const savedSimplifiedMode = localStorage.getItem("simplifiedMode") === "true"
+    setSimplifiedMode(savedSimplifiedMode)
 
     // Set default date range (current month)
     const now = new Date()
@@ -89,6 +94,14 @@ export function SettingsDialog({ currentLocale, members = [], isOpen, onOpenChan
   const handleNotificationsToggle = (enabled: boolean) => {
     setNotifications(enabled)
     localStorage.setItem("notifications", enabled.toString())
+  }
+
+  const handleSimplifiedModeToggle = (enabled: boolean) => {
+    setSimplifiedMode(enabled)
+    localStorage.setItem("simplifiedMode", enabled.toString())
+    
+    // Dispatch a custom event to notify other components
+    window.dispatchEvent(new CustomEvent('simplifiedModeChanged', { detail: enabled }))
   }
 
   const sendNotification = async () => {
@@ -268,24 +281,44 @@ export function SettingsDialog({ currentLocale, members = [], isOpen, onOpenChan
             </div>
 
             {/* Send Notification */}
-            <div className="space-y-2">
-              <Label className="text-sm font-medium">Send Manual Notification</Label>
-              <Textarea
-                placeholder="Enter your notification message..."
-                value={notificationMessage}
-                onChange={(e) => setNotificationMessage(e.target.value)}
-                className="bg-white/50 dark:bg-gray-800/50 border-gray-200/50 dark:border-gray-600/50 resize-none"
-                rows={2}
+            {notifications && (
+              <div className="space-y-2">
+                <Label className="text-sm font-medium">Send Manual Notification</Label>
+                <Textarea
+                  placeholder="Enter your notification message..."
+                  value={notificationMessage}
+                  onChange={(e) => setNotificationMessage(e.target.value)}
+                  className="bg-white/50 dark:bg-gray-800/50 border-gray-200/50 dark:border-gray-600/50 resize-none"
+                  rows={2}
+                />
+                <Button
+                  onClick={sendNotification}
+                  disabled={!notificationMessage.trim() || isSendingNotification}
+                  size="sm"
+                  className="w-full bg-gradient-to-r from-green-600 to-blue-600 hover:from-green-700 hover:to-blue-700 text-white"
+                >
+                  <Send className="h-4 w-4 mr-2" />
+                  {isSendingNotification ? "Sending..." : "Send Notification"}
+                </Button>
+              </div>
+            )}
+
+            <Separator />
+
+            {/* View Mode Settings */}
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-2">
+                <div className="h-4 w-4 rounded-full bg-gradient-to-r from-green-500 to-red-500"></div>
+                <div className="space-y-1">
+                  <Label className="text-sm font-medium">{t('settings.simplifiedMode')}</Label>
+                  <p className="text-xs text-gray-600 dark:text-gray-400">{t('settings.simplifiedModeDescription')}</p>
+                </div>
+              </div>
+              <Switch
+                checked={simplifiedMode}
+                onCheckedChange={handleSimplifiedModeToggle}
+                className="data-[state=checked]:bg-gradient-to-r data-[state=checked]:from-green-500 data-[state=checked]:to-red-500"
               />
-              <Button
-                onClick={sendNotification}
-                disabled={!notificationMessage.trim() || isSendingNotification}
-                size="sm"
-                className="w-full bg-gradient-to-r from-green-600 to-blue-600 hover:from-green-700 hover:to-blue-700 text-white"
-              >
-                <Send className="h-4 w-4 mr-2" />
-                {isSendingNotification ? "Sending..." : "Send Notification"}
-              </Button>
             </div>
 
             <Separator />

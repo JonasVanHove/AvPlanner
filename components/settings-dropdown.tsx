@@ -1,8 +1,9 @@
 "use client"
 
-import { useState } from "react"
+import { useState, useEffect } from "react"
 import { Button } from "@/components/ui/button"
 import { Label } from "@/components/ui/label"
+import { Switch } from "@/components/ui/switch"
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -32,8 +33,31 @@ interface SettingsDropdownProps {
 export function SettingsDropdown({ currentLocale, members }: SettingsDropdownProps) {
   const [exportDialogOpen, setExportDialogOpen] = useState(false)
   const [notificationDialogOpen, setNotificationDialogOpen] = useState(false)
+  const [notifications, setNotifications] = useState(true)
+  const [simplifiedMode, setSimplifiedMode] = useState(false)
   const { theme, setTheme } = useTheme()
   const { t } = useTranslation(currentLocale)
+
+  // Load preferences on mount
+  useEffect(() => {
+    const savedNotifications = localStorage.getItem("notifications") !== "false"
+    const savedSimplifiedMode = localStorage.getItem("simplifiedMode") === "true"
+    setNotifications(savedNotifications)
+    setSimplifiedMode(savedSimplifiedMode)
+  }, [])
+
+  const handleNotificationsToggle = (enabled: boolean) => {
+    setNotifications(enabled)
+    localStorage.setItem("notifications", enabled.toString())
+  }
+
+  const handleSimplifiedModeToggle = (enabled: boolean) => {
+    setSimplifiedMode(enabled)
+    localStorage.setItem("simplifiedMode", enabled.toString())
+    
+    // Dispatch event to notify other components
+    window.dispatchEvent(new CustomEvent('simplifiedModeChanged', { detail: enabled }))
+  }
 
   const handleLanguageChange = (locale: Locale) => {
     try {
@@ -56,6 +80,8 @@ export function SettingsDropdown({ currentLocale, members }: SettingsDropdownPro
   }
 
   const handleNotifications = async () => {
+    if (!notifications) return // Only show notifications if toggle is enabled
+    
     try {
       if (!("Notification" in window)) {
         alert(currentLocale === "en" ? "This browser doesn't support notifications." : 
@@ -199,13 +225,48 @@ export function SettingsDropdown({ currentLocale, members }: SettingsDropdownPro
 
           <DropdownMenuSeparator className="bg-gray-200 dark:bg-gray-600" />
 
-          <DropdownMenuItem
-            onClick={handleNotifications}
-            className="cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-700"
-          >
-            <Bell className="mr-2 h-4 w-4" />
-            <span>{t("settings.notifications")}</span>
-          </DropdownMenuItem>
+          {/* Notifications Toggle */}
+          <div className="px-2 py-2">
+            <div className="flex items-center justify-between">
+              <div className="flex items-center">
+                <Bell className="mr-2 h-4 w-4" />
+                <Label className="text-sm font-medium">{t("settings.notifications")}</Label>
+              </div>
+              <Switch
+                checked={notifications}
+                onCheckedChange={handleNotificationsToggle}
+                className="h-4 w-7"
+              />
+            </div>
+          </div>
+
+          {/* Simplified Mode Toggle */}
+          <div className="px-2 py-2">
+            <div className="flex items-center justify-between">
+              <div className="flex items-center">
+                <div className="mr-2 h-4 w-4 rounded-full bg-gradient-to-r from-green-500 to-red-500"></div>
+                <Label className="text-sm font-medium">{t("settings.simplifiedMode")}</Label>
+              </div>
+              <Switch
+                checked={simplifiedMode}
+                onCheckedChange={handleSimplifiedModeToggle}
+                className="h-4 w-7"
+              />
+            </div>
+          </div>
+
+          <DropdownMenuSeparator className="bg-gray-200 dark:bg-gray-600" />
+
+          {/* Test notification button (only visible when notifications are enabled) */}
+          {notifications && (
+            <DropdownMenuItem
+              onClick={handleNotifications}
+              className="cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-700"
+            >
+              <Bell className="mr-2 h-4 w-4" />
+              <span>Test Notification</span>
+            </DropdownMenuItem>
+          )}
         </DropdownMenuContent>
       </DropdownMenu>
 
