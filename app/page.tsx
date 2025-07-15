@@ -232,12 +232,12 @@ export default function HomePage() {
         <div className="max-w-4xl mx-auto text-center">
           <h3 className="text-3xl font-bold text-white mb-4">{t("landing.cta")}</h3>
           <p className="text-xl text-blue-100 mb-8">{t("landing.ctaDescription")}</p>
-          <button
+          {/* <button
             onClick={() => scrollToSection('create-team')}
             className="bg-white text-blue-600 px-8 py-4 rounded-lg font-semibold hover:bg-blue-50 transform hover:scale-105 transition-all duration-200 shadow-lg hover:shadow-xl"
           >
             Get Started
-          </button>
+          </button> */}
         </div>
       </section>
 
