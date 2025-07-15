@@ -1,9 +1,22 @@
+"use client"
+
 import { TeamForm } from "@/components/team-form"
+import { JoinTeamForm } from "@/components/join-team-form"
 import { LanguageSelector } from "@/components/language-selector"
 import { useTranslation } from "@/lib/i18n"
 
 export default function HomePage() {
   const { t } = useTranslation("en")
+
+  const scrollToSection = (sectionId: string) => {
+    const element = document.getElementById(sectionId)
+    if (element) {
+      element.scrollIntoView({
+        behavior: 'smooth',
+        block: 'start',
+      })
+    }
+  }
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-blue-50 via-indigo-50 to-purple-50">
@@ -12,11 +25,11 @@ export default function HomePage() {
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="flex justify-between items-center h-16">
             <div className="flex items-center gap-3">
-              <div className="h-8 w-8 bg-gradient-to-r from-blue-500 to-purple-600 rounded-lg flex items-center justify-center">
-                <svg className="h-5 w-5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
-                </svg>
-              </div>
+              <img 
+                src="/favicon.svg" 
+                alt="Availability Planner Logo" 
+                className="h-8 w-8"
+              />
               <h1 className="text-xl font-bold bg-gradient-to-r from-blue-600 to-purple-600 bg-clip-text text-transparent">
                 {t("landing.title")}
               </h1>
@@ -36,12 +49,18 @@ export default function HomePage() {
             {t("landing.description")}
           </p>
           <div className="flex flex-col sm:flex-row gap-4 justify-center items-center">
-            <a
-              href="#create-team"
+            <button
+              onClick={() => scrollToSection('create-team')}
               className="bg-gradient-to-r from-blue-600 to-purple-600 text-white px-8 py-4 rounded-lg font-semibold hover:from-blue-700 hover:to-purple-700 transform hover:scale-105 transition-all duration-200 shadow-lg hover:shadow-xl"
             >
-              {t("landing.getStarted")}
-            </a>
+              Create Team
+            </button>
+            <button
+              onClick={() => scrollToSection('join-team')}
+              className="bg-white text-blue-600 px-8 py-4 rounded-lg font-semibold hover:bg-blue-50 transform hover:scale-105 transition-all duration-200 shadow-lg hover:shadow-xl border-2 border-blue-600"
+            >
+              Join Team
+            </button>
           </div>
         </div>
       </section>
@@ -201,28 +220,84 @@ export default function HomePage() {
         <div className="max-w-4xl mx-auto text-center">
           <h3 className="text-3xl font-bold text-white mb-4">{t("landing.cta")}</h3>
           <p className="text-xl text-blue-100 mb-8">{t("landing.ctaDescription")}</p>
-          <a
-            href="#create-team"
+          <button
+            onClick={() => scrollToSection('create-team')}
             className="bg-white text-blue-600 px-8 py-4 rounded-lg font-semibold hover:bg-blue-50 transform hover:scale-105 transition-all duration-200 shadow-lg hover:shadow-xl"
           >
-            {t("landing.ctaButton")}
-          </a>
+            Get Started
+          </button>
         </div>
       </section>
 
-      {/* Team Creation Section */}
-      <section id="create-team" className="py-20 px-4 sm:px-6 lg:px-8 bg-white/60 backdrop-blur-sm">
-        <div className="max-w-4xl mx-auto">
-          <div className="text-center mb-12">
-            <h3 className="text-3xl font-bold text-gray-900 mb-4">{t("landing.createTeam")}</h3>
-            <p className="text-xl text-gray-600">{t("landing.getStarted")}</p>
-          </div>
-          
-          <div className="bg-white/80 backdrop-blur-sm rounded-2xl shadow-xl p-8 border border-white/20">
-            <TeamForm locale="en" />
+      {/* Team Management Section */}
+      <section className="py-20 px-4 sm:px-6 lg:px-8 bg-gradient-to-br from-blue-50 via-indigo-50 to-purple-50 relative overflow-hidden">
+        {/* Background decorative elements */}
+        <div className="absolute inset-0 bg-gradient-to-r from-blue-500/5 via-purple-500/5 to-pink-500/5"></div>
+        <div className="absolute top-0 left-0 w-72 h-72 bg-blue-500/10 rounded-full blur-3xl -translate-x-1/2 -translate-y-1/2"></div>
+        <div className="absolute bottom-0 right-0 w-72 h-72 bg-purple-500/10 rounded-full blur-3xl translate-x-1/2 translate-y-1/2"></div>
+        
+        <div className="h-12" />
+
+        <div className="max-w-7xl mx-auto relative z-10">
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-12">
+            {/* Create Team Section */}
+            <div id="create-team" className="relative bg-white/90 backdrop-blur-sm rounded-3xl shadow-2xl p-8 border border-white/30 hover:shadow-3xl transition-all duration-300 hover:scale-[1.02] group">
+              <div className="absolute inset-0 bg-gradient-to-r from-blue-500/5 to-purple-500/5 rounded-3xl opacity-0 group-hover:opacity-100 transition-opacity duration-300"></div>
+              <div className="relative z-10">
+                <div className="text-center mb-8">
+                  <div className="inline-flex items-center justify-center w-14 h-14 bg-gradient-to-r from-blue-500 to-blue-600 rounded-full mb-4 shadow-lg">
+                    <svg className="w-7 h-7 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 6v6m0 0v6m0-6h6m-6 0H6" />
+                    </svg>
+                  </div>
+                  <h4 className="text-2xl font-bold text-gray-900 mb-2">Create Team</h4>
+                  <p className="text-gray-600">Start your journey by creating a new team and inviting your colleagues</p>
+                </div>
+                <TeamForm locale="en" />
+              </div>
+            </div>
+            
+            {/* Join Team Section */}
+            <div id="join-team" className="relative bg-white/90 backdrop-blur-sm rounded-3xl shadow-2xl p-8 border border-white/30 hover:shadow-3xl transition-all duration-300 hover:scale-[1.02] group">
+              <div className="absolute inset-0 bg-gradient-to-r from-purple-500/5 to-pink-500/5 rounded-3xl opacity-0 group-hover:opacity-100 transition-opacity duration-300"></div>
+              <div className="relative z-10">
+                <div className="text-center mb-8">
+                  <div className="inline-flex items-center justify-center w-14 h-14 bg-gradient-to-r from-purple-500 to-pink-600 rounded-full mb-4 shadow-lg">
+                    <svg className="w-7 h-7 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 16l-4-4m0 0l4-4m-4 4h14m-5 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h7a3 3 0 013 3v1" />
+                    </svg>
+                  </div>
+                  <h4 className="text-2xl font-bold text-gray-900 mb-2">Join Team</h4>
+                  <p className="text-gray-600">Already have an invite code? Join your team and start collaborating</p>
+                </div>
+                <JoinTeamForm locale="en" />
+              </div>
+            </div>
           </div>
         </div>
       </section>
+
+      {/* Footer */}
+      <footer className="bg-gray-900 text-white py-16 px-4 sm:px-6 lg:px-8">
+        <div className="max-w-7xl mx-auto">
+          <div className="border-t border-gray-800 pt-8 text-center">
+            <div className="flex items-center justify-center gap-3 mb-4">
+              <img 
+                src="/favicon.svg" 
+                alt="Availability Planner Logo" 
+                className="h-8 w-8"
+              />
+              <span className="text-white font-semibold">Availability Planner</span>
+            </div>
+            <p className="text-gray-400">
+              {t("landing.madeWith")} ❤️ {t("landing.forTeams")}
+            </p>
+            <p className="text-gray-500 text-sm mt-2">
+              Made by <span className="font-semibold text-gray-300">Jonas Van Hove</span>
+            </p>
+          </div>
+        </div>
+      </footer>
     </div>
   )
 }

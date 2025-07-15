@@ -13,18 +13,27 @@ export type Database = {
           id: string
           name: string
           slug: string
+          invite_code: string
+          password_hash?: string
+          is_password_protected: boolean
           created_at: string
         }
         Insert: {
           id?: string
           name: string
-          slug: string
+          slug?: string
+          invite_code?: string
+          password_hash?: string
+          is_password_protected?: boolean
           created_at?: string
         }
         Update: {
           id?: string
           name?: string
           slug?: string
+          invite_code?: string
+          password_hash?: string
+          is_password_protected?: boolean
           created_at?: string
         }
       }
