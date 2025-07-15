@@ -11,6 +11,7 @@ import Link from "next/link"
 interface Team {
   id: string
   name: string
+  slug?: string
   invite_code: string
   is_password_protected: boolean
   password_hash?: string
@@ -177,9 +178,12 @@ export default function TeamPage({ params }: TeamPageProps) {
     <AvailabilityCalendarRedesigned
       teamId={team.id}
       teamName={team.name}
+      team={team}
       members={members}
       locale={locale}
       onMembersUpdate={fetchTeamData}
+      isPasswordProtected={team.is_password_protected}
+      passwordHash={team.password_hash}
     />
   )
 }

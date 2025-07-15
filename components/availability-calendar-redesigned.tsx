@@ -26,6 +26,7 @@ import { MemberForm } from "./member-form"
 import { BulkUpdateDialog, AnalyticsButton, PlannerButton } from "./bulk-update-dialog"
 import { SettingsDropdown } from "./settings-dropdown"
 import { MemberAvatar } from "./member-avatar"
+import { EditModePasswordDialog } from "./edit-mode-password-dialog"
 
 interface Member {
   id: string
@@ -41,20 +42,34 @@ interface Availability {
   status: "available" | "unavailable" | "need_to_check" | "absent" | "holiday" | "remote"
 }
 
+interface Team {
+  id: string
+  name: string
+  slug?: string
+  invite_code: string
+  is_password_protected: boolean
+}
+
 interface AvailabilityCalendarProps {
   teamId: string
   teamName: string
+  team?: Team
   members: Member[]
   locale: Locale
   onMembersUpdate: () => void
+  isPasswordProtected?: boolean
+  passwordHash?: string
 }
 
 const AvailabilityCalendarRedesigned = ({
   teamId,
   teamName,
+  team,
   members,
   locale,
   onMembersUpdate,
+  isPasswordProtected,
+  passwordHash,
 }: AvailabilityCalendarProps) => {
   const [currentDate, setCurrentDate] = useState(new Date())
   const [availability, setAvailability] = useState<Availability[]>([])
@@ -63,6 +78,10 @@ const AvailabilityCalendarRedesigned = ({
   const [isLoading, setIsLoading] = useState(false)
   const [editMode, setEditMode] = useState(false)
   const [simplifiedMode, setSimplifiedMode] = useState(false)
+  const [showPasswordDialog, setShowPasswordDialog] = useState(false)
+  const [isPasswordVerified, setIsPasswordVerified] = useState(false)
+  const [passwordError, setPasswordError] = useState("")
+  const [isPasswordLoading, setIsPasswordLoading] = useState(false)
   const { t } = useTranslation(locale)
 
   // Check for simplified mode preference
@@ -264,6 +283,50 @@ const AvailabilityCalendarRedesigned = ({
     } finally {
       setIsLoading(false)
     }
+  }
+
+  const handleEditModeToggle = (checked: boolean) => {
+    if (checked) {
+      // Switching to edit mode - check password if team is password protected
+      if (isPasswordProtected && !isPasswordVerified) {
+        setShowPasswordDialog(true)
+      } else {
+        setEditMode(true)
+      }
+    } else {
+      // Switching to view mode - no password needed
+      setEditMode(false)
+    }
+  }
+
+  const handlePasswordSubmit = async (password: string) => {
+    if (!passwordHash) return
+    
+    setIsPasswordLoading(true)
+    setPasswordError("")
+    
+    try {
+      // Decode the Base64 password hash and compare with entered password
+      const decodedPassword = atob(passwordHash)
+      
+      if (password === decodedPassword) {
+        handlePasswordVerified()
+      } else {
+        setPasswordError("Incorrect password")
+      }
+    } catch (error) {
+      console.error('Error verifying password:', error)
+      setPasswordError("An error occurred while verifying the password")
+    } finally {
+      setIsPasswordLoading(false)
+    }
+  }
+
+  const handlePasswordVerified = () => {
+    setIsPasswordVerified(true)
+    setShowPasswordDialog(false)
+    setPasswordError("")
+    setEditMode(true)
   }
 
   const updateAvailability = async (
@@ -952,10 +1015,12 @@ const AvailabilityCalendarRedesigned = ({
                     locale={locale} 
                     weeksToShow={weeksToShow}
                     currentDate={currentDate}
+                    teamId={teamId}
                   />
                   <PlannerButton 
                     members={members} 
                     locale={locale} 
+                    teamId={teamId}
                   />
                 </div>
 
@@ -979,11 +1044,11 @@ const AvailabilityCalendarRedesigned = ({
                     {editMode ? <Edit3 className="h-4 w-4 flex-shrink-0" /> : <Lock className="h-4 w-4 flex-shrink-0" />}
                     <span className="text-sm font-medium">{editMode ? "Edit Mode" : "View Mode"}</span>
                   </div>
-                  <Switch checked={editMode} onCheckedChange={setEditMode} />
+                  <Switch checked={editMode} onCheckedChange={handleEditModeToggle} />
                 </div>
 
                 <div className="w-full sm:w-auto">
-                  <SettingsDropdown currentLocale={locale} members={members} />
+                  <SettingsDropdown currentLocale={locale} members={members} team={team} />
                 </div>
               </div>
             </div>
@@ -1077,6 +1142,17 @@ const AvailabilityCalendarRedesigned = ({
         </div>
 
       </div>
+
+      {/* Password Dialog */}
+      <EditModePasswordDialog
+        isOpen={showPasswordDialog}
+        onClose={() => setShowPasswordDialog(false)}
+        teamName={teamName}
+        onPasswordSubmit={handlePasswordSubmit}
+        isLoading={isPasswordLoading}
+        error={passwordError}
+        locale={locale}
+      />
     </TooltipProvider>
   )
 }

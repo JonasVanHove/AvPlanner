@@ -26,12 +26,21 @@ interface Member {
   profile_image?: string
 }
 
+interface Team {
+  id: string
+  name: string
+  slug?: string
+  invite_code: string
+  is_password_protected: boolean
+}
+
 interface SettingsDropdownProps {
   currentLocale: Locale
   members: Member[]
+  team?: Team
 }
 
-export function SettingsDropdown({ currentLocale, members }: SettingsDropdownProps) {
+export function SettingsDropdown({ currentLocale, members, team }: SettingsDropdownProps) {
   const [exportDialogOpen, setExportDialogOpen] = useState(false)
   const [notificationDialogOpen, setNotificationDialogOpen] = useState(false)
   const [notifications, setNotifications] = useState(true)
@@ -150,11 +159,11 @@ export function SettingsDropdown({ currentLocale, members }: SettingsDropdownPro
     }
   }
 
-  const generateQR = async () => {
+  const generateQR = async (url?: string) => {
     setIsGeneratingQR(true)
     try {
       const QRCode = (await import("qrcode")).default
-      const qrDataUrl = await QRCode.toDataURL(shareUrl, {
+      const qrDataUrl = await QRCode.toDataURL(url || shareUrl, {
         width: 256,
         margin: 1,
         color: {
@@ -199,41 +208,90 @@ export function SettingsDropdown({ currentLocale, members }: SettingsDropdownPro
           align="end"
           className="w-56 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700"
         >
-          <DropdownMenuItem
-            onClick={() => setExportDialogOpen(true)}
-            className="cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-700"
-          >
-            <Download className="mr-2 h-4 w-4" />
-            <span>{t("settings.export")}</span>
-          </DropdownMenuItem>
-
-          <DropdownMenuSeparator className="bg-gray-200 dark:bg-gray-600" />
-
-          {/* Share Section */}
+          {/* Share Section - Most important for team management */}
           <div className="px-2 py-2">
-            <div className="flex items-center mb-2">
-              <Share2 className="mr-2 h-4 w-4" />
-              <Label className="text-sm font-medium">
-                {currentLocale === "en" ? "Share" : currentLocale === "nl" ? "Delen" : "Partager"}
-              </Label>
+            <div className="flex items-center justify-between mb-2">
+              <div className="flex items-center">
+                <Share2 className="mr-2 h-4 w-4" />
+                <Label className="text-sm font-medium">
+                  {currentLocale === "en" ? "Share" : currentLocale === "nl" ? "Delen" : "Partager"}
+                </Label>
+              </div>
+              <div className="flex items-center gap-1">
+                {team?.is_password_protected ? (
+                  <>
+                    <Eye className="h-3 w-3 text-orange-500" />
+                    <span className="text-xs text-orange-600 dark:text-orange-400 font-medium">
+                      {currentLocale === "en" ? "Protected" : currentLocale === "nl" ? "Beveiligd" : "Protégé"}
+                    </span>
+                  </>
+                ) : (
+                  <>
+                    <EyeOff className="h-3 w-3 text-green-500" />
+                    <span className="text-xs text-green-600 dark:text-green-400 font-medium">
+                      {currentLocale === "en" ? "Public" : currentLocale === "nl" ? "Openbaar" : "Public"}
+                    </span>
+                  </>
+                )}
+              </div>
             </div>
             
-            {/* Share URL input */}
-            <div className="flex items-center gap-2 mb-2">
-              <Input
-                value={shareUrl}
-                readOnly
-                className="flex-1 h-8 text-xs bg-gray-50 dark:bg-gray-700 border-gray-200 dark:border-gray-600"
-                placeholder={currentLocale === "en" ? "Share URL" : currentLocale === "nl" ? "Deel URL" : "URL de partage"}
-              />
-              <Button
-                variant="outline"
-                size="sm"
-                onClick={() => copyToClipboard(shareUrl)}
-                className="h-8 w-8 p-0 border-gray-200 dark:border-gray-600"
-              >
-                <Copy className="h-3 w-3" />
-              </Button>
+            {/* Invite Code URL */}
+            {team?.invite_code && (
+              <div className="mb-3">
+                <Label className="text-xs text-gray-600 dark:text-gray-400 mb-1 block">
+                  {currentLocale === "en" ? "Invite Code URL (Primary)" : currentLocale === "nl" ? "Uitnodigingscode URL (Primair)" : "URL du code d'invitation (Principal)"}
+                </Label>
+                <div className="flex items-center gap-2">
+                  <Input
+                    value={`${window.location.origin}${currentLocale === "en" ? "" : `/${currentLocale}`}/team/${team.invite_code}`}
+                    readOnly
+                    className="flex-1 h-8 text-xs bg-gray-50 dark:bg-gray-700 border-gray-200 dark:border-gray-600"
+                  />
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => copyToClipboard(`${window.location.origin}${currentLocale === "en" ? "" : `/${currentLocale}`}/team/${team.invite_code}`)}
+                    className="h-8 w-8 p-0 border-gray-200 dark:border-gray-600"
+                  >
+                    <Copy className="h-3 w-3" />
+                  </Button>
+                </div>
+              </div>
+            )}
+
+            {/* Friendly URL (if available) */}
+            {team?.slug && (
+              <div className="mb-3">
+                <Label className="text-xs text-gray-600 dark:text-gray-400 mb-1 block">
+                  {currentLocale === "en" ? "Friendly URL (Alternative)" : currentLocale === "nl" ? "Vriendelijke URL (Alternatief)" : "URL conviviale (Alternative)"}
+                </Label>
+                <div className="flex items-center gap-2">
+                  <Input
+                    value={`${window.location.origin}${currentLocale === "en" ? "" : `/${currentLocale}`}/team/${team.slug}`}
+                    readOnly
+                    className="flex-1 h-8 text-xs bg-gray-50 dark:bg-gray-700 border-gray-200 dark:border-gray-600"
+                  />
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => copyToClipboard(`${window.location.origin}${currentLocale === "en" ? "" : `/${currentLocale}`}/team/${team.slug}`)}
+                    className="h-8 w-8 p-0 border-gray-200 dark:border-gray-600"
+                  >
+                    <Copy className="h-3 w-3" />
+                  </Button>
+                </div>
+              </div>
+            )}
+
+            {/* Security Info */}
+            <div className={`${team?.is_password_protected ? 'bg-orange-50 dark:bg-orange-900/20 border-orange-200 dark:border-orange-700' : 'bg-green-50 dark:bg-green-900/20 border-green-200 dark:border-green-700'} border rounded p-2 mb-3`}>
+              <p className={`text-xs ${team?.is_password_protected ? 'text-orange-800 dark:text-orange-200' : 'text-green-800 dark:text-green-200'}`}>
+                {team?.is_password_protected 
+                  ? (currentLocale === "en" ? "🔒 Password protected - Users need password to access" : currentLocale === "nl" ? "🔒 Wachtwoord beveiligd - Gebruikers hebben wachtwoord nodig" : "🔒 Protégé par mot de passe - Mot de passe requis")
+                  : (currentLocale === "en" ? "🔓 Public access - Anyone with link can view" : currentLocale === "nl" ? "🔓 Openbare toegang - Iedereen met link kan bekijken" : "🔓 Accès public - Visible avec le lien")
+                }
+              </p>
             </div>
 
             {/* QR Code buttons */}
@@ -241,7 +299,7 @@ export function SettingsDropdown({ currentLocale, members }: SettingsDropdownPro
               <Button
                 variant="outline"
                 size="sm"
-                onClick={generateQR}
+                onClick={() => generateQR(team?.invite_code ? `${window.location.origin}${currentLocale === "en" ? "" : `/${currentLocale}`}/team/${team.invite_code}` : shareUrl)}
                 disabled={isGeneratingQR}
                 className="flex-1 h-8 text-xs border-gray-200 dark:border-gray-600"
               >
@@ -286,7 +344,36 @@ export function SettingsDropdown({ currentLocale, members }: SettingsDropdownPro
 
           <DropdownMenuSeparator className="bg-gray-200 dark:bg-gray-600" />
 
-          {/* Theme Selection */}
+          {/* Export - Data/Content related */}
+          <DropdownMenuItem
+            onClick={() => setExportDialogOpen(true)}
+            className="cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-700"
+          >
+            <Download className="mr-2 h-4 w-4" />
+            <span>{t("settings.export")}</span>
+          </DropdownMenuItem>
+
+          <DropdownMenuSeparator className="bg-gray-200 dark:bg-gray-600" />
+
+          {/* View Settings - Display preferences */}
+          <div className="px-2 py-2">
+            <div className="flex items-center justify-between mb-2">
+              <div className="flex items-center">
+                {simplifiedMode ? (
+                  <EyeOff className="mr-2 h-4 w-4" />
+                ) : (
+                  <Eye className="mr-2 h-4 w-4" />
+                )}
+                <Label className="text-sm font-medium">{t("settings.simplifiedMode")}</Label>
+              </div>
+              <Switch
+                checked={simplifiedMode}
+                onCheckedChange={handleSimplifiedModeToggle}
+                className="h-4 w-7"
+              />
+            </div>
+          </div>
+
           <div className="px-2 py-2">
             <div className="flex items-center justify-between mb-2">
               <div className="flex items-center">
@@ -331,7 +418,7 @@ export function SettingsDropdown({ currentLocale, members }: SettingsDropdownPro
 
           <DropdownMenuSeparator className="bg-gray-200 dark:bg-gray-600" />
 
-          {/* Language Selection */}
+          {/* Language - Localization */}
           <div className="px-2 py-2">
             <div className="flex items-center justify-between mb-2">
               <div className="flex items-center">
@@ -359,7 +446,7 @@ export function SettingsDropdown({ currentLocale, members }: SettingsDropdownPro
 
           <DropdownMenuSeparator className="bg-gray-200 dark:bg-gray-600" />
 
-          {/* Notifications Section */}
+          {/* Notifications - System behavior */}
           <div className="px-2 py-2">
             <div className="flex items-center justify-between mb-2">
               <div className="flex items-center">
@@ -401,25 +488,6 @@ export function SettingsDropdown({ currentLocale, members }: SettingsDropdownPro
                 </p>
               </div>
             )}
-          </div>
-
-          {/* Simplified Mode Toggle */}
-          <div className="px-2 py-2">
-            <div className="flex items-center justify-between">
-              <div className="flex items-center">
-                {simplifiedMode ? (
-                  <EyeOff className="mr-2 h-4 w-4" />
-                ) : (
-                  <Eye className="mr-2 h-4 w-4" />
-                )}
-                <Label className="text-sm font-medium">{t("settings.simplifiedMode")}</Label>
-              </div>
-              <Switch
-                checked={simplifiedMode}
-                onCheckedChange={handleSimplifiedModeToggle}
-                className="h-4 w-7"
-              />
-            </div>
           </div>
 
         </DropdownMenuContent>

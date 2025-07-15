@@ -40,11 +40,12 @@ interface BulkUpdateDialogProps {
 }
 
 // Export individual button components
-export function AnalyticsButton({ members, locale, weeksToShow, currentDate }: { 
+export function AnalyticsButton({ members, locale, weeksToShow, currentDate, teamId }: { 
   members: Member[], 
   locale: Locale,
   weeksToShow: 1 | 2 | 4 | 8,
-  currentDate: Date
+  currentDate: Date,
+  teamId: string
 }) {
   const [showAnalytics, setShowAnalytics] = useState(false)
   const [analyticsData, setAnalyticsData] = useState<any>(null)
@@ -166,10 +167,11 @@ export function AnalyticsButton({ members, locale, weeksToShow, currentDate }: {
           status,
           member_id,
           created_at,
-          members!inner(first_name, last_name, profile_image)
+          members!inner(first_name, last_name, profile_image, team_id)
         `)
         .gte('date', startDate.toISOString().split('T')[0])
         .lte('date', endDate.toISOString().split('T')[0])
+        .eq('members.team_id', teamId) // Filter by team_id
         .order('date', { ascending: true })
 
       if (error) {
@@ -290,7 +292,14 @@ export function AnalyticsButton({ members, locale, weeksToShow, currentDate }: {
     try {
       const { data, error } = await supabase
         .from('availability')
-        .select('member_id, status, date, created_at')
+        .select(`
+          member_id, 
+          status, 
+          date, 
+          created_at,
+          members!inner(team_id)
+        `)
+        .eq('members.team_id', teamId) // Filter by team_id
         .order('date', { ascending: true })
 
       if (error) {
@@ -1453,7 +1462,7 @@ export function BulkUpdateDialog({ members, locale, onUpdate }: BulkUpdateDialog
 }
 
 // Export PlannerButton component
-export function PlannerButton({ members, locale }: { members: Member[], locale: Locale }) {
+export function PlannerButton({ members, locale, teamId }: { members: Member[], locale: Locale, teamId: string }) {
   const [showPlanner, setShowPlanner] = useState(false)
   const [plannerData, setPlannerData] = useState<any>(null)
   const [plannerPeriod, setPlannerPeriod] = useState<7 | 14 | 30>(7)
@@ -1472,10 +1481,11 @@ export function PlannerButton({ members, locale }: { members: Member[], locale: 
           date,
           status,
           member_id,
-          members!inner(first_name, last_name)
+          members!inner(first_name, last_name, team_id)
         `)
         .gte('date', today.toISOString().split('T')[0])
         .lte('date', endDate.toISOString().split('T')[0])
+        .eq('members.team_id', teamId) // Filter by team_id
         .order('date', { ascending: true })
 
       if (error) throw error

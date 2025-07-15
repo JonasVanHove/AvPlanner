@@ -25,14 +25,23 @@ interface Member {
   email?: string
 }
 
+interface Team {
+  id: string
+  name: string
+  slug?: string
+  invite_code: string
+  is_password_protected: boolean
+}
+
 interface SettingsDialogProps {
   currentLocale: Locale
   members?: Member[]
+  team?: Team
   isOpen: boolean
   onOpenChange: (open: boolean) => void
 }
 
-export function SettingsDialog({ currentLocale, members = [], isOpen, onOpenChange }: SettingsDialogProps) {
+export function SettingsDialog({ currentLocale, members = [], team, isOpen, onOpenChange }: SettingsDialogProps) {
   const [darkMode, setDarkMode] = useState(false)
   const [notifications, setNotifications] = useState(true)
   const [simplifiedMode, setSimplifiedMode] = useState(false)
@@ -43,6 +52,8 @@ export function SettingsDialog({ currentLocale, members = [], isOpen, onOpenChan
   const [startDate, setStartDate] = useState("")
   const [endDate, setEndDate] = useState("")
   const [shareUrl, setShareUrl] = useState("")
+  const [inviteCodeUrl, setInviteCodeUrl] = useState("")
+  const [slugUrl, setSlugUrl] = useState("")
   const [showQR, setShowQR] = useState(false)
   const [qrDataUrl, setQrDataUrl] = useState("")
   const [isGeneratingQR, setIsGeneratingQR] = useState(false)
@@ -78,10 +89,23 @@ export function SettingsDialog({ currentLocale, members = [], isOpen, onOpenChan
     setStartDate(firstDay.toISOString().split("T")[0])
     setEndDate(lastDay.toISOString().split("T")[0])
 
-    // Generate share URL
+    // Generate share URLs
     const currentUrl = window.location.href
-    const baseUrl = currentUrl.split('?')[0]
-    setShareUrl(`${baseUrl}?view=readonly`)
+    const baseUrl = window.location.origin
+    const localePrefix = currentLocale === "en" ? "" : `/${currentLocale}`
+    
+    // Set invite code URL (always available)
+    if (team?.invite_code) {
+      const inviteUrl = `${baseUrl}${localePrefix}/team/${team.invite_code}`
+      setInviteCodeUrl(inviteUrl)
+      setShareUrl(inviteUrl) // Default to invite code URL
+    }
+    
+    // Set slug URL (if available)
+    if (team?.slug) {
+      const slugUrlValue = `${baseUrl}${localePrefix}/team/${team.slug}`
+      setSlugUrl(slugUrlValue)
+    }
   }, [])
 
   const handleLanguageChange = (newLocale: Locale) => {
@@ -231,14 +255,14 @@ export function SettingsDialog({ currentLocale, members = [], isOpen, onOpenChan
     document.body.removeChild(link)
   }
 
-  const copyShareUrl = async () => {
+  const copyShareUrl = async (url: string) => {
     try {
-      await navigator.clipboard.writeText(shareUrl)
+      await navigator.clipboard.writeText(url)
       alert(t("settings.linkCopied"))
     } catch (err) {
       // Fallback for older browsers
       const textArea = document.createElement("textarea")
-      textArea.value = shareUrl
+      textArea.value = url
       document.body.appendChild(textArea)
       textArea.select()
       document.execCommand("copy")
@@ -247,11 +271,11 @@ export function SettingsDialog({ currentLocale, members = [], isOpen, onOpenChan
     }
   }
 
-  const generateQRCode = () => {
+  const generateQRCode = (url: string) => {
     setIsGeneratingQR(true)
     
     // Simple QR code generation using QR Server API
-    const qrUrl = `https://api.qrserver.com/v1/create-qr-code/?size=200x200&data=${encodeURIComponent(shareUrl)}`
+    const qrUrl = `https://api.qrserver.com/v1/create-qr-code/?size=200x200&data=${encodeURIComponent(url)}`
     setQrDataUrl(qrUrl)
     setShowQR(true)
     setIsGeneratingQR(false)
@@ -379,64 +403,121 @@ export function SettingsDialog({ currentLocale, members = [], isOpen, onOpenChan
                 <Label className="text-sm font-medium">{t('settings.share')}</Label>
               </div>
               
-              <div className="space-y-2">
-                <Label className="text-xs text-gray-600 dark:text-gray-400">{t('settings.shareDescription')}</Label>
-                
+              <div className="space-y-3">
+                <div className="flex items-center gap-2">
+                  <Label className="text-xs text-gray-600 dark:text-gray-400">Team Access</Label>
+                  <div className="flex items-center gap-1">
+                    {team?.is_password_protected ? (
+                      <>
+                        <Eye className="h-3 w-3 text-orange-500" />
+                        <span className="text-xs text-orange-600 dark:text-orange-400 font-medium">Password Protected</span>
+                      </>
+                    ) : (
+                      <>
+                        <EyeOff className="h-3 w-3 text-green-500" />
+                        <span className="text-xs text-green-600 dark:text-green-400 font-medium">Public Access</span>
+                      </>
+                    )}
+                  </div>
+                </div>
+
+                {/* Invite Code URL */}
                 <div className="bg-gray-50 dark:bg-gray-800/50 border border-gray-200 dark:border-gray-600 rounded-lg p-3 space-y-2">
                   <div className="flex items-center gap-2">
+                    <Label className="text-xs font-medium text-gray-700 dark:text-gray-300">Invite Code URL</Label>
+                    <span className="text-xs text-gray-500 dark:text-gray-400">(Primary)</span>
+                  </div>
+                  <div className="flex items-center gap-2">
                     <Input
-                      value={shareUrl}
+                      value={inviteCodeUrl}
                       readOnly
                       className="flex-1 text-xs bg-white dark:bg-gray-700 border-gray-200 dark:border-gray-600"
                     />
                     <Button
-                      onClick={copyShareUrl}
+                      onClick={() => copyShareUrl(inviteCodeUrl)}
                       size="sm"
                       className="bg-gradient-to-r from-blue-600 to-blue-700 hover:from-blue-700 hover:to-blue-800 text-white px-3"
                     >
                       <Copy className="h-3 w-3 mr-1" />
-                      {t('settings.copyLink')}
+                      Copy
                     </Button>
                   </div>
-                  
-                  <div className="flex gap-2">
+                  <Button
+                    onClick={() => generateQRCode(inviteCodeUrl)}
+                    disabled={isGeneratingQR}
+                    size="sm"
+                    variant="outline"
+                    className="w-full text-xs"
+                  >
+                    <QrCode className="h-3 w-3 mr-1" />
+                    {isGeneratingQR ? "Generating..." : "Generate QR Code"}
+                  </Button>
+                </div>
+
+                {/* Friendly URL (if available) */}
+                {team?.slug && (
+                  <div className="bg-gray-50 dark:bg-gray-800/50 border border-gray-200 dark:border-gray-600 rounded-lg p-3 space-y-2">
+                    <div className="flex items-center gap-2">
+                      <Label className="text-xs font-medium text-gray-700 dark:text-gray-300">Friendly URL</Label>
+                      <span className="text-xs text-gray-500 dark:text-gray-400">(Alternative)</span>
+                    </div>
+                    <div className="flex items-center gap-2">
+                      <Input
+                        value={slugUrl}
+                        readOnly
+                        className="flex-1 text-xs bg-white dark:bg-gray-700 border-gray-200 dark:border-gray-600"
+                      />
+                      <Button
+                        onClick={() => copyShareUrl(slugUrl)}
+                        size="sm"
+                        className="bg-gradient-to-r from-purple-600 to-purple-700 hover:from-purple-700 hover:to-purple-800 text-white px-3"
+                      >
+                        <Copy className="h-3 w-3 mr-1" />
+                        Copy
+                      </Button>
+                    </div>
                     <Button
-                      onClick={generateQRCode}
+                      onClick={() => generateQRCode(slugUrl)}
                       disabled={isGeneratingQR}
                       size="sm"
                       variant="outline"
-                      className="flex-1 text-xs"
+                      className="w-full text-xs"
                     >
                       <QrCode className="h-3 w-3 mr-1" />
-                      {isGeneratingQR ? "Generating..." : t('settings.generateQR')}
+                      {isGeneratingQR ? "Generating..." : "Generate QR Code"}
                     </Button>
                   </div>
-                  
-                  {showQR && qrDataUrl && (
-                    <div className="bg-white dark:bg-gray-700 rounded-lg p-3 text-center space-y-2">
-                      <p className="text-xs text-gray-600 dark:text-gray-400">{t('settings.qrCodeDescription')}</p>
-                      <img 
-                        src={qrDataUrl} 
-                        alt="QR Code" 
-                        className="mx-auto border border-gray-200 dark:border-gray-600 rounded"
-                      />
-                      <Button
-                        onClick={downloadQRCode}
-                        size="sm"
-                        variant="outline"
-                        className="text-xs"
-                      >
-                        <Download className="h-3 w-3 mr-1" />
-                        {t('settings.downloadQR')}
-                      </Button>
-                    </div>
-                  )}
-                  
-                  <div className="bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-700 rounded p-2">
-                    <p className="text-xs text-blue-800 dark:text-blue-200">
-                      ℹ️ {t('settings.readOnlyDescription')}
-                    </p>
+                )}
+
+                {/* QR Code Display */}
+                {showQR && qrDataUrl && (
+                  <div className="bg-white dark:bg-gray-700 rounded-lg p-3 text-center space-y-2 border border-gray-200 dark:border-gray-600">
+                    <p className="text-xs text-gray-600 dark:text-gray-400">Scan this QR code to access the team</p>
+                    <img 
+                      src={qrDataUrl} 
+                      alt="QR Code" 
+                      className="mx-auto border border-gray-200 dark:border-gray-600 rounded"
+                    />
+                    <Button
+                      onClick={downloadQRCode}
+                      size="sm"
+                      variant="outline"
+                      className="text-xs"
+                    >
+                      <Download className="h-3 w-3 mr-1" />
+                      Download QR Code
+                    </Button>
                   </div>
+                )}
+                
+                {/* Security Info */}
+                <div className={`${team?.is_password_protected ? 'bg-orange-50 dark:bg-orange-900/20 border-orange-200 dark:border-orange-700' : 'bg-green-50 dark:bg-green-900/20 border-green-200 dark:border-green-700'} border rounded p-2`}>
+                  <p className={`text-xs ${team?.is_password_protected ? 'text-orange-800 dark:text-orange-200' : 'text-green-800 dark:text-green-200'}`}>
+                    {team?.is_password_protected 
+                      ? "🔒 This team is password protected. Users will need to enter a password to access the calendar."
+                      : "🔓 This team is publicly accessible. Anyone with the link can view the calendar."
+                    }
+                  </p>
                 </div>
               </div>
             </div>

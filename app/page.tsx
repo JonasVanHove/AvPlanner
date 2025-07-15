@@ -4,9 +4,21 @@ import { TeamForm } from "@/components/team-form"
 import { JoinTeamForm } from "@/components/join-team-form"
 import { LanguageSelector } from "@/components/language-selector"
 import { useTranslation } from "@/lib/i18n"
+import { useEffect } from "react"
 
 export default function HomePage() {
   const { t } = useTranslation("en")
+
+  useEffect(() => {
+    // Force light mode for landing page
+    document.documentElement.classList.remove('dark')
+    document.documentElement.setAttribute('data-theme', 'light')
+    
+    // Cleanup on unmount - restore to system theme
+    return () => {
+      document.documentElement.removeAttribute('data-theme')
+    }
+  }, [])
 
   const scrollToSection = (sectionId: string) => {
     const element = document.getElementById(sectionId)
@@ -20,8 +32,8 @@ export default function HomePage() {
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-blue-50 via-indigo-50 to-purple-50">
-      {/* Header */}
-      <header className="bg-white/80 backdrop-blur-md shadow-sm border-b border-white/20 sticky top-0 z-50">
+        {/* Header */}
+        <header className="bg-white/80 backdrop-blur-md shadow-sm border-b border-white/20 sticky top-0 z-50">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="flex justify-between items-center h-16">
             <div className="flex items-center gap-3">
