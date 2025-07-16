@@ -61,24 +61,24 @@ export function JoinTeamForm({ locale }: JoinTeamFormProps) {
   }
 
   return (
-    <Card className="w-full max-w-md mx-auto">
+    <Card className="w-full max-w-md mx-auto bg-white border-gray-200 shadow-lg">
       <CardHeader className="text-center">
-        <CardTitle className="text-2xl font-bold">Join Team</CardTitle>
-        <CardDescription>
+        <CardTitle className="text-2xl font-bold text-gray-900">Join Team</CardTitle>
+        <CardDescription className="text-gray-600">
           Enter your team's invite code to join
         </CardDescription>
       </CardHeader>
       <CardContent>
         <form onSubmit={handleSubmit} className="space-y-4">
           <div className="space-y-2">
-            <Label htmlFor="inviteCode">Invite Code</Label>
+            <Label htmlFor="inviteCode" className="text-gray-700">Invite Code</Label>
             <Input
               id="inviteCode"
               type="text"
               value={inviteCode}
               onChange={(e) => setInviteCode(e.target.value)}
               placeholder="Enter invite code"
-              className="text-center font-mono"
+              className="text-center font-mono bg-white border-gray-300 text-gray-900 placeholder-gray-500"
               disabled={isLoading}
             />
           </div>
@@ -91,7 +91,7 @@ export function JoinTeamForm({ locale }: JoinTeamFormProps) {
           
           <Button 
             type="submit" 
-            className="w-full"
+            className="w-full bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700 text-white"
             disabled={isLoading}
           >
             {isLoading ? (

@@ -199,25 +199,26 @@ export function TeamForm({ locale }: TeamFormProps) {
       : null
     
     return (
-      <Card className="w-full max-w-md mx-auto">
+      <Card className="w-full max-w-md mx-auto bg-white border-gray-200 shadow-lg">
         <CardHeader className="text-center">
           <CardTitle className="text-green-600">✅ Team Created!</CardTitle>
-          <CardDescription>
+          <CardDescription className="text-gray-600">
             Your team "{createdTeam.name}" has been created successfully.
           </CardDescription>
         </CardHeader>
         <CardContent className="space-y-4">
           <div>
-            <Label>{t("team.inviteCode")}</Label>
+            <Label className="text-gray-700">{t("team.inviteCode")}</Label>
             <div className="flex gap-2">
               <Input
                 value={createdTeam.inviteCode}
                 readOnly
-                className="bg-gray-50"
+                className="bg-gray-50 border-gray-300 text-gray-900"
               />
               <Button
                 variant="outline"
                 size="sm"
+                className="border-gray-300 text-gray-700 hover:bg-gray-50 bg-white"
                 onClick={() => copyInviteCode(createdTeam.inviteCode)}
               >
                 <Copy className="h-4 w-4" />
@@ -226,16 +227,17 @@ export function TeamForm({ locale }: TeamFormProps) {
           </div>
           
           <div>
-            <Label>Invite Link (with code)</Label>
+            <Label className="text-gray-700">Invite Link (with code)</Label>
             <div className="flex gap-2">
               <Input
                 value={inviteUrl}
                 readOnly
-                className="bg-gray-50 text-xs"
+                className="bg-gray-50 text-xs border-gray-300 text-gray-900"
               />
               <Button
                 variant="outline"
                 size="sm"
+                className="border-gray-300 text-gray-700 hover:bg-gray-50 bg-white"
                 onClick={() => copyInviteCode(inviteUrl)}
               >
                 <Share2 className="h-4 w-4" />
@@ -245,16 +247,17 @@ export function TeamForm({ locale }: TeamFormProps) {
 
           {friendlyUrl && (
             <div>
-              <Label>Friendly URL</Label>
+              <Label className="text-gray-700">Friendly URL</Label>
               <div className="flex gap-2">
                 <Input
                   value={friendlyUrl}
                   readOnly
-                  className="bg-green-50 text-xs font-medium"
+                  className="bg-green-50 text-xs font-medium border-green-300 text-gray-900"
                 />
                 <Button
                   variant="outline"
                   size="sm"
+                  className="border-gray-300 text-gray-700 hover:bg-gray-50 bg-white"
                   onClick={() => copyInviteCode(friendlyUrl)}
                 >
                   <Share2 className="h-4 w-4" />
@@ -292,23 +295,24 @@ export function TeamForm({ locale }: TeamFormProps) {
   }
 
   return (
-    <Card className="w-full max-w-md mx-auto">
+    <Card className="w-full max-w-md mx-auto bg-white border-gray-200 shadow-lg">
       <CardHeader>
-        <CardTitle>{t("team.create")}</CardTitle>
-        <CardDescription>
+        <CardTitle className="text-gray-900">{t("team.create")}</CardTitle>
+        <CardDescription className="text-gray-600">
           Create a new team and optionally protect it with a password
         </CardDescription>
       </CardHeader>
       <CardContent>
         <form onSubmit={createTeam} className="space-y-4">
           <div>
-            <Label htmlFor="teamName">{t("team.name")}</Label>
+            <Label htmlFor="teamName" className="text-gray-700">{t("team.name")}</Label>
             <Input
               id="teamName"
               value={teamName}
               onChange={(e) => setTeamName(e.target.value)}
               placeholder={t("team.name")}
               required
+              className="bg-white border-gray-300 text-gray-900 placeholder-gray-500"
             />
           </div>
 
@@ -317,15 +321,16 @@ export function TeamForm({ locale }: TeamFormProps) {
               id="friendly-url"
               checked={useFriendlyUrl}
               onCheckedChange={setUseFriendlyUrl}
+              className="data-[state=checked]:bg-blue-600 data-[state=unchecked]:bg-gray-200"
             />
-            <Label htmlFor="friendly-url" className="text-sm">
+            <Label htmlFor="friendly-url" className="text-sm text-gray-700">
               Create custom URL (optional)
             </Label>
           </div>
 
           {useFriendlyUrl && (
             <div>
-              <Label htmlFor="friendlyUrl">Custom URL</Label>
+              <Label htmlFor="friendlyUrl" className="text-gray-700">Custom URL</Label>
               <div className="space-y-2">
                 <div className="relative">
                   <Input
@@ -336,7 +341,7 @@ export function TeamForm({ locale }: TeamFormProps) {
                     pattern="[a-zA-Z0-9-]+"
                     title="Only letters, numbers, and hyphens allowed"
                     className={cn(
-                      "pr-10",
+                      "pr-10 bg-white border-gray-300 text-gray-900 placeholder-gray-500",
                       urlCheckStatus === "available" && "border-green-500 focus:border-green-500",
                       urlCheckStatus === "taken" && "border-red-500 focus:border-red-500"
                     )}
@@ -373,15 +378,16 @@ export function TeamForm({ locale }: TeamFormProps) {
               id="password-protection"
               checked={isPasswordProtected}
               onCheckedChange={setIsPasswordProtected}
+              className="data-[state=checked]:bg-blue-600 data-[state=unchecked]:bg-gray-200"
             />
-            <Label htmlFor="password-protection" className="text-sm">
+            <Label htmlFor="password-protection" className="text-sm text-gray-700">
               {t("team.makePasswordProtected")}
             </Label>
           </div>
 
           {isPasswordProtected && (
             <div>
-              <Label htmlFor="password">{t("team.password")}</Label>
+              <Label htmlFor="password" className="text-gray-700">{t("team.password")}</Label>
               <div className="relative">
                 <Input
                   id="password"
@@ -390,13 +396,13 @@ export function TeamForm({ locale }: TeamFormProps) {
                   onChange={(e) => setPassword(e.target.value)}
                   placeholder={t("team.setPassword")}
                   required
-                  className="pr-10"
+                  className="pr-10 bg-white border-gray-300 text-gray-900 placeholder-gray-500"
                 />
                 <Button
                   type="button"
                   variant="ghost"
                   size="sm"
-                  className="absolute right-0 top-0 h-full px-3 py-2 hover:bg-transparent"
+                  className="absolute right-0 top-0 h-full px-3 py-2 hover:bg-gray-100 text-gray-600"
                   onClick={() => setShowPassword(!showPassword)}
                   tabIndex={-1}
                 >
@@ -417,7 +423,7 @@ export function TeamForm({ locale }: TeamFormProps) {
               (useFriendlyUrl && urlCheckStatus === "checking") ||
               (useFriendlyUrl && urlCheckStatus === "taken")
             } 
-            className="w-full"
+            className="w-full bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700 text-white"
           >
             {isLoading ? t("common.loading") : 
              urlCheckStatus === "checking" ? "Checking URL..." :

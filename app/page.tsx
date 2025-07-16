@@ -9,31 +9,41 @@ import { useEffect } from "react"
 export default function HomePage() {
   const { t } = useTranslation("en")
 
+  // Force light mode for landing page (better for sales/marketing)
   useEffect(() => {
-    // Force light mode for landing page
     document.documentElement.classList.remove('dark')
     document.documentElement.setAttribute('data-theme', 'light')
     
-    // Cleanup on unmount - restore to system theme
+    // Clean up on unmount
     return () => {
       document.documentElement.removeAttribute('data-theme')
+      // Restore user's preferred theme when leaving
+      const savedTheme = localStorage.getItem('theme')
+      if (savedTheme === 'dark' || (!savedTheme && window.matchMedia('(prefers-color-scheme: dark)').matches)) {
+        document.documentElement.classList.add('dark')
+      }
     }
   }, [])
 
   const scrollToSection = (sectionId: string) => {
     const element = document.getElementById(sectionId)
     if (element) {
-      element.scrollIntoView({
-        behavior: 'smooth',
-        block: 'start',
+      // Use a more stable scroll method that doesn't affect layout
+      const elementRect = element.getBoundingClientRect()
+      const absoluteElementTop = elementRect.top + window.pageYOffset
+      const middle = absoluteElementTop - (window.innerHeight / 2) + (elementRect.height / 2)
+      
+      window.scrollTo({
+        top: middle,
+        behavior: 'smooth'
       })
     }
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-blue-50 via-indigo-50 to-purple-50">
+    <div className="min-h-screen bg-gradient-to-br from-blue-50 via-indigo-50 to-purple-50 overflow-x-hidden">
         {/* Header */}
-        <header className="bg-white/80 backdrop-blur-md shadow-sm border-b border-white/20 sticky top-0 z-50">
+        <header className="bg-white/80 backdrop-blur-md shadow-sm border-b border-white/20 sticky top-0 z-50 will-change-transform">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="flex justify-between items-center h-16">
             <div className="flex items-center gap-3">
@@ -46,7 +56,9 @@ export default function HomePage() {
                 {t("landing.title")}
               </h1>
             </div>
-            <LanguageSelector currentLocale="en" />
+            <div className="flex items-center">
+              <LanguageSelector currentLocale="en" />
+            </div>
           </div>
         </div>
       </header>
@@ -242,18 +254,19 @@ export default function HomePage() {
       </section>
 
       {/* Team Management Section */}
-      <section className="py-20 px-4 sm:px-6 lg:px-8 bg-gradient-to-br from-blue-50 via-indigo-50 to-purple-50 relative overflow-hidden">
+      <section id="team-management" className="py-20 px-4 sm:px-6 lg:px-8 bg-gradient-to-br from-blue-50 via-indigo-50 to-purple-50 relative overflow-hidden">
         {/* Background decorative elements */}
         <div className="absolute inset-0 bg-gradient-to-r from-blue-500/5 via-purple-500/5 to-pink-500/5"></div>
         <div className="absolute top-0 left-0 w-72 h-72 bg-blue-500/10 rounded-full blur-3xl -translate-x-1/2 -translate-y-1/2"></div>
         <div className="absolute bottom-0 right-0 w-72 h-72 bg-purple-500/10 rounded-full blur-3xl translate-x-1/2 translate-y-1/2"></div>
         
-        <div className="h-12" />
+        {/* Extra spacing to prevent scroll interference */}
+        <div className="h-8" />
 
         <div className="max-w-7xl mx-auto relative z-10">
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-12">
             {/* Create Team Section */}
-            <div id="create-team" className="relative bg-white/90 backdrop-blur-sm rounded-3xl shadow-2xl p-8 border border-white/30 hover:shadow-3xl transition-all duration-300 hover:scale-[1.02] group">
+            <div id="create-team" className="scroll-mt-24 relative bg-white/90 backdrop-blur-sm rounded-3xl shadow-2xl p-8 border border-white/30 hover:shadow-3xl transition-all duration-300 hover:scale-[1.02] group">
               <div className="absolute inset-0 bg-gradient-to-r from-blue-500/5 to-purple-500/5 rounded-3xl opacity-0 group-hover:opacity-100 transition-opacity duration-300"></div>
               <div className="relative z-10">
                 <div className="text-center mb-8">
@@ -270,7 +283,7 @@ export default function HomePage() {
             </div>
             
             {/* Join Team Section */}
-            <div id="join-team" className="relative bg-white/90 backdrop-blur-sm rounded-3xl shadow-2xl p-8 border border-white/30 hover:shadow-3xl transition-all duration-300 hover:scale-[1.02] group">
+            <div id="join-team" className="scroll-mt-24 relative bg-white/90 backdrop-blur-sm rounded-3xl shadow-2xl p-8 border border-white/30 hover:shadow-3xl transition-all duration-300 hover:scale-[1.02] group">
               <div className="absolute inset-0 bg-gradient-to-r from-purple-500/5 to-pink-500/5 rounded-3xl opacity-0 group-hover:opacity-100 transition-opacity duration-300"></div>
               <div className="relative z-10">
                 <div className="text-center mb-8">
@@ -287,6 +300,9 @@ export default function HomePage() {
             </div>
           </div>
         </div>
+        
+        {/* Bottom spacing to prevent scroll interference */}
+        <div className="h-8" />
       </section>
 
       {/* Footer */}
