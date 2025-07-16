@@ -91,6 +91,9 @@ export function TeamForm({ locale }: TeamFormProps) {
 
     setIsLoading(true)
     try {
+      // Get current user to set as creator
+      const { data: { user } } = await supabase.auth.getUser()
+      
       // Generate a unique slug from the team name with timestamp as fallback
       const baseSlug = teamName.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/(^-|-$)/g, '')
       const timestamp = Date.now().toString(36) // Convert timestamp to base36 for shorter string
@@ -125,13 +128,18 @@ export function TeamForm({ locale }: TeamFormProps) {
         is_password_protected: isPasswordProtected
       }
 
+      // Add created_by only if user is authenticated and the column exists
+      if (user) {
+        teamData.created_by = user.id
+      }
+
       // Hash password if provided
       if (isPasswordProtected && password.trim()) {
         // Simple hash - in production, use bcrypt or similar
         teamData.password_hash = btoa(password) // Base64 encoding for demo
       }
 
-      const { data: team, error } = await supabase
+      let { data: team, error } = await supabase
         .from("teams")
         .insert([teamData])
         .select("id, name, slug, invite_code, is_password_protected")
@@ -145,7 +153,30 @@ export function TeamForm({ locale }: TeamFormProps) {
           throw new Error("This custom URL is already taken. Please choose a different one.")
         }
         
-        throw new Error(`Database error: ${error.message} (Code: ${error.code})`)
+        // Check if it's a missing column error and retry without created_by
+        if (error.code === 'PGRST204' && error.message.includes('created_by')) {
+          console.log("created_by column not found, retrying without it...")
+          const { created_by, ...teamDataWithoutCreatedBy } = teamData
+          
+          const { data: retryTeam, error: retryError } = await supabase
+            .from("teams")
+            .insert([teamDataWithoutCreatedBy])
+            .select("id, name, slug, invite_code, is_password_protected")
+            .single()
+            
+          if (retryError) {
+            throw new Error(`Database error: ${retryError.message} (Code: ${retryError.code})`)
+          }
+          
+          // Use the retry result
+          team = retryTeam
+        } else {
+          throw new Error(`Database error: ${error.message} (Code: ${error.code})`)
+        }
+      }
+
+      if (!team) {
+        throw new Error("Failed to create team - no data returned")
       }
 
       setCreatedTeam({

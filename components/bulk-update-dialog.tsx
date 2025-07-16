@@ -416,10 +416,10 @@ export function AnalyticsButton({ members, locale, weeksToShow, currentDate, tea
         variant="outline" 
         size="sm" 
         onClick={handleShowAnalytics}
-        className="rounded-lg bg-gradient-to-r from-green-50 to-emerald-50 dark:from-green-900/20 dark:to-emerald-900/20 hover:from-green-100 hover:to-emerald-100 dark:hover:from-green-800/30 dark:hover:to-emerald-800/30 border-green-200 dark:border-green-700 text-green-700 dark:text-green-300 font-semibold transition-all duration-200 shadow-sm hover:shadow-md w-full sm:w-auto"
+        className="rounded-lg bg-gradient-to-r from-green-50 to-emerald-50 dark:from-green-900/20 dark:to-emerald-900/20 hover:from-green-100 hover:to-emerald-100 dark:hover:from-green-800/30 dark:hover:to-emerald-800/30 border-green-200 dark:border-green-700 text-green-700 dark:text-green-300 font-semibold transition-all duration-200 shadow-sm hover:shadow-md"
       >
         <BarChart3 className="h-4 w-4 mr-2 flex-shrink-0" />
-        <span className="truncate">{t("analytics.title")}</span>
+        <span className="truncate hidden sm:inline">{t("analytics.title")}</span>
       </Button>
 
       {/* Analytics Dialog */}
@@ -1104,12 +1104,12 @@ export function BulkUpdateDialog({ members, locale, onUpdate }: BulkUpdateDialog
       <Dialog open={open} onOpenChange={setOpen}>
         <DialogTrigger asChild>
           <Button 
-            variant="outline" 
+            variant="ghost" 
             size="sm" 
-            className="rounded-lg bg-gradient-to-r from-blue-50 to-indigo-50 dark:from-blue-900/20 dark:to-indigo-900/20 hover:from-blue-100 hover:to-indigo-100 dark:hover:from-blue-800/30 dark:hover:to-indigo-800/30 border-blue-200 dark:border-blue-700 text-blue-700 dark:text-blue-300 font-semibold transition-all duration-200 shadow-sm hover:shadow-md w-full sm:w-auto"
+            className="rounded-md hover:bg-orange-100 dark:hover:bg-orange-900/40 text-orange-700 dark:text-orange-300 font-medium transition-all duration-200 px-2 py-1.5 h-8"
           >
-            <Users className="h-4 w-4 mr-2 flex-shrink-0" />
-            <span className="truncate">{t("bulk.title")}</span>
+            <Users className="h-4 w-4 mr-1 flex-shrink-0" />
+            <span className="truncate hidden sm:inline">{t("bulk.title")}</span>
           </Button>
         </DialogTrigger>
         <DialogContent className="max-w-[95vw] sm:max-w-4xl max-h-[90vh] overflow-y-auto">
@@ -1597,10 +1597,10 @@ export function PlannerButton({ members, locale, teamId }: { members: Member[], 
         variant="outline" 
         size="sm" 
         onClick={() => setShowPlanner(true)}
-        className="rounded-lg bg-gradient-to-r from-purple-50 to-indigo-50 dark:from-purple-900/20 dark:to-indigo-900/20 hover:from-purple-100 hover:to-indigo-100 dark:hover:from-purple-800/30 dark:hover:to-indigo-800/30 border-purple-200 dark:border-purple-700 text-purple-700 dark:text-purple-300 font-semibold transition-all duration-200 shadow-sm hover:shadow-md w-full sm:w-auto"
+        className="rounded-lg bg-gradient-to-r from-purple-50 to-indigo-50 dark:from-purple-900/20 dark:to-indigo-900/20 hover:from-purple-100 hover:to-indigo-100 dark:hover:from-purple-800/30 dark:hover:to-indigo-800/30 border-purple-200 dark:border-purple-700 text-purple-700 dark:text-purple-300 font-semibold transition-all duration-200 shadow-sm hover:shadow-md"
       >
         <TrendingUp className="h-4 w-4 mr-2 flex-shrink-0" />
-        <span className="truncate">{t("planner.title")}</span>
+        <span className="truncate hidden sm:inline">{t("planner.title")}</span>
       </Button>
 
       {/* Planner Dialog */}

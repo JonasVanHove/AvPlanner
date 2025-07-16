@@ -3,11 +3,43 @@
 import { TeamForm } from "@/components/team-form"
 import { JoinTeamForm } from "@/components/join-team-form"
 import { LanguageSelector } from "@/components/language-selector"
+import { LoginButton, RegisterButton } from "@/components/auth/auth-dialog"
+import { Button } from "@/components/ui/button"
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
+import { DropdownMenu, DropdownMenuContent, DropdownMenuTrigger, DropdownMenuItem, DropdownMenuSeparator } from "@/components/ui/dropdown-menu"
+import { LogOut, UserIcon, ChevronDown } from "lucide-react"
 import { useTranslation } from "@/lib/i18n"
-import { useEffect } from "react"
+import { supabase } from "@/lib/supabase"
+import { useEffect, useState } from "react"
+import { User } from "@supabase/supabase-js"
+import { useRouter } from "next/navigation"
 
 export default function HomePage() {
   const { t } = useTranslation("en")
+  const router = useRouter()
+  const [user, setUser] = useState<User | null>(null)
+  const [loading, setLoading] = useState(true)
+
+  useEffect(() => {
+    // Get initial session
+    const getInitialSession = async () => {
+      const { data: { session } } = await supabase.auth.getSession()
+      setUser(session?.user ?? null)
+      setLoading(false)
+    }
+
+    getInitialSession()
+
+    // Listen for auth changes
+    const { data: { subscription } } = supabase.auth.onAuthStateChange(
+      (event, session) => {
+        setUser(session?.user ?? null)
+        setLoading(false)
+      }
+    )
+
+    return () => subscription.unsubscribe()
+  }, [])
 
   // Force light mode for landing page (better for sales/marketing)
   useEffect(() => {
@@ -25,6 +57,18 @@ export default function HomePage() {
     }
   }, [])
 
+  const handleLogout = async () => {
+    await supabase.auth.signOut()
+  }
+
+  const handleGoHome = () => {
+    // Not needed anymore since we're on the main page
+  }
+
+  const handleViewDashboard = () => {
+    router.push('/my-teams')
+  }
+
   const scrollToSection = (sectionId: string) => {
     const element = document.getElementById(sectionId)
     if (element) {
@@ -38,6 +82,18 @@ export default function HomePage() {
         behavior: 'smooth'
       })
     }
+  }
+
+  // Show loading state
+  if (loading) {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-blue-50 via-indigo-50 to-purple-50">
+        <div className="text-center">
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto mb-4"></div>
+          <p className="text-gray-600">Loading...</p>
+        </div>
+      </div>
+    )
   }
 
   return (
@@ -56,8 +112,42 @@ export default function HomePage() {
                 {t("landing.title")}
               </h1>
             </div>
-            <div className="flex items-center">
+            <div className="flex items-center gap-4">
               <LanguageSelector currentLocale="en" />
+              {user ? (
+                <DropdownMenu>
+                  <DropdownMenuTrigger asChild>
+                    <Button variant="outline" className="flex items-center gap-2 px-3">
+                      <Avatar className="h-6 w-6">
+                        <AvatarImage src={user.user_metadata?.avatar_url} />
+                        <AvatarFallback className="text-xs">
+                          {user.user_metadata?.first_name?.[0] || user.email?.[0]?.toUpperCase()}
+                        </AvatarFallback>
+                      </Avatar>
+                      <span className="text-sm font-medium max-w-[100px] truncate">
+                        {user.user_metadata?.first_name || user.email?.split('@')[0]}
+                      </span>
+                      <ChevronDown className="h-4 w-4" />
+                    </Button>
+                  </DropdownMenuTrigger>
+                  <DropdownMenuContent align="end" className="w-48">
+                    <DropdownMenuItem onClick={handleViewDashboard}>
+                      <UserIcon className="h-4 w-4 mr-2" />
+                      My Teams
+                    </DropdownMenuItem>
+                    <DropdownMenuSeparator />
+                    <DropdownMenuItem onClick={handleLogout}>
+                      <LogOut className="h-4 w-4 mr-2" />
+                      Logout
+                    </DropdownMenuItem>
+                  </DropdownMenuContent>
+                </DropdownMenu>
+              ) : (
+                <div className="flex items-center gap-2">
+                  <LoginButton />
+                  <RegisterButton />
+                </div>
+              )}
             </div>
           </div>
         </div>

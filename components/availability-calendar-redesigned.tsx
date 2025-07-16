@@ -952,64 +952,39 @@ const AvailabilityCalendarRedesigned = ({
                 </div>
               </div>
 
-              <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-4 w-full sm:w-auto">
-                <div className="flex bg-gray-100 dark:bg-gray-700 rounded-lg p-1 flex-wrap sm:flex-nowrap">
-                  <Button
-                    variant={weeksToShow === 1 ? "default" : "ghost"}
-                    size="sm"
-                    onClick={() => setWeeksToShow(1)}
-                    className={cn(
-                      "text-xs px-2 sm:px-3 py-2 rounded-md font-medium flex-1 sm:flex-none",
-                      weeksToShow === 1
-                        ? "bg-blue-600 text-white shadow-sm"
-                        : "hover:bg-gray-200 dark:hover:bg-gray-600",
-                    )}
-                  >
-                    <span className="truncate">{t("calendar.1week")}</span>
-                  </Button>
-                  <Button
-                    variant={weeksToShow === 2 ? "default" : "ghost"}
-                    size="sm"
-                    onClick={() => setWeeksToShow(2)}
-                    className={cn(
-                      "text-xs px-2 sm:px-3 py-2 rounded-md font-medium flex-1 sm:flex-none",
-                      weeksToShow === 2
-                        ? "bg-blue-600 text-white shadow-sm"
-                        : "hover:bg-gray-200 dark:hover:bg-gray-600",
-                    )}
-                  >
-                    <span className="truncate">{t("calendar.2weeks")}</span>
-                  </Button>
-                  <Button
-                    variant={weeksToShow === 4 ? "default" : "ghost"}
-                    size="sm"
-                    onClick={() => setWeeksToShow(4)}
-                    className={cn(
-                      "text-xs px-2 sm:px-3 py-2 rounded-md font-medium flex-1 sm:flex-none",
-                      weeksToShow === 4
-                        ? "bg-blue-600 text-white shadow-sm"
-                        : "hover:bg-gray-200 dark:hover:bg-gray-600",
-                    )}
-                  >
-                    <span className="truncate">{t("calendar.4weeks")}</span>
-                  </Button>
-                  <Button
-                    variant={weeksToShow === 8 ? "default" : "ghost"}
-                    size="sm"
-                    onClick={() => setWeeksToShow(8)}
-                    className={cn(
-                      "text-xs px-2 sm:px-3 py-2 rounded-md font-medium flex-1 sm:flex-none",
-                      weeksToShow === 8
-                        ? "bg-blue-600 text-white shadow-sm"
-                        : "hover:bg-gray-200 dark:hover:bg-gray-600",
-                    )}
-                  >
-                    <span className="truncate">{t("calendar.8weeks")}</span>
-                  </Button>
-                </div>
+              <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-2 w-full sm:w-auto">
+                {/* Week selector - More compact */}
+                <DropdownMenu>
+                  <DropdownMenuTrigger asChild>
+                    <Button variant="outline" size="sm" className="flex items-center gap-2 bg-gray-50 dark:bg-gray-700 hover:bg-gray-100 dark:hover:bg-gray-600 w-full sm:w-auto">
+                      <Calendar className="h-4 w-4" />
+                      <span className="text-sm font-medium">
+                        {weeksToShow === 1 ? t("calendar.1week") : 
+                         weeksToShow === 2 ? t("calendar.2weeks") : 
+                         weeksToShow === 4 ? t("calendar.4weeks") : 
+                         t("calendar.8weeks")}
+                      </span>
+                      <ChevronDown className="h-4 w-4" />
+                    </Button>
+                  </DropdownMenuTrigger>
+                  <DropdownMenuContent align="end">
+                    <DropdownMenuItem onClick={() => setWeeksToShow(1)}>
+                      {t("calendar.1week")}
+                    </DropdownMenuItem>
+                    <DropdownMenuItem onClick={() => setWeeksToShow(2)}>
+                      {t("calendar.2weeks")}
+                    </DropdownMenuItem>
+                    <DropdownMenuItem onClick={() => setWeeksToShow(4)}>
+                      {t("calendar.4weeks")}
+                    </DropdownMenuItem>
+                    <DropdownMenuItem onClick={() => setWeeksToShow(8)}>
+                      {t("calendar.8weeks")}
+                    </DropdownMenuItem>
+                  </DropdownMenuContent>
+                </DropdownMenu>
 
-                {/* Analytics and Planner Buttons - Always visible */}
-                <div className="flex flex-col sm:flex-row gap-2 w-full sm:w-auto">
+                {/* Analytics and Planner Buttons - Compact */}
+                <div className="flex items-center gap-1 w-full sm:w-auto">
                   <AnalyticsButton 
                     members={members} 
                     locale={locale} 
@@ -1024,27 +999,31 @@ const AvailabilityCalendarRedesigned = ({
                   />
                 </div>
 
-                {editMode && (
-                  <div className="flex flex-col sm:flex-row gap-2 w-full sm:w-auto">
-                    <BulkUpdateDialog members={members} locale={locale} onUpdate={fetchAvailability} />
-                    <MemberForm teamId={teamId} locale={locale} onMemberAdded={onMembersUpdate} />
-                  </div>
-                )}
-
-                {/* Edit Mode Toggle - More subtle */}
-                <div className="flex items-center gap-3 bg-white dark:bg-gray-800 rounded-lg p-3 border border-gray-200 dark:border-gray-700 w-full sm:w-auto">
-                  <div
-                    className={cn(
-                      "flex items-center gap-2 px-3 py-1.5 rounded-md flex-1 sm:flex-none",
-                      editMode
-                        ? "bg-orange-50 dark:bg-orange-900/20 text-orange-700 dark:text-orange-300"
-                        : "bg-green-50 dark:bg-green-900/20 text-green-700 dark:text-green-300",
-                    )}
-                  >
-                    {editMode ? <Edit3 className="h-4 w-4 flex-shrink-0" /> : <Lock className="h-4 w-4 flex-shrink-0" />}
-                    <span className="text-sm font-medium">{editMode ? "Edit Mode" : "View Mode"}</span>
-                  </div>
-                  <Switch checked={editMode} onCheckedChange={handleEditModeToggle} />
+                {/* Edit Mode Actions - Compact */}
+                <div className="flex items-center gap-2 w-full sm:w-auto">
+                  {editMode ? (
+                    <div className="flex items-center gap-1 bg-orange-50 dark:bg-orange-900/20 rounded-lg p-1 border border-orange-200 dark:border-orange-700">
+                      <div className="flex items-center gap-2 px-2 py-1">
+                        <Edit3 className="h-4 w-4 text-orange-700 dark:text-orange-300" />
+                        <span className="text-sm font-medium text-orange-700 dark:text-orange-300 hidden sm:inline">Edit Mode</span>
+                      </div>
+                      <div className="w-px h-6 bg-orange-200 dark:bg-orange-700"></div>
+                      <BulkUpdateDialog members={members} locale={locale} onUpdate={fetchAvailability} />
+                      <MemberForm teamId={teamId} locale={locale} onMemberAdded={onMembersUpdate} />
+                      <div className="w-px h-6 bg-orange-200 dark:bg-orange-700"></div>
+                      <div className="flex items-center gap-1 px-2">
+                        <Switch checked={editMode} onCheckedChange={handleEditModeToggle} />
+                      </div>
+                    </div>
+                  ) : (
+                    <div className="flex items-center gap-3 bg-green-50 dark:bg-green-900/20 rounded-lg p-2 border border-green-200 dark:border-green-700">
+                      <div className="flex items-center gap-2">
+                        <Lock className="h-4 w-4 text-green-700 dark:text-green-300" />
+                        <span className="text-sm font-medium text-green-700 dark:text-green-300 hidden sm:inline">View Mode</span>
+                      </div>
+                      <Switch checked={editMode} onCheckedChange={handleEditModeToggle} />
+                    </div>
+                  )}
                 </div>
 
                 <div className="w-full sm:w-auto">
