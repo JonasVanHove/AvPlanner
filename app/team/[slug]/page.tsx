@@ -6,6 +6,7 @@ import { AvailabilityCalendarRedesigned } from "@/components/availability-calend
 import { TeamPasswordForm } from "@/components/team-password-form"
 import { supabase } from "@/lib/supabase"
 import { useTranslation, type Locale } from "@/lib/i18n"
+import { useAuth } from "@/hooks/useAuth"
 import Link from "next/link"
 
 interface Team {
@@ -33,6 +34,7 @@ interface TeamPageProps {
 
 export default function TeamPage({ params }: TeamPageProps) {
   const locale: Locale = "en" // Default to English for non-locale routes
+  const { user } = useAuth()
 
   const [team, setTeam] = useState<Team | null>(null)
   const [members, setMembers] = useState<Member[]>([])
@@ -90,6 +92,7 @@ export default function TeamPage({ params }: TeamPageProps) {
         .from("members")
         .select("*")
         .eq("team_id", teamData.id)
+        .order("order_index", { ascending: true })
         .order("created_at", { ascending: true })
 
       if (membersError) throw membersError
@@ -122,6 +125,7 @@ export default function TeamPage({ params }: TeamPageProps) {
           .from("members")
           .select("*")
           .eq("team_id", team.id)
+          .order("order_index", { ascending: true })
           .order("created_at", { ascending: true })
 
         if (membersError) throw membersError
@@ -184,6 +188,7 @@ export default function TeamPage({ params }: TeamPageProps) {
       onMembersUpdate={fetchTeamData}
       isPasswordProtected={team.is_password_protected}
       passwordHash={team.password_hash}
+      userEmail={user?.email}
     />
   )
 }

@@ -7,7 +7,7 @@ import { LoginButton, RegisterButton } from "@/components/auth/auth-dialog"
 import { Button } from "@/components/ui/button"
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
 import { DropdownMenu, DropdownMenuContent, DropdownMenuTrigger, DropdownMenuItem, DropdownMenuSeparator } from "@/components/ui/dropdown-menu"
-import { LogOut, UserIcon, ChevronDown } from "lucide-react"
+import { LogOut, UserIcon, ChevronDown, Shield } from "lucide-react"
 import { useTranslation } from "@/lib/i18n"
 import { supabase } from "@/lib/supabase"
 import { useEffect, useState } from "react"
@@ -19,6 +19,7 @@ export default function HomePage() {
   const router = useRouter()
   const [user, setUser] = useState<User | null>(null)
   const [loading, setLoading] = useState(true)
+  const [isAdmin, setIsAdmin] = useState(false)
 
   useEffect(() => {
     // Get initial session
@@ -26,6 +27,11 @@ export default function HomePage() {
       const { data: { session } } = await supabase.auth.getSession()
       setUser(session?.user ?? null)
       setLoading(false)
+      
+      // Check admin status if user is logged in
+      if (session?.user) {
+        checkAdminStatus(session.user.email!)
+      }
     }
 
     getInitialSession()
@@ -35,11 +41,32 @@ export default function HomePage() {
       (event, session) => {
         setUser(session?.user ?? null)
         setLoading(false)
+        
+        // Check admin status if user is logged in
+        if (session?.user) {
+          checkAdminStatus(session.user.email!)
+        } else {
+          setIsAdmin(false)
+        }
       }
     )
 
     return () => subscription.unsubscribe()
   }, [])
+
+  const checkAdminStatus = async (email: string) => {
+    try {
+      const { data, error } = await supabase.rpc('is_user_admin', {
+        user_email: email
+      })
+      
+      if (!error && data) {
+        setIsAdmin(true)
+      }
+    } catch (error) {
+      console.error('Error checking admin status:', error)
+    }
+  }
 
   // Force light mode for landing page (better for sales/marketing)
   useEffect(() => {
@@ -135,6 +162,12 @@ export default function HomePage() {
                       <UserIcon className="h-4 w-4 mr-2" />
                       My Teams
                     </DropdownMenuItem>
+                    {isAdmin && (
+                      <DropdownMenuItem onClick={() => router.push('/admin')}>
+                        <Shield className="h-4 w-4 mr-2" />
+                        Admin Panel
+                      </DropdownMenuItem>
+                    )}
                     <DropdownMenuSeparator />
                     <DropdownMenuItem onClick={handleLogout}>
                       <LogOut className="h-4 w-4 mr-2" />

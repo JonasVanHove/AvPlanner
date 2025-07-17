@@ -9,6 +9,7 @@ import {
   Calendar,
   MoreHorizontal,
   ChevronDown,
+  ChevronUp,
   Edit3,
   Lock,
   Mail,
@@ -59,6 +60,7 @@ interface AvailabilityCalendarProps {
   onMembersUpdate: () => void
   isPasswordProtected?: boolean
   passwordHash?: string
+  userEmail?: string
 }
 
 const AvailabilityCalendarRedesigned = ({
@@ -70,6 +72,7 @@ const AvailabilityCalendarRedesigned = ({
   onMembersUpdate,
   isPasswordProtected,
   passwordHash,
+  userEmail,
 }: AvailabilityCalendarProps) => {
   const [currentDate, setCurrentDate] = useState(new Date())
   const [availability, setAvailability] = useState<Availability[]>([])
@@ -366,6 +369,86 @@ const AvailabilityCalendarRedesigned = ({
     } catch (error) {
       console.error("Error deleting member:", error)
       alert("Er is een fout opgetreden bij het verwijderen van het teamlid.")
+    }
+  }
+
+  const moveMemberUp = async (memberId: string) => {
+    if (!editMode || !userEmail) {
+      console.error('Cannot move member:', { editMode, userEmail })
+      alert("Je moet ingelogd zijn en in edit mode om leden te verplaatsen.")
+      return
+    }
+
+    try {
+      console.log('Moving member up:', { teamId, memberId, userEmail })
+      
+      // Debug: show current member info
+      const member = members.find(m => m.id === memberId)
+      console.log('Member to move:', member)
+      
+      const { data, error } = await supabase.rpc('move_member_up', {
+        team_id_param: teamId,
+        member_id_param: memberId,
+        user_email: userEmail
+      })
+      
+      console.log('Move member up result:', { data, error })
+      
+      if (error) {
+        console.error('Supabase RPC error:', error)
+        // Check if it's a function not found error
+        if (error.code === '42883') {
+          alert("De database functie 'move_member_up' bestaat niet. Voer eerst de migration script uit.")
+          return
+        }
+        throw error
+      }
+      
+      console.log('Member moved up successfully')
+      onMembersUpdate()
+    } catch (error: any) {
+      console.error("Error moving member up:", error)
+      alert(`Er is een fout opgetreden bij het verplaatsen van het teamlid: ${error?.message || error}`)
+    }
+  }
+
+  const moveMemberDown = async (memberId: string) => {
+    if (!editMode || !userEmail) {
+      console.error('Cannot move member:', { editMode, userEmail })
+      alert("Je moet ingelogd zijn en in edit mode om leden te verplaatsen.")
+      return
+    }
+
+    try {
+      console.log('Moving member down:', { teamId, memberId, userEmail })
+      
+      // Debug: show current member info
+      const member = members.find(m => m.id === memberId)
+      console.log('Member to move:', member)
+      
+      const { data, error } = await supabase.rpc('move_member_down', {
+        team_id_param: teamId,
+        member_id_param: memberId,
+        user_email: userEmail
+      })
+      
+      console.log('Move member down result:', { data, error })
+      
+      if (error) {
+        console.error('Supabase RPC error:', error)
+        // Check if it's a function not found error
+        if (error.code === '42883') {
+          alert("De database functie 'move_member_down' bestaat niet. Voer eerst de migration script uit.")
+          return
+        }
+        throw error
+      }
+      
+      console.log('Member moved down successfully')
+      onMembersUpdate()
+    } catch (error: any) {
+      console.error("Error moving member down:", error)
+      alert(`Er is een fout opgetreden bij het verplaatsen van het teamlid: ${error?.message || error}`)
     }
   }
 
@@ -793,35 +876,69 @@ const AvailabilityCalendarRedesigned = ({
                         </div>
                       </div>
                       {editMode && (
-                        <DropdownMenu>
-                          <DropdownMenuTrigger asChild>
-                            <Button
-                              variant="ghost"
-                              size="sm"
-                              className="h-8 w-8 p-0 rounded-full hover:bg-gray-100 dark:hover:bg-gray-600 flex-shrink-0"
+                        <div className="flex items-center gap-1">
+                          <Tooltip>
+                            <TooltipTrigger asChild>
+                              <Button
+                                variant="ghost"
+                                size="sm"
+                                className="h-6 w-6 p-0 hover:bg-gray-100 dark:hover:bg-gray-600"
+                                onClick={() => moveMemberUp(member.id)}
+                                disabled={memberIndex === 0}
+                              >
+                                <ChevronUp className="h-3 w-3" />
+                              </Button>
+                            </TooltipTrigger>
+                            <TooltipContent>
+                              <p>Omhoog verplaatsen</p>
+                            </TooltipContent>
+                          </Tooltip>
+                          <Tooltip>
+                            <TooltipTrigger asChild>
+                              <Button
+                                variant="ghost"
+                                size="sm"
+                                className="h-6 w-6 p-0 hover:bg-gray-100 dark:hover:bg-gray-600"
+                                onClick={() => moveMemberDown(member.id)}
+                                disabled={memberIndex === members.length - 1}
+                              >
+                                <ChevronDown className="h-3 w-3" />
+                              </Button>
+                            </TooltipTrigger>
+                            <TooltipContent>
+                              <p>Omlaag verplaatsen</p>
+                            </TooltipContent>
+                          </Tooltip>
+                          <DropdownMenu>
+                            <DropdownMenuTrigger asChild>
+                              <Button
+                                variant="ghost"
+                                size="sm"
+                                className="h-8 w-8 p-0 rounded-full hover:bg-gray-100 dark:hover:bg-gray-600 flex-shrink-0"
+                              >
+                                <MoreHorizontal className="h-4 w-4" />
+                              </Button>
+                            </DropdownMenuTrigger>
+                            <DropdownMenuContent
+                              align="end"
+                              className="bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700"
                             >
-                              <MoreHorizontal className="h-4 w-4" />
-                            </Button>
-                          </DropdownMenuTrigger>
-                          <DropdownMenuContent
-                            align="end"
-                            className="bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700"
-                          >
-                            <MemberForm
-                              teamId={teamId}
-                              locale={locale}
-                              onMemberAdded={onMembersUpdate}
-                              member={member}
-                              mode="edit"
-                            />
-                            <DropdownMenuItem
-                              onClick={() => deleteMember(member.id)}
-                              className="text-red-600 hover:bg-red-50 dark:hover:bg-red-900/20"
-                            >
-                              Verwijderen
-                            </DropdownMenuItem>
-                          </DropdownMenuContent>
-                        </DropdownMenu>
+                              <MemberForm
+                                teamId={teamId}
+                                locale={locale}
+                                onMemberAdded={onMembersUpdate}
+                                member={member}
+                                mode="edit"
+                              />
+                              <DropdownMenuItem
+                                onClick={() => deleteMember(member.id)}
+                                className="text-red-600 hover:bg-red-50 dark:hover:bg-red-900/20"
+                              >
+                                Verwijderen
+                              </DropdownMenuItem>
+                            </DropdownMenuContent>
+                          </DropdownMenu>
+                        </div>
                       )}
                     </div>
                     {week.days.map((date, dayIndex) => {
