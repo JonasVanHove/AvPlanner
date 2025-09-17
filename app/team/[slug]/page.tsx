@@ -6,6 +6,7 @@ import { AvailabilityCalendarRedesigned } from "@/components/availability-calend
 import { TeamPasswordForm } from "@/components/team-password-form"
 import { supabase } from "@/lib/supabase"
 import { useTranslation, type Locale } from "@/lib/i18n"
+import { useAuth } from "@/hooks/useAuth"
 import Link from "next/link"
 
 interface Team {
@@ -21,8 +22,13 @@ interface Member {
   id: string
   first_name: string
   last_name: string
-  email?: string
-  team_id: string
+  email: string
+  role: string
+  status: string
+  profile_image?: string
+  created_at: string
+  last_active?: string
+  order_index?: number
 }
 
 interface TeamPageProps {
@@ -33,6 +39,7 @@ interface TeamPageProps {
 
 export default function TeamPage({ params }: TeamPageProps) {
   const locale: Locale = "en" // Default to English for non-locale routes
+  const { user } = useAuth()
 
   const [team, setTeam] = useState<Team | null>(null)
   const [members, setMembers] = useState<Member[]>([])
@@ -85,15 +92,32 @@ export default function TeamPage({ params }: TeamPageProps) {
         setIsAuthenticated(true)
       }
 
-      // Fetch members
-      const { data: membersData, error: membersError } = await supabase
-        .from("members")
-        .select("*")
-        .eq("team_id", teamData.id)
-        .order("created_at", { ascending: true })
+      // Fetch active members for this team only using database function
+      const { data: membersData, error: membersError } = await supabase.rpc('get_team_active_members', {
+        team_id_param: teamData.id,
+        user_email: user?.email || ''
+      })
 
       if (membersError) throw membersError
-      setMembers(membersData || [])
+      
+      // Transform database function output to Member interface format
+      const transformedMembers: Member[] = (membersData || []).map((member: any) => {
+        const nameParts = member.member_name.split(' ')
+        return {
+          id: member.member_id,
+          first_name: nameParts[0] || '',
+          last_name: nameParts.slice(1).join(' ') || '',
+          email: member.member_email,
+          role: member.member_role,
+          status: member.member_status,
+          profile_image: member.profile_image_url, // This now contains the correct profile_image or profile_image_url
+          created_at: member.joined_at,
+          last_active: member.last_active,
+          order_index: 0 // Default value since not returned by function
+        }
+      })
+      
+      setMembers(transformedMembers)
     } catch (error) {
       console.error("Error fetching team data:", error)
     } finally {
@@ -122,6 +146,7 @@ export default function TeamPage({ params }: TeamPageProps) {
           .from("members")
           .select("*")
           .eq("team_id", team.id)
+          .order("order_index", { ascending: true })
           .order("created_at", { ascending: true })
 
         if (membersError) throw membersError
@@ -184,6 +209,7 @@ export default function TeamPage({ params }: TeamPageProps) {
       onMembersUpdate={fetchTeamData}
       isPasswordProtected={team.is_password_protected}
       passwordHash={team.password_hash}
+      userEmail={user?.email}
     />
   )
 }

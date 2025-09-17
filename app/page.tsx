@@ -3,37 +3,130 @@
 import { TeamForm } from "@/components/team-form"
 import { JoinTeamForm } from "@/components/join-team-form"
 import { LanguageSelector } from "@/components/language-selector"
+import { LoginButton, RegisterButton } from "@/components/auth/auth-dialog"
+import { Button } from "@/components/ui/button"
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
+import { DropdownMenu, DropdownMenuContent, DropdownMenuTrigger, DropdownMenuItem, DropdownMenuSeparator } from "@/components/ui/dropdown-menu"
+import { LogOut, UserIcon, ChevronDown, Shield } from "lucide-react"
 import { useTranslation } from "@/lib/i18n"
-import { useEffect } from "react"
+import { supabase } from "@/lib/supabase"
+import { useEffect, useState } from "react"
+import { User } from "@supabase/supabase-js"
+import { useRouter } from "next/navigation"
 
 export default function HomePage() {
   const { t } = useTranslation("en")
+  const router = useRouter()
+  const [user, setUser] = useState<User | null>(null)
+  const [loading, setLoading] = useState(true)
+  const [isAdmin, setIsAdmin] = useState(false)
 
   useEffect(() => {
-    // Force light mode for landing page
+    // Get initial session
+    const getInitialSession = async () => {
+      const { data: { session } } = await supabase.auth.getSession()
+      setUser(session?.user ?? null)
+      setLoading(false)
+      
+      // Check admin status if user is logged in
+      if (session?.user) {
+        checkAdminStatus(session.user.email!)
+      }
+    }
+
+    getInitialSession()
+
+    // Listen for auth changes
+    const { data: { subscription } } = supabase.auth.onAuthStateChange(
+      (event, session) => {
+        setUser(session?.user ?? null)
+        setLoading(false)
+        
+        // Check admin status if user is logged in
+        if (session?.user) {
+          checkAdminStatus(session.user.email!)
+        } else {
+          setIsAdmin(false)
+        }
+      }
+    )
+
+    return () => subscription.unsubscribe()
+  }, [])
+
+  const checkAdminStatus = async (email: string) => {
+    try {
+      const { data, error } = await supabase.rpc('is_user_admin', {
+        user_email: email
+      })
+      
+      if (!error && data) {
+        setIsAdmin(true)
+      }
+    } catch (error) {
+      console.error('Error checking admin status:', error)
+    }
+  }
+
+  // Force light mode for landing page (better for sales/marketing)
+  useEffect(() => {
     document.documentElement.classList.remove('dark')
     document.documentElement.setAttribute('data-theme', 'light')
     
-    // Cleanup on unmount - restore to system theme
+    // Clean up on unmount
     return () => {
       document.documentElement.removeAttribute('data-theme')
+      // Restore user's preferred theme when leaving
+      const savedTheme = localStorage.getItem('theme')
+      if (savedTheme === 'dark' || (!savedTheme && window.matchMedia('(prefers-color-scheme: dark)').matches)) {
+        document.documentElement.classList.add('dark')
+      }
     }
   }, [])
+
+  const handleLogout = async () => {
+    await supabase.auth.signOut()
+  }
+
+  const handleGoHome = () => {
+    // Not needed anymore since we're on the main page
+  }
+
+  const handleViewDashboard = () => {
+    router.push('/my-teams')
+  }
 
   const scrollToSection = (sectionId: string) => {
     const element = document.getElementById(sectionId)
     if (element) {
-      element.scrollIntoView({
-        behavior: 'smooth',
-        block: 'start',
+      // Use a more stable scroll method that doesn't affect layout
+      const elementRect = element.getBoundingClientRect()
+      const absoluteElementTop = elementRect.top + window.pageYOffset
+      const middle = absoluteElementTop - (window.innerHeight / 2) + (elementRect.height / 2)
+      
+      window.scrollTo({
+        top: middle,
+        behavior: 'smooth'
       })
     }
   }
 
+  // Show loading state
+  if (loading) {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-blue-50 via-indigo-50 to-purple-50">
+        <div className="text-center">
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto mb-4"></div>
+          <p className="text-gray-600">Loading...</p>
+        </div>
+      </div>
+    )
+  }
+
   return (
-    <div className="min-h-screen bg-gradient-to-br from-blue-50 via-indigo-50 to-purple-50">
+    <div className="min-h-screen bg-gradient-to-br from-blue-50 via-indigo-50 to-purple-50 overflow-x-hidden">
         {/* Header */}
-        <header className="bg-white/80 backdrop-blur-md shadow-sm border-b border-white/20 sticky top-0 z-50">
+        <header className="bg-white/80 backdrop-blur-md shadow-sm border-b border-white/20 sticky top-0 z-50 will-change-transform">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="flex justify-between items-center h-16">
             <div className="flex items-center gap-3">
@@ -42,11 +135,53 @@ export default function HomePage() {
                 alt="Availability Planner Logo" 
                 className="h-8 w-8"
               />
-              <h1 className="text-xl font-bold bg-gradient-to-r from-blue-600 to-purple-600 bg-clip-text text-transparent">
+              <h1 className="text-xl font-bold text-black">
                 {t("landing.title")}
               </h1>
             </div>
-            <LanguageSelector currentLocale="en" />
+            <div className="flex items-center gap-4">
+              <LanguageSelector currentLocale="en" />
+              {user ? (
+                <DropdownMenu>
+                  <DropdownMenuTrigger asChild>
+                    <Button variant="outline" className="flex items-center gap-2 px-3">
+                      <Avatar className="h-6 w-6">
+                        <AvatarImage src={user.user_metadata?.avatar_url} />
+                        <AvatarFallback className="text-xs">
+                          {user.user_metadata?.first_name?.[0] || user.email?.[0]?.toUpperCase()}
+                        </AvatarFallback>
+                      </Avatar>
+                      <span className="text-sm font-medium max-w-[100px] truncate">
+                        {user.user_metadata?.first_name || user.email?.split('@')[0]}
+                      </span>
+                      <ChevronDown className="h-4 w-4" />
+                    </Button>
+                  </DropdownMenuTrigger>
+                  <DropdownMenuContent align="end" className="w-48">
+                    <DropdownMenuItem onClick={handleViewDashboard}>
+                      <UserIcon className="h-4 w-4 mr-2" />
+                      My Teams
+                    </DropdownMenuItem>
+                    {isAdmin && (
+                      <DropdownMenuItem onClick={() => router.push('/admin')}>
+                        <Shield className="h-4 w-4 mr-2" />
+                        Admin Panel
+                      </DropdownMenuItem>
+                    )}
+                    <DropdownMenuSeparator />
+                    <DropdownMenuItem onClick={handleLogout}>
+                      <LogOut className="h-4 w-4 mr-2" />
+                      Logout
+                    </DropdownMenuItem>
+                  </DropdownMenuContent>
+                </DropdownMenu>
+              ) : (
+                <div className="flex items-center gap-2">
+                  <LoginButton />
+                  <RegisterButton />
+                </div>
+              )}
+            </div>
           </div>
         </div>
       </header>
@@ -54,7 +189,7 @@ export default function HomePage() {
       {/* Hero Section */}
       <section className="relative py-20 px-4 sm:px-6 lg:px-8">
         <div className="max-w-7xl mx-auto text-center">
-          <h2 className="text-4xl sm:text-5xl lg:text-6xl font-bold text-gray-900 mb-6">
+          <h2 className="text-4xl sm:text-5xl lg:text-6xl font-bold bg-gradient-to-r from-blue-600 to-purple-600 bg-clip-text text-transparent mb-6">
             {t("landing.subtitle")}
           </h2>
           <p className="text-xl text-gray-600 max-w-3xl mx-auto mb-8 leading-relaxed">
@@ -242,18 +377,19 @@ export default function HomePage() {
       </section>
 
       {/* Team Management Section */}
-      <section className="py-20 px-4 sm:px-6 lg:px-8 bg-gradient-to-br from-blue-50 via-indigo-50 to-purple-50 relative overflow-hidden">
+      <section id="team-management" className="py-20 px-4 sm:px-6 lg:px-8 bg-gradient-to-br from-blue-50 via-indigo-50 to-purple-50 relative overflow-hidden">
         {/* Background decorative elements */}
         <div className="absolute inset-0 bg-gradient-to-r from-blue-500/5 via-purple-500/5 to-pink-500/5"></div>
         <div className="absolute top-0 left-0 w-72 h-72 bg-blue-500/10 rounded-full blur-3xl -translate-x-1/2 -translate-y-1/2"></div>
         <div className="absolute bottom-0 right-0 w-72 h-72 bg-purple-500/10 rounded-full blur-3xl translate-x-1/2 translate-y-1/2"></div>
         
-        <div className="h-12" />
+        {/* Extra spacing to prevent scroll interference */}
+        <div className="h-8" />
 
         <div className="max-w-7xl mx-auto relative z-10">
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-12">
             {/* Create Team Section */}
-            <div id="create-team" className="relative bg-white/90 backdrop-blur-sm rounded-3xl shadow-2xl p-8 border border-white/30 hover:shadow-3xl transition-all duration-300 hover:scale-[1.02] group">
+            <div id="create-team" className="scroll-mt-24 relative bg-white/90 backdrop-blur-sm rounded-3xl shadow-2xl p-8 border border-white/30 hover:shadow-3xl transition-all duration-300 hover:scale-[1.02] group">
               <div className="absolute inset-0 bg-gradient-to-r from-blue-500/5 to-purple-500/5 rounded-3xl opacity-0 group-hover:opacity-100 transition-opacity duration-300"></div>
               <div className="relative z-10">
                 <div className="text-center mb-8">
@@ -270,7 +406,7 @@ export default function HomePage() {
             </div>
             
             {/* Join Team Section */}
-            <div id="join-team" className="relative bg-white/90 backdrop-blur-sm rounded-3xl shadow-2xl p-8 border border-white/30 hover:shadow-3xl transition-all duration-300 hover:scale-[1.02] group">
+            <div id="join-team" className="scroll-mt-24 relative bg-white/90 backdrop-blur-sm rounded-3xl shadow-2xl p-8 border border-white/30 hover:shadow-3xl transition-all duration-300 hover:scale-[1.02] group">
               <div className="absolute inset-0 bg-gradient-to-r from-purple-500/5 to-pink-500/5 rounded-3xl opacity-0 group-hover:opacity-100 transition-opacity duration-300"></div>
               <div className="relative z-10">
                 <div className="text-center mb-8">
@@ -287,6 +423,9 @@ export default function HomePage() {
             </div>
           </div>
         </div>
+        
+        {/* Bottom spacing to prevent scroll interference */}
+        <div className="h-8" />
       </section>
 
       {/* Footer */}

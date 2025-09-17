@@ -65,12 +65,100 @@
   }
   body {
     @apply bg-background text-foreground;
+    /* Ensure stable scrolling behavior */
+    scroll-behavior: smooth;
   }
   html {
+    /* Improved scroll behavior for better mobile experience */
     scroll-behavior: smooth;
+    /* Prevent layout shift during scroll */
+    scroll-padding-top: 80px;
+  }
+  
+  /* Force light mode for landing page forms */
+  [data-theme="light"] {
+    --background: 0 0% 100%;
+    --foreground: 222.2 84% 4.9%;
+    --card: 0 0% 100%;
+    --card-foreground: 222.2 84% 4.9%;
+    --popover: 0 0% 100%;
+    --popover-foreground: 222.2 84% 4.9%;
+    --primary: 221.2 83.2% 53.3%;
+    --primary-foreground: 210 40% 98%;
+    --secondary: 210 40% 96%;
+    --secondary-foreground: 222.2 84% 4.9%;
+    --muted: 210 40% 96%;
+    --muted-foreground: 215.4 16.3% 46.9%;
+    --accent: 210 40% 96%;
+    --accent-foreground: 222.2 84% 4.9%;
+    --destructive: 0 84.2% 60.2%;
+    --destructive-foreground: 210 40% 98%;
+    --border: 214.3 31.8% 91.4%;
+    --input: 214.3 31.8% 91.4%;
+    --ring: 221.2 83.2% 53.3%;
+  }
+  
+  /* Prevent scrolling from affecting layout */
+  @supports (scroll-behavior: smooth) {
+    html {
+      scroll-behavior: smooth;
+    }
+    
+    /* Ensure smooth scrolling doesn't interfere with layout */
+    * {
+      scroll-margin-top: 80px;
+    }
+  }
+  
+  /* Ensure proper mobile scrolling */
+  @media (max-width: 768px) {
+    html {
+      scroll-padding-top: 60px;
+    }
+    
+    * {
+      scroll-margin-top: 60px;
+    }
   }
 }
 
 .dark .bg-gray-750 {
   background-color: rgb(55 65 81);
+}
+
+/* Ensure sticky header stays properly positioned during scroll */
+.sticky {
+  position: -webkit-sticky;
+  position: sticky;
+  z-index: 50;
+}
+
+/* Improve drawer positioning on mobile */
+@media (max-width: 768px) {
+  [data-vaul-drawer] {
+    /* Ensure drawer doesn't interfere with viewport */
+    touch-action: none;
+  }
+  
+  [data-vaul-drawer-wrapper] {
+    /* Prevent body scroll when drawer is open */
+    overflow: hidden;
+  }
+  
+  /* Ensure mobile settings button is properly sized */
+  .settings-button-mobile {
+    min-width: 40px;
+    min-height: 40px;
+    padding: 0;
+  }
+  
+  /* Improve scroll behavior on mobile */
+  html {
+    -webkit-overflow-scrolling: touch;
+  }
+  
+  /* Prevent horizontal scroll on mobile */
+  body {
+    overflow-x: hidden;
+  }
 }

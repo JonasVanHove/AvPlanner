@@ -91,6 +91,9 @@ export function TeamForm({ locale }: TeamFormProps) {
 
     setIsLoading(true)
     try {
+      // Get current user to set as creator
+      const { data: { user } } = await supabase.auth.getUser()
+      
       // Generate a unique slug from the team name with timestamp as fallback
       const baseSlug = teamName.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/(^-|-$)/g, '')
       const timestamp = Date.now().toString(36) // Convert timestamp to base36 for shorter string
@@ -118,42 +121,117 @@ export function TeamForm({ locale }: TeamFormProps) {
           throw new Error(`Error checking custom URL: ${checkError.message}`)
         }
       }
-      
-      const teamData: any = {
-        name: teamName,
-        slug: finalSlug,
-        is_password_protected: isPasswordProtected
-      }
 
-      // Hash password if provided
-      if (isPasswordProtected && password.trim()) {
-        // Simple hash - in production, use bcrypt or similar
-        teamData.password_hash = btoa(password) // Base64 encoding for demo
-      }
+      // Try to use the database function first (preferred method)
+      try {
+        const { data: teamData, error: rpcError } = await supabase.rpc('create_team_with_creator', {
+          team_name: teamName,
+          team_slug: finalSlug,
+          is_password_protected: isPasswordProtected,
+          password_hash: isPasswordProtected && password.trim() ? btoa(password) : null,
+          creator_email: user?.email || null
+        })
 
-      const { data: team, error } = await supabase
-        .from("teams")
-        .insert([teamData])
-        .select("id, name, slug, invite_code, is_password_protected")
-        .single()
+        if (rpcError) throw rpcError
 
-      if (error) {
-        console.error("Supabase error details:", error)
-        
-        // Check if it's a duplicate slug error
-        if (error.code === '23505' && (error.message.includes('teams_slug_unique') || error.message.includes('teams_slug_unique_idx'))) {
-          throw new Error("This custom URL is already taken. Please choose a different one.")
+        const team = teamData[0]
+        if (!team) {
+          throw new Error("Failed to create team - no data returned")
         }
-        
-        throw new Error(`Database error: ${error.message} (Code: ${error.code})`)
-      }
 
-      setCreatedTeam({
-        inviteCode: team.invite_code,
-        name: team.name,
-        isPasswordProtected: team.is_password_protected,
-        friendlyUrl: useFriendlyUrl ? team.slug : undefined
-      })
+        setCreatedTeam({
+          inviteCode: team.team_invite_code,
+          name: team.team_name,
+          isPasswordProtected: team.team_is_password_protected,
+          friendlyUrl: useFriendlyUrl ? team.team_slug : undefined
+        })
+      } catch (rpcError) {
+        // Fallback to manual creation if RPC function fails
+        console.log("RPC function failed, falling back to manual creation:", rpcError)
+        
+        const teamData: any = {
+          name: teamName,
+          slug: finalSlug,
+          is_password_protected: isPasswordProtected
+        }
+
+        // Add created_by only if user is authenticated and the column exists
+        if (user) {
+          teamData.created_by = user.id
+        }
+
+        // Hash password if provided
+        if (isPasswordProtected && password.trim()) {
+          // Simple hash - in production, use bcrypt or similar
+          teamData.password_hash = btoa(password) // Base64 encoding for demo
+        }
+
+        let { data: team, error } = await supabase
+          .from("teams")
+          .insert([teamData])
+          .select("id, name, slug, invite_code, is_password_protected")
+          .single()
+
+        if (error) {
+          console.error("Supabase error details:", error)
+          
+          // Check if it's a duplicate slug error
+          if (error.code === '23505' && (error.message.includes('teams_slug_unique') || error.message.includes('teams_slug_unique_idx'))) {
+            throw new Error("This custom URL is already taken. Please choose a different one.")
+          }
+          
+          // Check if it's a missing column error and retry without created_by
+          if (error.code === 'PGRST204' && error.message.includes('created_by')) {
+            console.log("created_by column not found, retrying without it...")
+            const { created_by, ...teamDataWithoutCreatedBy } = teamData
+            
+            const { data: retryTeam, error: retryError } = await supabase
+              .from("teams")
+              .insert([teamDataWithoutCreatedBy])
+              .select("id, name, slug, invite_code, is_password_protected")
+              .single()
+              
+            if (retryError) {
+              throw new Error(`Database error: ${retryError.message} (Code: ${retryError.code})`)
+            }
+            
+            // Use the retry result
+            team = retryTeam
+          } else {
+            throw new Error(`Database error: ${error.message} (Code: ${error.code})`)
+          }
+        }
+
+        if (!team) {
+          throw new Error("Failed to create team - no data returned")
+        }
+
+        // If user is authenticated, add them as a member with admin role
+        if (user) {
+          try {
+            await supabase
+              .from("members")
+              .insert([{
+                team_id: team.id,
+                email: user.email,
+                first_name: user.user_metadata?.first_name || user.email?.split('@')[0] || 'User',
+                last_name: user.user_metadata?.last_name || '',
+                role: 'admin',
+                auth_user_id: user.id
+              }])
+          } catch (memberError) {
+            console.error("Error adding creator as member:", memberError)
+            // Don't fail team creation if adding member fails
+          }
+        }
+
+        setCreatedTeam({
+          inviteCode: team.invite_code,
+          name: team.name,
+          isPasswordProtected: team.is_password_protected,
+          friendlyUrl: useFriendlyUrl ? team.slug : undefined
+        })
+      }
       
       // Trigger confetti animation
       createConfetti()
@@ -199,25 +277,26 @@ export function TeamForm({ locale }: TeamFormProps) {
       : null
     
     return (
-      <Card className="w-full max-w-md mx-auto">
+      <Card className="w-full max-w-md mx-auto bg-white border-gray-200 shadow-lg">
         <CardHeader className="text-center">
           <CardTitle className="text-green-600">✅ Team Created!</CardTitle>
-          <CardDescription>
+          <CardDescription className="text-gray-600">
             Your team "{createdTeam.name}" has been created successfully.
           </CardDescription>
         </CardHeader>
         <CardContent className="space-y-4">
           <div>
-            <Label>{t("team.inviteCode")}</Label>
+            <Label className="text-gray-700">{t("team.inviteCode")}</Label>
             <div className="flex gap-2">
               <Input
                 value={createdTeam.inviteCode}
                 readOnly
-                className="bg-gray-50"
+                className="bg-gray-50 border-gray-300 text-gray-900"
               />
               <Button
                 variant="outline"
                 size="sm"
+                className="border-gray-300 text-gray-700 hover:bg-gray-50 bg-white"
                 onClick={() => copyInviteCode(createdTeam.inviteCode)}
               >
                 <Copy className="h-4 w-4" />
@@ -226,16 +305,17 @@ export function TeamForm({ locale }: TeamFormProps) {
           </div>
           
           <div>
-            <Label>Invite Link (with code)</Label>
+            <Label className="text-gray-700">Invite Link (with code)</Label>
             <div className="flex gap-2">
               <Input
                 value={inviteUrl}
                 readOnly
-                className="bg-gray-50 text-xs"
+                className="bg-gray-50 text-xs border-gray-300 text-gray-900"
               />
               <Button
                 variant="outline"
                 size="sm"
+                className="border-gray-300 text-gray-700 hover:bg-gray-50 bg-white"
                 onClick={() => copyInviteCode(inviteUrl)}
               >
                 <Share2 className="h-4 w-4" />
@@ -245,16 +325,17 @@ export function TeamForm({ locale }: TeamFormProps) {
 
           {friendlyUrl && (
             <div>
-              <Label>Friendly URL</Label>
+              <Label className="text-gray-700">Friendly URL</Label>
               <div className="flex gap-2">
                 <Input
                   value={friendlyUrl}
                   readOnly
-                  className="bg-green-50 text-xs font-medium"
+                  className="bg-green-50 text-xs font-medium border-green-300 text-gray-900"
                 />
                 <Button
                   variant="outline"
                   size="sm"
+                  className="border-gray-300 text-gray-700 hover:bg-gray-50 bg-white"
                   onClick={() => copyInviteCode(friendlyUrl)}
                 >
                   <Share2 className="h-4 w-4" />
@@ -292,23 +373,24 @@ export function TeamForm({ locale }: TeamFormProps) {
   }
 
   return (
-    <Card className="w-full max-w-md mx-auto">
+    <Card className="w-full max-w-md mx-auto bg-white border-gray-200 shadow-lg">
       <CardHeader>
-        <CardTitle>{t("team.create")}</CardTitle>
-        <CardDescription>
+        <CardTitle className="text-gray-900">{t("team.create")}</CardTitle>
+        <CardDescription className="text-gray-600">
           Create a new team and optionally protect it with a password
         </CardDescription>
       </CardHeader>
       <CardContent>
         <form onSubmit={createTeam} className="space-y-4">
           <div>
-            <Label htmlFor="teamName">{t("team.name")}</Label>
+            <Label htmlFor="teamName" className="text-gray-700">{t("team.name")}</Label>
             <Input
               id="teamName"
               value={teamName}
               onChange={(e) => setTeamName(e.target.value)}
               placeholder={t("team.name")}
               required
+              className="bg-white border-gray-300 text-gray-900 placeholder-gray-500"
             />
           </div>
 
@@ -317,15 +399,16 @@ export function TeamForm({ locale }: TeamFormProps) {
               id="friendly-url"
               checked={useFriendlyUrl}
               onCheckedChange={setUseFriendlyUrl}
+              className="data-[state=checked]:bg-blue-600 data-[state=unchecked]:bg-gray-200"
             />
-            <Label htmlFor="friendly-url" className="text-sm">
+            <Label htmlFor="friendly-url" className="text-sm text-gray-700">
               Create custom URL (optional)
             </Label>
           </div>
 
           {useFriendlyUrl && (
             <div>
-              <Label htmlFor="friendlyUrl">Custom URL</Label>
+              <Label htmlFor="friendlyUrl" className="text-gray-700">Custom URL</Label>
               <div className="space-y-2">
                 <div className="relative">
                   <Input
@@ -336,7 +419,7 @@ export function TeamForm({ locale }: TeamFormProps) {
                     pattern="[a-zA-Z0-9-]+"
                     title="Only letters, numbers, and hyphens allowed"
                     className={cn(
-                      "pr-10",
+                      "pr-10 bg-white border-gray-300 text-gray-900 placeholder-gray-500",
                       urlCheckStatus === "available" && "border-green-500 focus:border-green-500",
                       urlCheckStatus === "taken" && "border-red-500 focus:border-red-500"
                     )}
@@ -373,15 +456,16 @@ export function TeamForm({ locale }: TeamFormProps) {
               id="password-protection"
               checked={isPasswordProtected}
               onCheckedChange={setIsPasswordProtected}
+              className="data-[state=checked]:bg-blue-600 data-[state=unchecked]:bg-gray-200"
             />
-            <Label htmlFor="password-protection" className="text-sm">
+            <Label htmlFor="password-protection" className="text-sm text-gray-700">
               {t("team.makePasswordProtected")}
             </Label>
           </div>
 
           {isPasswordProtected && (
             <div>
-              <Label htmlFor="password">{t("team.password")}</Label>
+              <Label htmlFor="password" className="text-gray-700">{t("team.password")}</Label>
               <div className="relative">
                 <Input
                   id="password"
@@ -390,13 +474,13 @@ export function TeamForm({ locale }: TeamFormProps) {
                   onChange={(e) => setPassword(e.target.value)}
                   placeholder={t("team.setPassword")}
                   required
-                  className="pr-10"
+                  className="pr-10 bg-white border-gray-300 text-gray-900 placeholder-gray-500"
                 />
                 <Button
                   type="button"
                   variant="ghost"
                   size="sm"
-                  className="absolute right-0 top-0 h-full px-3 py-2 hover:bg-transparent"
+                  className="absolute right-0 top-0 h-full px-3 py-2 hover:bg-gray-100 text-gray-600"
                   onClick={() => setShowPassword(!showPassword)}
                   tabIndex={-1}
                 >
@@ -417,7 +501,7 @@ export function TeamForm({ locale }: TeamFormProps) {
               (useFriendlyUrl && urlCheckStatus === "checking") ||
               (useFriendlyUrl && urlCheckStatus === "taken")
             } 
-            className="w-full"
+            className="w-full bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700 text-white"
           >
             {isLoading ? t("common.loading") : 
              urlCheckStatus === "checking" ? "Checking URL..." :
