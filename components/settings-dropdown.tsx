@@ -497,7 +497,7 @@ export function SettingsDropdown({ currentLocale, members, team }: SettingsDropd
       <div className="px-2 py-2">
         <div className="flex items-center justify-center">
           <span className="text-xs text-gray-400 dark:text-gray-500">
-            {versionLoading ? "..." : `v${version || "1.0.0"}`}
+            {versionLoading ? "..." : version || "Git not available"}
           </span>
         </div>
       </div>

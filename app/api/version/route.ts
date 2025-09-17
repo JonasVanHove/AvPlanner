@@ -18,8 +18,8 @@ export async function GET(request: NextRequest) {
   } catch (error) {
     console.error('Error getting version info:', error)
     return NextResponse.json({
-      version: '1.5.0',
-      buildInfo: 'v1.5.0',
+      version: 'Git not available',
+      buildInfo: 'Git not available',
       environment: 'unknown'
     })
   }

@@ -462,7 +462,7 @@ export default function TeamSettingsPage({ params }: TeamSettingsPageProps) {
                   <label className="font-medium text-gray-700">App Versie</label>
                   <div className="flex items-center gap-2">
                     <code className="text-xs bg-blue-50 px-2 py-1 rounded font-mono text-blue-700">
-                      {buildInfo || `v${version}`}
+                      {buildInfo || version}
                     </code>
                     <Tooltip>
                       <TooltipTrigger asChild>
@@ -470,7 +470,7 @@ export default function TeamSettingsPage({ params }: TeamSettingsPageProps) {
                       </TooltipTrigger>
                       <TooltipContent>
                         <div className="text-xs space-y-1">
-                          <p className="font-medium">Availability Planner {buildInfo || `v${version}`}</p>
+                          <p className="font-medium">Availability Planner {buildInfo || version}</p>
                           {commitMessage && (
                             <p className="text-gray-600 max-w-xs">Laatste commit: {commitMessage}</p>
                           )}
@@ -757,7 +757,7 @@ export default function TeamSettingsPage({ params }: TeamSettingsPageProps) {
         {/* Subtle footer with version info */}
         <div className="text-center pt-8 pb-4">
           <p className="text-xs text-gray-400">
-            Availability Planner {buildInfo || `v${version}`} 
+            Availability Planner {buildInfo || version} 
             {process.env.NODE_ENV === 'development' && (
               <span className="ml-2 px-2 py-1 bg-orange-100 text-orange-600 rounded text-xs">DEV</span>
             )}

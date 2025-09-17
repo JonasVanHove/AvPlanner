@@ -33,42 +33,18 @@ function extractVersionFromCommitMessage(commitMessage: string): string | null {
 
 function getVersionFromGit(): string {
   try {
-    // Get the latest commit message
+    // Get the latest commit message and use it as the version
     const latestCommitMessage = execSync('git log -1 --pretty=%s', { 
       encoding: 'utf8',
       stdio: ['pipe', 'pipe', 'ignore']
     }).trim()
     
-    // Try to extract version from commit message
-    const versionFromCommit = extractVersionFromCommitMessage(latestCommitMessage)
-    if (versionFromCommit) {
-      return versionFromCommit
-    }
-    
-    // Fallback: look through recent commits for version
-    const recentCommits = execSync('git log --oneline -10', { 
-      encoding: 'utf8',
-      stdio: ['pipe', 'pipe', 'ignore']
-    }).split('\n')
-    
-    for (const commit of recentCommits) {
-      const version = extractVersionFromCommitMessage(commit)
-      if (version) {
-        return version
-      }
-    }
-    
-    // Ultimate fallback: count commits as patch version
-    const commitCount = execSync('git rev-list --count HEAD', { 
-      encoding: 'utf8',
-      stdio: ['pipe', 'pipe', 'ignore']
-    }).trim()
-    
-    return `1.5.${commitCount}`
+    // Return the commit message directly as the version
+    return latestCommitMessage || 'No commit message'
     
   } catch (error) {
     // Git not available or not in a git repo
-    return '1.5.0'
+    return 'Git not available'
   }
 }
 
@@ -131,7 +107,7 @@ export function getVersionInfo(): VersionInfo {
 
 export function getVersionString(): string {
   const info = getVersionInfo()
-  let versionString = `v${info.version}`
+  let versionString = info.version
   
   if (info.gitCommit) {
     versionString += ` (${info.gitCommit})`
@@ -142,7 +118,7 @@ export function getVersionString(): string {
 
 export function getDetailedVersionInfo(): string {
   const info = getVersionInfo()
-  let details = `v${info.version}`
+  let details = info.version
   
   if (info.gitCommit && info.gitBranch) {
     details += ` • ${info.gitBranch}@${info.gitCommit}`

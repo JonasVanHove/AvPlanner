@@ -11,7 +11,7 @@ interface ClientVersionInfo {
 
 export function useVersion(): ClientVersionInfo {
   const [versionInfo, setVersionInfo] = useState<ClientVersionInfo>({
-    version: '1.5.0',
+    version: 'Loading...',
     isLoading: true
   })
 
@@ -21,7 +21,7 @@ export function useVersion(): ClientVersionInfo {
       .then(res => res.json())
       .then(data => {
         setVersionInfo({
-          version: data.version || '1.5.0',
+          version: data.version || 'Git not available',
           buildInfo: data.buildInfo,
           commitMessage: data.commitMessage,
           isLoading: false
@@ -29,7 +29,7 @@ export function useVersion(): ClientVersionInfo {
       })
       .catch(() => {
         setVersionInfo({
-          version: '1.5.0',
+          version: 'Git not available',
           isLoading: false
         })
       })
@@ -39,4 +39,4 @@ export function useVersion(): ClientVersionInfo {
 }
 
 // Static version for immediate use
-export const APP_VERSION = '1.5.0'
+export const APP_VERSION = 'Git not available'
