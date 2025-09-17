@@ -75,7 +75,7 @@ export default function MyTeamsPage() {
                 alt="Availability Planner Logo" 
                 className="h-8 w-8"
               />
-              <h1 className="text-xl font-bold bg-gradient-to-r from-blue-600 to-purple-600 bg-clip-text text-transparent">
+              <h1 className="text-xl font-bold text-black">
                 My Teams Dashboard
               </h1>
             </div>

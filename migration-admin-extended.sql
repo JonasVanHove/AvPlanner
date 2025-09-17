@@ -16,6 +16,9 @@ ALTER TABLE members ADD COLUMN IF NOT EXISTS auth_user_id UUID REFERENCES auth.u
 -- Voeg order_index kolom toe aan members tabel voor sorteer functionaliteit
 ALTER TABLE members ADD COLUMN IF NOT EXISTS order_index INTEGER DEFAULT 0;
 
+-- Voeg is_hidden kolom toe aan members tabel om members te kunnen verbergen
+ALTER TABLE members ADD COLUMN IF NOT EXISTS is_hidden BOOLEAN DEFAULT FALSE;
+
 -- Stap 2: Update is_user_admin functie voor consistentie
 -- Drop existing function first to avoid parameter name conflicts
 DROP FUNCTION IF EXISTS is_user_admin(TEXT);
@@ -37,6 +40,7 @@ CREATE INDEX IF NOT EXISTS idx_teams_created_by ON teams(created_by);
 CREATE INDEX IF NOT EXISTS idx_members_role ON members(role);
 CREATE INDEX IF NOT EXISTS idx_members_auth_user_id ON members(auth_user_id);
 CREATE INDEX IF NOT EXISTS idx_members_order_index ON members(order_index);
+CREATE INDEX IF NOT EXISTS idx_members_is_hidden ON members(is_hidden);
 
 -- Stap 4: Functie om complete database statistieken op te halen
 CREATE OR REPLACE FUNCTION get_database_statistics(admin_email TEXT)
@@ -606,6 +610,9 @@ END;
 $$ LANGUAGE plpgsql SECURITY DEFINER;
 
 -- Stap 16: Functie om teamleden op te halen voor gewone team members
+-- Drop existing function first to avoid return type conflicts
+DROP FUNCTION IF EXISTS get_team_members(UUID, TEXT);
+
 CREATE OR REPLACE FUNCTION get_team_members(team_id_param UUID, user_email TEXT)
 RETURNS TABLE (
   member_id UUID,
@@ -616,7 +623,8 @@ RETURNS TABLE (
   profile_image_url TEXT,
   joined_at TIMESTAMP WITH TIME ZONE,
   last_active TIMESTAMP WITH TIME ZONE,
-  is_current_user BOOLEAN
+  is_current_user BOOLEAN,
+  is_hidden BOOLEAN
 ) AS $$
 BEGIN
   -- Check if user is member of this team
@@ -637,7 +645,8 @@ BEGIN
     m.profile_image_url,
     m.created_at,
     m.last_active,
-    (m.email = user_email) as is_current_user
+    (m.email = user_email) as is_current_user,
+    COALESCE(m.is_hidden, FALSE) as is_hidden
   FROM members m
   WHERE m.team_id = team_id_param 
   AND m.status IN ('active', 'inactive') -- Exclude 'left' members
@@ -657,6 +666,9 @@ END;
 $$ LANGUAGE plpgsql SECURITY DEFINER;
 
 -- Stap 17: Functie om member volgorde bij te werken
+-- Drop existing function first to avoid conflicts
+DROP FUNCTION IF EXISTS update_member_order(UUID, UUID, INTEGER, TEXT);
+
 CREATE OR REPLACE FUNCTION update_member_order(
   team_id_param UUID, 
   member_id_param UUID, 
@@ -732,6 +744,9 @@ END;
 $$ LANGUAGE plpgsql SECURITY DEFINER;
 
 -- Stap 18: Functie om member een positie omhoog te verplaatsen
+-- Drop existing function first to avoid conflicts
+DROP FUNCTION IF EXISTS move_member_up(UUID, UUID, TEXT);
+
 CREATE OR REPLACE FUNCTION move_member_up(
   team_id_param UUID, 
   member_id_param UUID, 
@@ -761,6 +776,9 @@ END;
 $$ LANGUAGE plpgsql SECURITY DEFINER;
 
 -- Stap 19: Functie om member een positie omlaag te verplaatsen
+-- Drop existing function first to avoid conflicts
+DROP FUNCTION IF EXISTS move_member_down(UUID, UUID, TEXT);
+
 CREATE OR REPLACE FUNCTION move_member_down(
   team_id_param UUID, 
   member_id_param UUID, 
@@ -851,3 +869,90 @@ BEGIN
   END LOOP;
 END;
 $$;
+
+-- Stap 22: Functie om member visibility te wijzigen (verbergen/tonen)
+-- Drop existing function first to avoid conflicts
+DROP FUNCTION IF EXISTS toggle_member_visibility(UUID, UUID, BOOLEAN, TEXT);
+
+CREATE OR REPLACE FUNCTION toggle_member_visibility(
+  team_id_param UUID, 
+  member_id_param UUID, 
+  is_hidden_param BOOLEAN,
+  user_email TEXT
+)
+RETURNS BOOLEAN AS $$
+BEGIN
+  -- Check if user is member of this team and has admin rights
+  IF NOT EXISTS (
+    SELECT 1 FROM members 
+    WHERE team_id = team_id_param 
+    AND email = user_email 
+    AND status = 'active'
+    AND role = 'admin'
+  ) THEN
+    RAISE EXCEPTION 'Access denied: User does not have admin rights for this team';
+  END IF;
+
+  -- Update member visibility
+  UPDATE members
+  SET is_hidden = is_hidden_param
+  WHERE id = member_id_param AND team_id = team_id_param;
+
+  IF NOT FOUND THEN
+    RAISE EXCEPTION 'Member not found';
+  END IF;
+
+  RETURN TRUE;
+END;
+$$ LANGUAGE plpgsql SECURITY DEFINER;
+
+-- Stap 23: Functie om team settings op te halen (voor admins)
+-- Drop existing function first to avoid conflicts
+DROP FUNCTION IF EXISTS get_team_settings(UUID, TEXT);
+
+CREATE OR REPLACE FUNCTION get_team_settings(
+  team_id_param UUID,
+  user_email TEXT
+)
+RETURNS TABLE (
+  team_id UUID,
+  team_name TEXT,
+  team_slug TEXT,
+  team_invite_code TEXT,
+  team_is_password_protected BOOLEAN,
+  team_created_at TIMESTAMP WITH TIME ZONE,
+  member_count BIGINT,
+  hidden_member_count BIGINT,
+  user_is_admin BOOLEAN,
+  user_is_creator BOOLEAN
+) AS $$
+BEGIN
+  -- Check if user is member of this team
+  IF NOT EXISTS (
+    SELECT 1 FROM members 
+    WHERE team_id = team_id_param 
+    AND email = user_email 
+    AND status = 'active'
+  ) THEN
+    RAISE EXCEPTION 'Access denied: User is not a member of this team';
+  END IF;
+
+  RETURN QUERY
+  SELECT 
+    t.id as team_id,
+    t.name as team_name,
+    t.slug as team_slug,
+    t.invite_code as team_invite_code,
+    t.is_password_protected as team_is_password_protected,
+    t.created_at as team_created_at,
+    COUNT(m.id) as member_count,
+    COUNT(m.id) FILTER (WHERE m.is_hidden = TRUE) as hidden_member_count,
+    (SELECT m2.role = 'admin' FROM members m2 WHERE m2.team_id = team_id_param AND m2.email = user_email) as user_is_admin,
+    (t.created_by IS NOT NULL AND au.email = user_email) as user_is_creator
+  FROM teams t
+  LEFT JOIN members m ON t.id = m.team_id
+  LEFT JOIN auth.users au ON t.created_by = au.id
+  WHERE t.id = team_id_param
+  GROUP BY t.id, t.name, t.slug, t.invite_code, t.is_password_protected, t.created_at, t.created_by, au.email;
+END;
+$$ LANGUAGE plpgsql SECURITY DEFINER;

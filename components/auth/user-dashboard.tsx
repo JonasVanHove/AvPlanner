@@ -12,6 +12,7 @@ import { TeamForm } from "@/components/team-form"
 import { JoinTeamForm } from "@/components/join-team-form"
 import { Loader2, Users, Calendar, Settings, LogOut, Crown, Shield, Home, Plus, UserPlus, RefreshCw } from "lucide-react"
 import { User } from "@supabase/supabase-js"
+import { useRouter } from "next/navigation"
 
 interface Team {
   id: string
@@ -64,13 +65,20 @@ export function UserDashboard({ user, onLogout, onGoHome }: UserDashboardProps) 
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState("")
   const [refreshKey, setRefreshKey] = useState(0)
+  const [isRefreshing, setIsRefreshing] = useState(false)
+  const router = useRouter()
 
   useEffect(() => {
     fetchUserTeams()
   }, [user, refreshKey])
 
-  const refreshTeams = () => {
-    setRefreshKey(prev => prev + 1)
+  const refreshTeams = async () => {
+    setIsRefreshing(true)
+    try {
+      await fetchUserTeams()
+    } finally {
+      setIsRefreshing(false)
+    }
   }
 
   const fetchUserTeams = async () => {
@@ -330,10 +338,11 @@ export function UserDashboard({ user, onLogout, onGoHome }: UserDashboardProps) 
               onClick={refreshTeams}
               variant="outline"
               size="sm"
-              className="flex items-center gap-2 border-green-200 hover:bg-green-50"
+              disabled={isRefreshing}
+              className="flex items-center gap-2 border-green-200 hover:bg-green-50 disabled:opacity-50"
             >
-              <RefreshCw className="h-4 w-4" />
-              Refresh
+              <RefreshCw className={`h-4 w-4 ${isRefreshing ? 'animate-spin' : ''}`} />
+              {isRefreshing ? 'Refreshing...' : 'Refresh'}
             </Button>
           </div>
         </CardHeader>
@@ -394,9 +403,22 @@ export function UserDashboard({ user, onLogout, onGoHome }: UserDashboardProps) 
                             </div>
                             <div className="flex items-center gap-2">
                               <span className="font-medium text-gray-700">Invite Code:</span>
-                              <code className="bg-gray-100 px-2 py-1 rounded text-xs font-mono select-all">
-                                {team.invite_code}
-                              </code>
+                              <div className="flex items-center gap-2">
+                                <code className="bg-gray-100 px-2 py-1 rounded text-xs font-mono select-all">
+                                  {team.invite_code}
+                                </code>
+                                <Button
+                                  variant="ghost"
+                                  size="sm"
+                                  className="h-6 w-6 p-0"
+                                  onClick={() => navigator.clipboard.writeText(team.invite_code)}
+                                  title="Copy Invite Code"
+                                >
+                                  <svg className="h-3 w-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z" />
+                                  </svg>
+                                </Button>
+                              </div>
                             </div>
                             <div className="flex items-center gap-2">
                               <span className="font-medium text-gray-700">Members:</span>
@@ -417,12 +439,25 @@ export function UserDashboard({ user, onLogout, onGoHome }: UserDashboardProps) 
                               <span className="font-medium text-gray-700">Created:</span>
                               <span className="text-gray-600">{formatDate(team.created_at)}</span>
                             </div>
-                            <div className="flex items-center gap-2">
-                              <span className="font-medium text-gray-700">Team ID:</span>
-                              <code className="bg-gray-100 px-2 py-1 rounded text-xs font-mono select-all">
-                                {team.id.substring(0, 8)}...
-                              </code>
-                            </div>
+                              <div className="flex items-start gap-2">
+                                <span className="font-medium text-gray-700 mt-1 min-w-fit">Team ID:</span>
+                                <div className="flex items-center gap-2 flex-1">
+                                  <code className="bg-gray-100 px-2 py-1 rounded text-xs font-mono select-all break-all flex-1">
+                                    {team.id}
+                                  </code>
+                                  <Button
+                                    variant="ghost"
+                                    size="sm"
+                                    className="h-6 w-6 p-0 flex-shrink-0"
+                                    onClick={() => navigator.clipboard.writeText(team.id)}
+                                    title="Copy Team ID"
+                                  >
+                                    <svg className="h-3 w-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z" />
+                                    </svg>
+                                  </Button>
+                                </div>
+                              </div>
                             <div className="flex items-center gap-2">
                               <span className="font-medium text-gray-700">Your Role:</span>
                               <Badge variant={team.is_creator ? "default" : "secondary"}>
@@ -431,9 +466,24 @@ export function UserDashboard({ user, onLogout, onGoHome }: UserDashboardProps) 
                             </div>
                             <div className="flex items-center gap-2">
                               <span className="font-medium text-gray-700">Slug:</span>
-                              <code className="bg-gray-100 px-2 py-1 rounded text-xs font-mono select-all">
-                                {team.slug || 'Not set'}
-                              </code>
+                              <div className="flex items-center gap-2">
+                                <code className="bg-gray-100 px-2 py-1 rounded text-xs font-mono select-all">
+                                  {team.slug || 'Not set'}
+                                </code>
+                                {team.slug && (
+                                  <Button
+                                    variant="ghost"
+                                    size="sm"
+                                    className="h-6 w-6 p-0"
+                                    onClick={() => navigator.clipboard.writeText(team.slug)}
+                                    title="Copy Team Slug"
+                                  >
+                                    <svg className="h-3 w-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z" />
+                                    </svg>
+                                  </Button>
+                                )}
+                              </div>
                             </div>
                           </div>
                         </div>
@@ -497,8 +547,8 @@ export function UserDashboard({ user, onLogout, onGoHome }: UserDashboardProps) 
                           size="sm"
                           variant="outline"
                           onClick={() => {
-                            const teamUrl = team.slug ? `/team/${team.slug}` : `/team/${team.id}`
-                            window.open(teamUrl, '_blank')
+                            const teamUrl = `/team/${team.invite_code}`
+                            router.push(teamUrl)
                           }}
                           className="flex items-center gap-2 min-w-[140px] justify-start"
                         >
@@ -509,8 +559,8 @@ export function UserDashboard({ user, onLogout, onGoHome }: UserDashboardProps) 
                           size="sm"
                           variant="outline"
                           onClick={() => {
-                            const settingsUrl = team.slug ? `/team/${team.slug}/settings` : `/team/${team.id}/settings`
-                            window.open(settingsUrl, '_blank')
+                            const settingsUrl = `/team/${team.invite_code}/settings`
+                            router.push(settingsUrl)
                           }}
                           className="flex items-center gap-2 min-w-[140px] justify-start"
                         >
