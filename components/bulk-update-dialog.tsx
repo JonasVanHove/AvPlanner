@@ -416,7 +416,7 @@ export function AnalyticsButton({ members, locale, weeksToShow, currentDate, tea
         variant="outline" 
         size="sm" 
         onClick={handleShowAnalytics}
-        className="rounded-lg bg-gradient-to-r from-green-50 to-emerald-50 dark:from-green-900/20 dark:to-emerald-900/20 hover:from-green-100 hover:to-emerald-100 dark:hover:from-green-800/30 dark:hover:to-emerald-800/30 border-green-200 dark:border-green-700 text-green-700 dark:text-green-300 font-semibold transition-all duration-200 shadow-sm hover:shadow-md"
+        className="rounded-lg bg-white/10 backdrop-blur-sm border-white/20 text-white hover:bg-white/20 font-medium transition-all duration-200"
       >
         <BarChart3 className="h-4 w-4 mr-2 flex-shrink-0" />
         <span className="truncate hidden sm:inline">{t("analytics.title")}</span>
@@ -1106,7 +1106,7 @@ export function BulkUpdateDialog({ members, locale, onUpdate }: BulkUpdateDialog
           <Button 
             variant="ghost" 
             size="sm" 
-            className="rounded-md hover:bg-orange-100 dark:hover:bg-orange-900/40 text-orange-700 dark:text-orange-300 font-medium transition-all duration-200 px-2 py-1.5 h-8"
+            className="rounded-md bg-white/10 backdrop-blur-sm border border-white/20 text-white hover:bg-white/20 font-medium transition-all duration-200 px-2 py-1.5 h-8"
           >
             <Users className="h-4 w-4 mr-1 flex-shrink-0" />
             <span className="truncate hidden sm:inline">{t("bulk.title")}</span>
@@ -1597,7 +1597,7 @@ export function PlannerButton({ members, locale, teamId }: { members: Member[], 
         variant="outline" 
         size="sm" 
         onClick={() => setShowPlanner(true)}
-        className="rounded-lg bg-gradient-to-r from-purple-50 to-indigo-50 dark:from-purple-900/20 dark:to-indigo-900/20 hover:from-purple-100 hover:to-indigo-100 dark:hover:from-purple-800/30 dark:hover:to-indigo-800/30 border-purple-200 dark:border-purple-700 text-purple-700 dark:text-purple-300 font-semibold transition-all duration-200 shadow-sm hover:shadow-md"
+        className="rounded-lg bg-white/10 backdrop-blur-sm border-white/20 text-white hover:bg-white/20 font-medium transition-all duration-200"
       >
         <TrendingUp className="h-4 w-4 mr-2 flex-shrink-0" />
         <span className="truncate hidden sm:inline">{t("planner.title")}</span>

@@ -162,7 +162,7 @@ export function MemberForm({ teamId, locale, onMemberAdded, member, mode = "add"
         Bewerken
       </DropdownMenuItem>
     ) : (
-      <Button variant="ghost" size="sm" className="rounded-md hover:bg-orange-100 dark:hover:bg-orange-900/40 text-orange-700 dark:text-orange-300 font-medium transition-all duration-200 px-2 py-1.5 h-8">
+      <Button variant="ghost" size="sm" className="rounded-md bg-white/10 backdrop-blur-sm border border-white/20 text-white hover:bg-white/20 font-medium transition-all duration-200 px-2 py-1.5 h-8">
         <UserPlus className="h-4 w-4 mr-1" />
         <span className="hidden sm:inline">Add Member</span>
       </Button>

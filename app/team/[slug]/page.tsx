@@ -22,8 +22,13 @@ interface Member {
   id: string
   first_name: string
   last_name: string
-  email?: string
-  team_id: string
+  email: string
+  role: string
+  status: string
+  profile_image?: string
+  created_at: string
+  last_active?: string
+  order_index?: number
 }
 
 interface TeamPageProps {
@@ -87,16 +92,32 @@ export default function TeamPage({ params }: TeamPageProps) {
         setIsAuthenticated(true)
       }
 
-      // Fetch members
-      const { data: membersData, error: membersError } = await supabase
-        .from("members")
-        .select("*")
-        .eq("team_id", teamData.id)
-        .order("order_index", { ascending: true })
-        .order("created_at", { ascending: true })
+      // Fetch active members for this team only using database function
+      const { data: membersData, error: membersError } = await supabase.rpc('get_team_active_members', {
+        team_id_param: teamData.id,
+        user_email: user?.email || ''
+      })
 
       if (membersError) throw membersError
-      setMembers(membersData || [])
+      
+      // Transform database function output to Member interface format
+      const transformedMembers: Member[] = (membersData || []).map((member: any) => {
+        const nameParts = member.member_name.split(' ')
+        return {
+          id: member.member_id,
+          first_name: nameParts[0] || '',
+          last_name: nameParts.slice(1).join(' ') || '',
+          email: member.member_email,
+          role: member.member_role,
+          status: member.member_status,
+          profile_image: member.profile_image_url, // This now contains the correct profile_image or profile_image_url
+          created_at: member.joined_at,
+          last_active: member.last_active,
+          order_index: 0 // Default value since not returned by function
+        }
+      })
+      
+      setMembers(transformedMembers)
     } catch (error) {
       console.error("Error fetching team data:", error)
     } finally {

@@ -1050,19 +1050,19 @@ const AvailabilityCalendarRedesigned = ({
   return (
     <TooltipProvider>
       <div className="min-h-screen bg-gray-50 dark:bg-gray-900">
-        {/* Header - More subtle */}
-        <div className="bg-white dark:bg-gray-800 border-b border-gray-200 dark:border-gray-700">
-          <div className="px-4 sm:px-6 py-4 sm:py-6">
-            <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
-              <div className="flex items-center gap-4">
-                <div className="w-10 h-10 sm:w-12 sm:h-12 rounded-lg flex items-center justify-center shadow-sm">
-                  <img src="/favicon.svg" alt="Availability Planner" className="h-8 w-8 sm:h-10 sm:w-10" />
+        {/* Header - Optimized and Beautiful */}
+        <div className="bg-gradient-to-r from-blue-600 via-blue-700 to-indigo-700 dark:from-gray-800 dark:via-gray-800 dark:to-gray-900 border-b border-blue-500/20 dark:border-gray-700 shadow-lg">
+          <div className="px-4 sm:px-6 py-3">
+            <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3">
+              <div className="flex items-center gap-3">
+                <div className="w-10 h-10 rounded-xl bg-white/10 backdrop-blur-sm flex items-center justify-center shadow-lg border border-white/20">
+                  <img src="/favicon.svg" alt="Availability Planner" className="h-6 w-6" />
                 </div>
                 <div className="min-w-0 flex-1">
-                  <h1 className="text-xl sm:text-2xl font-bold text-gray-900 dark:text-white truncate">Availability Planner</h1>
-                  <div className="flex items-center gap-3 flex-wrap">
-                    <p className="text-base sm:text-lg font-medium text-gray-700 dark:text-gray-300 truncate">{teamName}</p>
-                    <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-200 flex-shrink-0">
+                  <h1 className="text-lg sm:text-xl font-bold text-white truncate">Availability Planner</h1>
+                  <div className="flex items-center gap-2 flex-wrap">
+                    <p className="text-sm sm:text-base font-medium text-blue-100 dark:text-gray-300 truncate">{teamName}</p>
+                    <span className="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-white/20 text-white backdrop-blur-sm border border-white/20 flex-shrink-0">
                       {members.length} {members.length === 1 ? 'member' : 'members'}
                     </span>
                   </div>
@@ -1070,10 +1070,10 @@ const AvailabilityCalendarRedesigned = ({
               </div>
 
               <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-2 w-full sm:w-auto">
-                {/* Week selector - More compact */}
+                {/* Week selector - Optimized */}
                 <DropdownMenu>
                   <DropdownMenuTrigger asChild>
-                    <Button variant="outline" size="sm" className="flex items-center gap-2 bg-gray-50 dark:bg-gray-700 hover:bg-gray-100 dark:hover:bg-gray-600 w-full sm:w-auto">
+                    <Button variant="outline" size="sm" className="flex items-center gap-2 bg-white/10 backdrop-blur-sm border-white/20 text-white hover:bg-white/20 w-full sm:w-auto">
                       <Calendar className="h-4 w-4" />
                       <span className="text-sm font-medium">
                         {weeksToShow === 1 ? t("calendar.1week") : 
@@ -1084,7 +1084,7 @@ const AvailabilityCalendarRedesigned = ({
                       <ChevronDown className="h-4 w-4" />
                     </Button>
                   </DropdownMenuTrigger>
-                  <DropdownMenuContent align="end">
+                  <DropdownMenuContent align="end" className="bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700">
                     <DropdownMenuItem onClick={() => setWeeksToShow(1)}>
                       {t("calendar.1week")}
                     </DropdownMenuItem>
@@ -1100,7 +1100,7 @@ const AvailabilityCalendarRedesigned = ({
                   </DropdownMenuContent>
                 </DropdownMenu>
 
-                {/* Analytics and Planner Buttons - Compact */}
+                {/* Analytics and Planner Buttons - Optimized */}
                 <div className="flex items-center gap-1 w-full sm:w-auto">
                   <AnalyticsButton 
                     members={members} 
@@ -1116,27 +1116,27 @@ const AvailabilityCalendarRedesigned = ({
                   />
                 </div>
 
-                {/* Edit Mode Actions - Compact */}
+                {/* Edit Mode Actions - Optimized */}
                 <div className="flex items-center gap-2 w-full sm:w-auto">
                   {editMode ? (
-                    <div className="flex items-center gap-1 bg-orange-50 dark:bg-orange-900/20 rounded-lg p-1 border border-orange-200 dark:border-orange-700">
+                    <div className="flex items-center gap-1 bg-orange-500/20 backdrop-blur-sm rounded-lg p-1 border border-orange-400/30">
                       <div className="flex items-center gap-2 px-2 py-1">
-                        <Edit3 className="h-4 w-4 text-orange-700 dark:text-orange-300" />
-                        <span className="text-sm font-medium text-orange-700 dark:text-orange-300 hidden sm:inline">Edit Mode</span>
+                        <Edit3 className="h-4 w-4 text-orange-100" />
+                        <span className="text-sm font-medium text-orange-100 hidden sm:inline">Edit Mode</span>
                       </div>
-                      <div className="w-px h-6 bg-orange-200 dark:bg-orange-700"></div>
+                      <div className="w-px h-6 bg-orange-300/30"></div>
                       <BulkUpdateDialog members={members} locale={locale} onUpdate={fetchAvailability} />
                       <MemberForm teamId={teamId} locale={locale} onMemberAdded={onMembersUpdate} />
-                      <div className="w-px h-6 bg-orange-200 dark:bg-orange-700"></div>
+                      <div className="w-px h-6 bg-orange-300/30"></div>
                       <div className="flex items-center gap-1 px-2">
                         <Switch checked={editMode} onCheckedChange={handleEditModeToggle} />
                       </div>
                     </div>
                   ) : (
-                    <div className="flex items-center gap-3 bg-green-50 dark:bg-green-900/20 rounded-lg p-2 border border-green-200 dark:border-green-700">
+                    <div className="flex items-center gap-2 bg-green-500/20 backdrop-blur-sm rounded-lg p-2 border border-green-400/30">
                       <div className="flex items-center gap-2">
-                        <Lock className="h-4 w-4 text-green-700 dark:text-green-300" />
-                        <span className="text-sm font-medium text-green-700 dark:text-green-300 hidden sm:inline">View Mode</span>
+                        <Lock className="h-4 w-4 text-green-100" />
+                        <span className="text-sm font-medium text-green-100 hidden sm:inline">View Mode</span>
                       </div>
                       <Switch checked={editMode} onCheckedChange={handleEditModeToggle} />
                     </div>
@@ -1149,36 +1149,46 @@ const AvailabilityCalendarRedesigned = ({
               </div>
             </div>
           </div>
-        </div>
 
-        {/* Date Navigation - More subtle */}
-        <div className="bg-white dark:bg-gray-800 border-b border-gray-200 dark:border-gray-700">
-          <div className="px-4 sm:px-6 py-4">
-            <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
-              <div className="flex items-center gap-4 flex-wrap">
-                <div className="flex items-center gap-3">
-                  <div className="w-8 h-8 bg-blue-500 rounded-md flex items-center justify-center flex-shrink-0">
-                    <Calendar className="h-4 w-4 text-white" />
+          {/* Date Navigation - Integrated and Compact */}
+          <div className="bg-black/10 backdrop-blur-sm border-t border-white/10">
+            <div className="px-4 sm:px-6 py-2">
+              <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3">
+                <div className="flex items-center gap-3 flex-wrap">
+                  <div className="flex items-center gap-2">
+                    <div className="w-6 h-6 bg-white/20 backdrop-blur-sm rounded-md flex items-center justify-center flex-shrink-0">
+                      <Calendar className="h-3 w-3 text-white" />
+                    </div>
+                    <span className="font-semibold text-sm sm:text-base text-white">{formatDateRange()}</span>
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={goToToday}
+                      className="text-xs bg-white/10 backdrop-blur-sm text-white border-white/20 hover:bg-white/20 font-medium rounded-full px-2 py-1 h-6"
+                    >
+                      Today
+                    </Button>
                   </div>
-                  <span className="font-semibold text-base sm:text-lg text-gray-900 dark:text-white">{formatDateRange()}</span>
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    onClick={goToToday}
-                    className="text-sm bg-blue-100 dark:bg-blue-900/30 text-blue-700 dark:text-blue-300 border-blue-200 dark:border-blue-700 hover:bg-blue-200 dark:hover:bg-blue-800/50 font-medium rounded-full px-3 py-1"
+                </div>
+
+                <div className="flex items-center gap-1 w-full sm:w-auto justify-end">
+                  <Button 
+                    variant="outline" 
+                    size="sm" 
+                    onClick={() => navigateDate("prev")} 
+                    className="rounded-md bg-white/10 backdrop-blur-sm border-white/20 text-white hover:bg-white/20 h-7 w-7 p-0"
                   >
-                    Today
+                    <ChevronLeft className="h-3 w-3" />
+                  </Button>
+                  <Button 
+                    variant="outline" 
+                    size="sm" 
+                    onClick={() => navigateDate("next")} 
+                    className="rounded-md bg-white/10 backdrop-blur-sm border-white/20 text-white hover:bg-white/20 h-7 w-7 p-0"
+                  >
+                    <ChevronRight className="h-3 w-3" />
                   </Button>
                 </div>
-              </div>
-
-              <div className="flex items-center gap-2 w-full sm:w-auto justify-end">
-                <Button variant="outline" size="sm" onClick={() => navigateDate("prev")} className="rounded-md">
-                  <ChevronLeft className="h-4 w-4" />
-                </Button>
-                <Button variant="outline" size="sm" onClick={() => navigateDate("next")} className="rounded-md">
-                  <ChevronRight className="h-4 w-4" />
-                </Button>
               </div>
             </div>
           </div>
