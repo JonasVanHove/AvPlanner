@@ -9,6 +9,7 @@ import { Label } from "@/components/ui/label"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Alert, AlertDescription } from "@/components/ui/alert"
 import { Loader2, Lock, ArrowLeft } from "lucide-react"
+import { LoadingSpinner as CustomLoadingSpinner } from "@/components/ui/loading-spinner"
 
 function ResetPasswordForm() {
   const [password, setPassword] = useState("")
@@ -131,7 +132,7 @@ function ResetPasswordForm() {
             >
               {loading ? (
                 <>
-                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                  <CustomLoadingSpinner variant="white" size="sm" className="mr-2" />
                   Updating password...
                 </>
               ) : (
@@ -161,8 +162,9 @@ function LoadingSpinner() {
     <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-blue-50 via-indigo-50 to-purple-50 p-4">
       <Card className="w-full max-w-md">
         <CardContent className="p-8">
-          <div className="flex items-center justify-center">
-            <Loader2 className="h-8 w-8 animate-spin" />
+          <div className="flex flex-col items-center gap-4">
+            <CustomLoadingSpinner size="xl" variant="default" />
+            <p className="text-sm font-medium text-gray-600">Loading...</p>
           </div>
         </CardContent>
       </Card>

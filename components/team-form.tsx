@@ -11,6 +11,7 @@ import { Switch } from "@/components/ui/switch"
 import { Alert, AlertDescription } from "@/components/ui/alert"
 import { Eye, EyeOff, Copy, Share2 } from "lucide-react"
 import { supabase } from "@/lib/supabase"
+import { LoadingSpinner } from "@/components/ui/loading-spinner"
 import { useRouter } from "next/navigation"
 import { useTranslation, type Locale } from "@/lib/i18n"
 import { createConfetti } from "@/lib/confetti"
@@ -426,7 +427,7 @@ export function TeamForm({ locale }: TeamFormProps) {
                   />
                   <div className="absolute right-3 top-1/2 transform -translate-y-1/2">
                     {urlCheckStatus === "checking" && (
-                      <div className="w-4 h-4 border-2 border-gray-400 border-t-transparent rounded-full animate-spin"></div>
+                      <LoadingSpinner variant="secondary" size="sm" />
                     )}
                     {urlCheckStatus === "available" && (
                       <div className="w-4 h-4 text-green-500">✓</div>

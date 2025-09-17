@@ -4,6 +4,7 @@ import type React from "react"
 
 import { useState, useRef } from "react"
 import { Button } from "@/components/ui/button"
+import { LoadingSpinner } from "@/components/ui/loading-spinner"
 import {
   Dialog,
   DialogContent,
@@ -284,7 +285,7 @@ export function MemberForm({ teamId, locale, onMemberAdded, member, mode = "add"
             >
               {isSubmitting ? (
                 <>
-                  <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin mr-2" />
+                  <LoadingSpinner variant="white" size="sm" className="mr-2" />
                   {mode === "edit" ? "Bijwerken..." : "Toevoegen..."}
                 </>
               ) : mode === "edit" ? (

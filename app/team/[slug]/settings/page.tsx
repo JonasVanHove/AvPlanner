@@ -14,6 +14,7 @@ import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigge
 import { supabase } from "@/lib/supabase"
 import { useAuth } from "@/hooks/useAuth"
 import { useVersion } from "@/hooks/use-version"
+import { LoadingSpinner } from "@/components/ui/loading-spinner"
 import { ArrowLeft, Users, Settings, Eye, EyeOff, Crown, Shield, Mail, Save, AlertCircle, UserCheck, UserX, MoreHorizontal } from "lucide-react"
 import Link from "next/link"
 import { useRouter } from "next/navigation"
@@ -275,7 +276,7 @@ export default function TeamSettingsPage({ params }: TeamSettingsPageProps) {
     return (
       <div className="container mx-auto py-8">
         <div className="flex items-center justify-center">
-          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600"></div>
+          <LoadingSpinner size="lg" text="Team instellingen laden..." showText />
         </div>
       </div>
     )
