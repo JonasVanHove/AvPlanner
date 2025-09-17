@@ -121,70 +121,117 @@ export function TeamForm({ locale }: TeamFormProps) {
           throw new Error(`Error checking custom URL: ${checkError.message}`)
         }
       }
-      
-      const teamData: any = {
-        name: teamName,
-        slug: finalSlug,
-        is_password_protected: isPasswordProtected
-      }
 
-      // Add created_by only if user is authenticated and the column exists
-      if (user) {
-        teamData.created_by = user.id
-      }
+      // Try to use the database function first (preferred method)
+      try {
+        const { data: teamData, error: rpcError } = await supabase.rpc('create_team_with_creator', {
+          team_name: teamName,
+          team_slug: finalSlug,
+          is_password_protected: isPasswordProtected,
+          password_hash: isPasswordProtected && password.trim() ? btoa(password) : null,
+          creator_email: user?.email || null
+        })
 
-      // Hash password if provided
-      if (isPasswordProtected && password.trim()) {
-        // Simple hash - in production, use bcrypt or similar
-        teamData.password_hash = btoa(password) // Base64 encoding for demo
-      }
+        if (rpcError) throw rpcError
 
-      let { data: team, error } = await supabase
-        .from("teams")
-        .insert([teamData])
-        .select("id, name, slug, invite_code, is_password_protected")
-        .single()
-
-      if (error) {
-        console.error("Supabase error details:", error)
-        
-        // Check if it's a duplicate slug error
-        if (error.code === '23505' && (error.message.includes('teams_slug_unique') || error.message.includes('teams_slug_unique_idx'))) {
-          throw new Error("This custom URL is already taken. Please choose a different one.")
+        const team = teamData[0]
+        if (!team) {
+          throw new Error("Failed to create team - no data returned")
         }
+
+        setCreatedTeam({
+          inviteCode: team.team_invite_code,
+          name: team.team_name,
+          isPasswordProtected: team.team_is_password_protected,
+          friendlyUrl: useFriendlyUrl ? team.team_slug : undefined
+        })
+      } catch (rpcError) {
+        // Fallback to manual creation if RPC function fails
+        console.log("RPC function failed, falling back to manual creation:", rpcError)
         
-        // Check if it's a missing column error and retry without created_by
-        if (error.code === 'PGRST204' && error.message.includes('created_by')) {
-          console.log("created_by column not found, retrying without it...")
-          const { created_by, ...teamDataWithoutCreatedBy } = teamData
+        const teamData: any = {
+          name: teamName,
+          slug: finalSlug,
+          is_password_protected: isPasswordProtected
+        }
+
+        // Add created_by only if user is authenticated and the column exists
+        if (user) {
+          teamData.created_by = user.id
+        }
+
+        // Hash password if provided
+        if (isPasswordProtected && password.trim()) {
+          // Simple hash - in production, use bcrypt or similar
+          teamData.password_hash = btoa(password) // Base64 encoding for demo
+        }
+
+        let { data: team, error } = await supabase
+          .from("teams")
+          .insert([teamData])
+          .select("id, name, slug, invite_code, is_password_protected")
+          .single()
+
+        if (error) {
+          console.error("Supabase error details:", error)
           
-          const { data: retryTeam, error: retryError } = await supabase
-            .from("teams")
-            .insert([teamDataWithoutCreatedBy])
-            .select("id, name, slug, invite_code, is_password_protected")
-            .single()
-            
-          if (retryError) {
-            throw new Error(`Database error: ${retryError.message} (Code: ${retryError.code})`)
+          // Check if it's a duplicate slug error
+          if (error.code === '23505' && (error.message.includes('teams_slug_unique') || error.message.includes('teams_slug_unique_idx'))) {
+            throw new Error("This custom URL is already taken. Please choose a different one.")
           }
           
-          // Use the retry result
-          team = retryTeam
-        } else {
-          throw new Error(`Database error: ${error.message} (Code: ${error.code})`)
+          // Check if it's a missing column error and retry without created_by
+          if (error.code === 'PGRST204' && error.message.includes('created_by')) {
+            console.log("created_by column not found, retrying without it...")
+            const { created_by, ...teamDataWithoutCreatedBy } = teamData
+            
+            const { data: retryTeam, error: retryError } = await supabase
+              .from("teams")
+              .insert([teamDataWithoutCreatedBy])
+              .select("id, name, slug, invite_code, is_password_protected")
+              .single()
+              
+            if (retryError) {
+              throw new Error(`Database error: ${retryError.message} (Code: ${retryError.code})`)
+            }
+            
+            // Use the retry result
+            team = retryTeam
+          } else {
+            throw new Error(`Database error: ${error.message} (Code: ${error.code})`)
+          }
         }
-      }
 
-      if (!team) {
-        throw new Error("Failed to create team - no data returned")
-      }
+        if (!team) {
+          throw new Error("Failed to create team - no data returned")
+        }
 
-      setCreatedTeam({
-        inviteCode: team.invite_code,
-        name: team.name,
-        isPasswordProtected: team.is_password_protected,
-        friendlyUrl: useFriendlyUrl ? team.slug : undefined
-      })
+        // If user is authenticated, add them as a member with admin role
+        if (user) {
+          try {
+            await supabase
+              .from("members")
+              .insert([{
+                team_id: team.id,
+                email: user.email,
+                first_name: user.user_metadata?.first_name || user.email?.split('@')[0] || 'User',
+                last_name: user.user_metadata?.last_name || '',
+                role: 'admin',
+                auth_user_id: user.id
+              }])
+          } catch (memberError) {
+            console.error("Error adding creator as member:", memberError)
+            // Don't fail team creation if adding member fails
+          }
+        }
+
+        setCreatedTeam({
+          inviteCode: team.invite_code,
+          name: team.name,
+          isPasswordProtected: team.is_password_protected,
+          friendlyUrl: useFriendlyUrl ? team.slug : undefined
+        })
+      }
       
       // Trigger confetti animation
       createConfetti()

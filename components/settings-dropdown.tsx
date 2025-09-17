@@ -25,6 +25,7 @@ import { ExportDialog } from "./export-dialog"
 import { useTheme } from "next-themes"
 import { useTranslation, type Locale } from "@/lib/i18n"
 import { useIsMobile } from "@/hooks/use-mobile"
+import { useVersion } from "@/hooks/use-version"
 
 interface Member {
   id: string
@@ -50,18 +51,18 @@ interface SettingsDropdownProps {
 
 export function SettingsDropdown({ currentLocale, members, team }: SettingsDropdownProps) {
   const [exportDialogOpen, setExportDialogOpen] = useState(false)
-  const [notificationDialogOpen, setNotificationDialogOpen] = useState(false)
-  const [notifications, setNotifications] = useState(true)
+  const [drawerOpen, setDrawerOpen] = useState(false)
+  const [isGeneratingQR, setIsGeneratingQR] = useState(false)
+  const [qrDataUrl, setQrDataUrl] = useState<string | null>(null)
+  const [showQR, setShowQR] = useState(false)
+  const [notifications, setNotifications] = useState(false)
+  const [testNotificationMessage, setTestNotificationMessage] = useState("")
   const [simplifiedMode, setSimplifiedMode] = useState(false)
   const [shareUrl, setShareUrl] = useState("")
-  const [showQR, setShowQR] = useState(false)
-  const [qrDataUrl, setQrDataUrl] = useState("")
-  const [isGeneratingQR, setIsGeneratingQR] = useState(false)
-  const [testNotificationMessage, setTestNotificationMessage] = useState("")
-  const [drawerOpen, setDrawerOpen] = useState(false)
-  const { theme, setTheme } = useTheme()
+  const { setTheme, theme } = useTheme()
   const { t } = useTranslation(currentLocale)
   const isMobile = useIsMobile()
+  const { version, isLoading: versionLoading } = useVersion()
 
   // Load preferences on mount
   useEffect(() => {
@@ -489,6 +490,17 @@ export function SettingsDropdown({ currentLocale, members, team }: SettingsDropd
           </div>
         )}
       </div>
+      
+      {/* Version Info - Subtle display at bottom */}
+      <div className="h-px bg-gray-200 dark:bg-gray-600 my-1" />
+      
+      <div className="px-2 py-2">
+        <div className="flex items-center justify-center">
+          <span className="text-xs text-gray-400 dark:text-gray-500">
+            {versionLoading ? "..." : `v${version || "1.0.0"}`}
+          </span>
+        </div>
+      </div>
     </div>
   )
 
@@ -501,7 +513,7 @@ export function SettingsDropdown({ currentLocale, members, team }: SettingsDropd
             <Button
               variant="outline"
               size="sm"
-              className="rounded-lg border-gray-200 dark:border-gray-700 hover:bg-gray-50 dark:hover:bg-gray-700 bg-transparent settings-button-mobile"
+              className="rounded-lg bg-white/10 backdrop-blur-sm border-white/20 text-white hover:bg-white/20 settings-button-mobile"
             >
               <Settings className="h-4 w-4" />
             </Button>
@@ -524,7 +536,7 @@ export function SettingsDropdown({ currentLocale, members, team }: SettingsDropd
             <Button
               variant="outline"
               size="sm"
-              className="rounded-lg border-gray-200 dark:border-gray-700 hover:bg-gray-50 dark:hover:bg-gray-700 bg-transparent"
+              className="rounded-lg bg-white/10 backdrop-blur-sm border-white/20 text-white hover:bg-white/20"
             >
               <Settings className="h-4 w-4" />
             </Button>

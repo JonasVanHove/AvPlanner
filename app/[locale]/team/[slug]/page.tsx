@@ -6,6 +6,7 @@ import { AvailabilityCalendarRedesigned } from "@/components/availability-calend
 import { TeamPasswordForm } from "@/components/team-password-form"
 import { supabase } from "@/lib/supabase"
 import { useTranslation, type Locale } from "@/lib/i18n"
+import { useAuth } from "@/hooks/useAuth"
 import Link from "next/link"
 import { notFound } from "next/navigation"
 
@@ -34,6 +35,7 @@ interface LocaleTeamPageProps {
 
 export default function LocaleTeamPage({ params }: LocaleTeamPageProps) {
   const locale = params.locale as Locale
+  const { user } = useAuth()
 
   if (!["en", "nl", "fr"].includes(locale)) {
     notFound()
@@ -95,6 +97,7 @@ export default function LocaleTeamPage({ params }: LocaleTeamPageProps) {
         .from("members")
         .select("*")
         .eq("team_id", teamData.id)
+        .order("order_index", { ascending: true })
         .order("created_at", { ascending: true })
 
       if (membersError) throw membersError
@@ -127,6 +130,7 @@ export default function LocaleTeamPage({ params }: LocaleTeamPageProps) {
           .from("members")
           .select("*")
           .eq("team_id", team.id)
+          .order("order_index", { ascending: true })
           .order("created_at", { ascending: true })
 
         if (membersError) throw membersError
@@ -187,9 +191,13 @@ export default function LocaleTeamPage({ params }: LocaleTeamPageProps) {
     <AvailabilityCalendarRedesigned
       teamId={team.id}
       teamName={team.name}
+      team={team}
       members={members}
       locale={locale}
       onMembersUpdate={fetchTeamData}
+      isPasswordProtected={team.is_password_protected}
+      passwordHash={team.password_hash}
+      userEmail={user?.email}
     />
   )
 }
