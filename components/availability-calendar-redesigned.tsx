@@ -121,26 +121,31 @@ const AvailabilityCalendarRedesigned = ({
   // Alias for getMondayOfWeek for consistency with usage in smart filtering
   const getWeekStart = getMondayOfWeek
 
-  // Helper function to check if a date is in the current visible week
-  const isDateInCurrentWeek = (date: Date) => {
+  // Helper function to check if a date is in the current visible period (supports multiple weeks)
+  const isDateInCurrentPeriod = (date: Date) => {
     const weekStart = getWeekStart(currentDate)
     const weekEnd = new Date(weekStart)
-    weekEnd.setDate(weekEnd.getDate() + 6)
+    weekEnd.setDate(weekEnd.getDate() + (weeksToShow * 7) - 1) // Support multiple weeks
     return date >= weekStart && date <= weekEnd
   }
 
-  // Smart member filtering based on visibility and activity status for the current week
+  // Legacy function for backward compatibility (now uses the period check)
+  const isDateInCurrentWeek = (date: Date) => {
+    return isDateInCurrentPeriod(date)
+  }
+
+  // Smart member filtering based on visibility and activity status for the current visible period
   // Rules:
-  // 1. Hidden members (is_hidden=true): Only show if they have availability records for this week
+  // 1. Hidden members (is_hidden=true): Only show if they have availability records for this visible period
   // 2. Visible members (is_hidden=false): Always show
   // 3. Active members (status=active): Always show
-  // 4. Inactive members (status=inactive): Only show if they have availability records for this week
+  // 4. Inactive members (status=inactive): Only show if they have availability records for this visible period
   const getVisibleMembers = () => {
     return members.filter(member => {
-      // Check if member has availability records for current week
-      const hasRecordsThisWeek = availability.some(record => 
+      // Check if member has availability records for current visible period (supports multiple weeks)
+      const hasRecordsThisPeriod = availability.some(record => 
         record.member_id === member.id && 
-        isDateInCurrentWeek(new Date(record.date))
+        isDateInCurrentPeriod(new Date(record.date))
       )
       
       // Get member visibility and status (handle both old and new data structures)
@@ -149,16 +154,16 @@ const AvailabilityCalendarRedesigned = ({
       
       // Logic based on your requirements:
       if (isHidden) {
-        // Hidden members: only show if they have records for this week
-        return hasRecordsThisWeek
+        // Hidden members: only show if they have records for this visible period
+        return hasRecordsThisPeriod
       }
       
       if (isActive) {
         // Active members: always show
         return true
       } else {
-        // Inactive members: hide if they have no records for this week
-        return hasRecordsThisWeek
+        // Inactive members: hide if they have no records for this visible period
+        return hasRecordsThisPeriod
       }
     })
   }
@@ -392,10 +397,18 @@ const AvailabilityCalendarRedesigned = ({
     if (members.length === 0) return
 
     setIsLoading(true)
+    console.log('🔄 Fetching availability data...')
     try {
       const startDate = getMondayOfWeek(currentDate)
       const endDate = new Date(startDate)
       endDate.setDate(startDate.getDate() + weeksToShow * 7 - 1)
+
+      console.log(`📅 Calendar date range: ${startDate.toISOString().split("T")[0]} to ${endDate.toISOString().split("T")[0]}`)
+      console.log(`📅 Calendar readable range: ${startDate.toLocaleDateString('nl-NL')} to ${endDate.toLocaleDateString('nl-NL')}`)
+      console.log(`👥 Fetching for ${members.length} members`)
+      console.log(`📊 Current displayed date: ${currentDate.toLocaleDateString('nl-NL')}`)
+      console.log(`🗓️ Weeks to show: ${weeksToShow} (${weeksToShow * 7} days total)`)
+      console.log(`🔍 Period spans: ${Math.ceil((endDate.getTime() - startDate.getTime()) / (24 * 60 * 60 * 1000) + 1)} days`)
 
       // Fetch availability for ALL members to support proper filtering and analytics
       // This ensures we have data to determine who should be visible and analytics work correctly
@@ -410,6 +423,17 @@ const AvailabilityCalendarRedesigned = ({
         .lte("date", endDate.toISOString().split("T")[0])
 
       if (error) throw error
+      
+      console.log(`✅ Fetched ${data?.length || 0} availability records for ${weeksToShow}-week period`)
+      console.log(`📊 Records per member average: ${((data?.length || 0) / members.length).toFixed(1)}`)
+      
+      // Log some sample records to help debug bulk update visibility
+      if (data && data.length > 0) {
+        console.log(`📝 Sample records:`, data.slice(0, 3))
+        const uniqueDates = [...new Set(data.map(d => d.date))].sort()
+        console.log(`📅 Unique dates in fetched data: ${uniqueDates.slice(0, 5).join(', ')}${uniqueDates.length > 5 ? ` (+${uniqueDates.length - 5} more)` : ''}`)
+      }
+      
       setAvailability(data || [])
     } catch (error) {
       console.error("Error fetching availability:", error)

@@ -24,6 +24,7 @@ import { supabase } from "@/lib/supabase"
 import { useTranslation, type Locale } from "@/lib/i18n"
 import { MemberAvatar } from "./member-avatar"
 import { cn } from "@/lib/utils"
+import { useToast } from "@/hooks/use-toast"
 
 interface Member {
   id: string
@@ -31,6 +32,7 @@ interface Member {
   last_name: string
   email?: string
   profile_image?: string
+  is_hidden?: boolean
 }
 
 interface BulkUpdateDialogProps {
@@ -1038,6 +1040,7 @@ export function BulkUpdateDialog({ members, locale, onUpdate }: BulkUpdateDialog
   const [todayAvailability, setTodayAvailability] = useState<Record<string, string>>({})
   const [existingAvailability, setExistingAvailability] = useState<Record<string, Record<string, string>>>({})
   const { t } = useTranslation(locale)
+  const { toast } = useToast()
 
   // Check for simplified mode preference
   useEffect(() => {
@@ -1146,6 +1149,10 @@ export function BulkUpdateDialog({ members, locale, onUpdate }: BulkUpdateDialog
   ]
 
   const handleMemberToggle = (memberId: string) => {
+    // Don't allow toggling of hidden members
+    const member = members.find(m => m.id === memberId)
+    if (member?.is_hidden) return
+    
     setSelectedMembers(prev => 
       prev.includes(memberId) 
         ? prev.filter(id => id !== memberId)
@@ -1154,11 +1161,40 @@ export function BulkUpdateDialog({ members, locale, onUpdate }: BulkUpdateDialog
   }
 
   const handleSelectAllMembers = () => {
-    if (selectedMembers.length === members.length) {
-      setSelectedMembers([])
+    // Only select/deselect non-hidden members
+    const visibleMembers = members.filter(m => !m.is_hidden)
+    const selectedVisibleMembers = selectedMembers.filter(id => 
+      !members.find(m => m.id === id)?.is_hidden
+    )
+    
+    if (selectedVisibleMembers.length === visibleMembers.length) {
+      // Deselect all visible members
+      setSelectedMembers(prev => prev.filter(id => 
+        members.find(m => m.id === id)?.is_hidden
+      ))
     } else {
-      setSelectedMembers(members.map(m => m.id))
+      // Select all visible members (keep hidden members as they were)
+      const hiddenSelected = selectedMembers.filter(id => 
+        members.find(m => m.id === id)?.is_hidden
+      )
+      setSelectedMembers([...hiddenSelected, ...visibleMembers.map(m => m.id)])
     }
+  }
+
+  const handleSmartDateSelection = () => {
+    // Smart date selection: select next 5 workdays
+    const dates = []
+    let currentDate = new Date()
+    let addedDays = 0
+    
+    while (addedDays < 5) {
+      if (!isWeekend(currentDate)) {
+        dates.push(new Date(currentDate))
+        addedDays++
+      }
+      currentDate = addDays(currentDate, 1)
+    }
+    setSelectedDates(dates)
   }
 
   const handleDateSelect = (date: Date | undefined) => {
@@ -1213,52 +1249,217 @@ export function BulkUpdateDialog({ members, locale, onUpdate }: BulkUpdateDialog
 
   const handleBulkUpdate = async () => {
     if (selectedMembers.length === 0 || selectedDates.length === 0) {
-      alert(t("bulk.selectMembersAndDates"))
+      toast({
+        title: "Selection Required",
+        description: t("bulk.selectMembersAndDates"),
+        variant: "destructive",
+      })
       return
     }
 
     setIsUpdating(true)
     
     try {
-      // Delete existing availability records for selected members and dates
-      const dateStrings = selectedDates.map(date => date.toISOString().split('T')[0])
+      // Use the exact same date formatting as individual updates
+      const dateStrings = selectedDates.map(date => {
+        // Use local date formatting to avoid timezone offset issues
+        const year = date.getFullYear()
+        const month = String(date.getMonth() + 1).padStart(2, '0')
+        const day = String(date.getDate()).padStart(2, '0')
+        return `${year}-${month}-${day}`
+      })
       
-      await supabase
-        .from('availability')
-        .delete()
-        .in('member_id', selectedMembers)
-        .in('date', dateStrings)
+      console.log('🗓️ Bulk update starting:', {
+        memberCount: selectedMembers.length,
+        dateCount: selectedDates.length,
+        status: selectedStatus,
+        totalOperations: selectedMembers.length * dateStrings.length,
+        selectedDatesRaw: selectedDates.map(d => d.toString()),
+        dateStringsFormatted: dateStrings,
+        dateRange: `${dateStrings[0]} to ${dateStrings[dateStrings.length - 1]}`
+      })
 
-      // Insert new availability records
-      const insertData = selectedMembers.flatMap(memberId =>
+      // Create update data using same structure as individual updates
+      const updateData = selectedMembers.flatMap(memberId =>
         dateStrings.map(date => ({
           member_id: memberId,
           date: date,
-          status: selectedStatus,
-          created_at: new Date().toISOString(),
-          updated_at: new Date().toISOString()
+          status: selectedStatus
         }))
       )
 
-      const { error } = await supabase
-        .from('availability')
-        .insert(insertData)
+      console.log('📝 Sample update data:', updateData.slice(0, 3))
 
-      if (error) {
-        console.error('Bulk update error:', error)
-        alert(t("common.error"))
+      // Use the same upsert method as individual updates
+      const { error: upsertError } = await supabase
+        .from('availability')
+        .upsert(updateData, {
+          onConflict: 'member_id,date'
+        })
+
+      if (upsertError) {
+        console.error('Bulk update error:', upsertError)
+        toast({
+          title: "Update Failed",
+          description: `${t("common.error")}: ${upsertError.message}`,
+          variant: "destructive",
+        })
         return
       }
 
-      // Success
-      alert(t("bulk.updateSuccess"))
+      console.log('✅ Bulk update completed successfully')
+
+      // Verify the bulk update worked by checking a few records
+      console.log('🔍 Verifying bulk update results...')
+      const { data: verifyData, error: verifyError } = await supabase
+        .from('availability')
+        .select('*')
+        .in('member_id', selectedMembers.slice(0, 2)) // Check first 2 members
+        .in('date', dateStrings.slice(0, 3)) // Check first 3 dates
+        .eq('status', selectedStatus)
+
+      if (verifyError) {
+        console.error('❌ Verification error:', verifyError)
+      } else {
+        const expectedRecords = Math.min(selectedMembers.length, 2) * Math.min(dateStrings.length, 3)
+        console.log(`✅ Verification: Found ${verifyData?.length || 0}/${expectedRecords} expected records`)
+        console.log('📊 Sample verified records:', verifyData?.slice(0, 3))
+        
+        if ((verifyData?.length || 0) < expectedRecords) {
+          console.warn('⚠️ Some records may not have been updated correctly')
+        } else {
+          console.log('✅ All verified records have correct status')
+        }
+      }
+
+      // Force multiple refreshes to ensure data is updated
+      console.log('🔄 Triggering calendar refresh...')
+      
+      // Wait longer for database to process changes and clear any caching
+      await new Promise(resolve => setTimeout(resolve, 1200))
+      
+      // Primary refresh
+      console.log('🔄 Primary calendar refresh at', new Date().toISOString())
       onUpdate()
+      
+      // Additional refresh after short delay to ensure data propagation
+      setTimeout(() => {
+        console.log('🔄 Secondary calendar refresh at', new Date().toISOString())
+        onUpdate()
+      }, 1500)
+      
+      // Final refresh to be absolutely sure
+      setTimeout(() => {
+        console.log('🔄 Final calendar refresh at', new Date().toISOString())
+        onUpdate()
+      }, 3000)
+      
+      // Log helpful debugging information
+      console.log('🎯 Bulk Update Summary:')
+      console.log(`   📅 Dates updated: ${dateStrings.join(', ')}`)
+      console.log(`   👥 Members: ${selectedMembers.length}`)
+      console.log(`   📊 Status set to: ${selectedStatus}`)
+      console.log(`   🔢 Total records: ${updateData.length}`)
+      console.log('   ⏰ Multiple refreshes scheduled to ensure visibility')
+      console.log('   🔗 Sample member IDs:', selectedMembers.slice(0, 3))
+      console.log('   📊 First few update records:', updateData.slice(0, 3))
+      
+      // Additional diagnostic: Check if we're updating the right date range
+      const today = new Date()
+      const todayStr = `${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, '0')}-${String(today.getDate()).padStart(2, '0')}`
+      const isUpdatingFutureDates = dateStrings.some(date => date >= todayStr)
+      console.log(`   ⏰ Updating future dates: ${isUpdatingFutureDates ? 'Yes' : 'No (past dates)'}`)
+      console.log(`   📅 Today: ${todayStr}, Updated dates: ${dateStrings.join(', ')}`)
+      
+      // Check if dates fall within typical calendar view (current week +/- 4 weeks)
+      const currentWeekStart = new Date()
+      currentWeekStart.setDate(currentWeekStart.getDate() - currentWeekStart.getDay() + 1) // Monday
+      const viewRangeStart = new Date(currentWeekStart)
+      viewRangeStart.setDate(viewRangeStart.getDate() - 28) // 4 weeks before
+      const viewRangeEnd = new Date(currentWeekStart)
+      viewRangeEnd.setDate(viewRangeEnd.getDate() + 56) // 8 weeks after
+      
+      const datesInView = dateStrings.filter(dateStr => {
+        const date = new Date(dateStr + 'T12:00:00') // Add noon time to avoid timezone issues
+        return date >= viewRangeStart && date <= viewRangeEnd
+      })
+      
+      // Format view range using local dates
+      const formatLocalDate = (date: Date) => {
+        const year = date.getFullYear()
+        const month = String(date.getMonth() + 1).padStart(2, '0')
+        const day = String(date.getDate()).padStart(2, '0')
+        return `${year}-${month}-${day}`
+      }
+      
+      console.log(`   📊 Typical calendar view range: ${formatLocalDate(viewRangeStart)} to ${formatLocalDate(viewRangeEnd)}`)
+      console.log(`   ✅ Dates likely visible in calendar: ${datesInView.length}/${dateStrings.length} (${datesInView.join(', ')})`)
+      
+      if (datesInView.length < dateStrings.length) {
+        const datesOutOfView = dateStrings.filter(d => !datesInView.includes(d))
+        console.log(`   ⚠️ Dates that may not be visible: ${datesOutOfView.join(', ')}`)
+        console.log(`   💡 To see these dates, navigate to the correct week/month in the calendar`)
+      }
+      
+      // Show success toast with visibility warning if needed
+      const warningMessage = datesInView.length < dateStrings.length 
+        ? ` ⚠️ Some dates may not be visible in current calendar view - navigate to October 2025 to see all updates.`
+        : ' Navigate to the correct date range if needed.'
+      
+      toast({
+        title: "Bulk Update Successful",
+        description: `Successfully updated ${updateData.length} availability records for ${selectedMembers.length} ${selectedMembers.length === 1 ? t("bulk.member") : t("bulk.members")} across ${selectedDates.length} ${selectedDates.length === 1 ? t("bulk.date") : t("bulk.dates")}. Calendar will refresh automatically.${warningMessage}`,
+        variant: "default",
+        duration: 10000,
+      })
+      
+      console.log('📊 Updated records should now be visible in calendar')
+      console.log('🔍 If records are not visible, check:')
+      console.log('   1. Calendar date range includes the updated dates')
+      console.log('   2. Team view shows the correct members')
+      console.log('   3. Browser refresh may be needed in some cases')
+      
+      // Final fallback: suggest navigation to correct month after 5 seconds if needed
+      setTimeout(() => {
+        console.log('⚠️ If updates are still not visible, consider refreshing the page manually')
+        
+        // Check if updates were in future months that need navigation
+        const hasOctoberDates = dateStrings.some(dateStr => {
+          const dateParts = dateStr.split('-')
+          const year = parseInt(dateParts[0])
+          const month = parseInt(dateParts[1])
+          return month === 10 && year === 2025 // October 2025
+        })
+        
+        if (hasOctoberDates) {
+          toast({
+            title: "Navigate to October 2025",
+            description: "Your bulk updates were made for October 2025. Use the calendar navigation arrows to go to October 2025 to see your updates, or extend the calendar view to show more weeks.",
+            variant: "default",
+            duration: 8000,
+          })
+        } else {
+          toast({
+            title: "Updates Not Visible?",
+            description: "If your bulk updates aren't visible, try: 1) Navigate to the correct date range in the calendar, 2) Refresh the page (F5), or 3) Check if you're viewing the right week/month period.",
+            variant: "default",
+            duration: 6000,
+          })
+        }
+      }, 5000)
+      
+      // Reset form
       setOpen(false)
       setSelectedMembers([])
       setSelectedDates([])
+      
     } catch (error) {
       console.error("Bulk update error:", error)
-      alert(t("common.error"))
+      toast({
+        title: "Unexpected Error",
+        description: `${t("common.error")}: ${error instanceof Error ? error.message : 'Unknown error'}`,
+        variant: "destructive",
+      })
     } finally {
       setIsUpdating(false)
     }
@@ -1313,7 +1514,7 @@ export function BulkUpdateDialog({ members, locale, onUpdate }: BulkUpdateDialog
                   onClick={handleSelectAllMembers}
                   className="h-8 text-xs"
                 >
-                  {selectedMembers.length === members.length 
+                  {selectedMembers.filter(id => !members.find(m => m.id === id)?.is_hidden).length === members.filter(m => !m.is_hidden).length 
                     ? t("bulk.deselectAll") 
                     : t("bulk.selectAll")
                   }
@@ -1324,16 +1525,22 @@ export function BulkUpdateDialog({ members, locale, onUpdate }: BulkUpdateDialog
                   <div
                     key={member.id}
                     className={cn(
-                      "flex items-center space-x-3 p-2 rounded-lg border transition-all cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-800",
-                      selectedMembers.includes(member.id) 
+                      "flex items-center space-x-3 p-2 rounded-lg border transition-all",
+                      member.is_hidden 
+                        ? "cursor-not-allowed opacity-60 bg-gray-100 dark:bg-gray-800 border-gray-300 dark:border-gray-600" 
+                        : "cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-800",
+                      !member.is_hidden && selectedMembers.includes(member.id) 
                         ? "bg-blue-50 dark:bg-blue-900/20 border-blue-200 dark:border-blue-700" 
-                        : "bg-white dark:bg-gray-900 border-gray-200 dark:border-gray-700"
+                        : !member.is_hidden 
+                        ? "bg-white dark:bg-gray-900 border-gray-200 dark:border-gray-700"
+                        : ""
                     )}
-                    onClick={() => handleMemberToggle(member.id)}
+                    onClick={() => !member.is_hidden && handleMemberToggle(member.id)}
                   >
                     <Checkbox 
                       checked={selectedMembers.includes(member.id)}
-                      onChange={() => handleMemberToggle(member.id)}
+                      onChange={() => !member.is_hidden && handleMemberToggle(member.id)}
+                      disabled={member.is_hidden}
                       className="pointer-events-none flex-shrink-0"
                     />
                     <MemberAvatar 
@@ -1341,11 +1548,22 @@ export function BulkUpdateDialog({ members, locale, onUpdate }: BulkUpdateDialog
                       lastName={member.last_name}
                       profileImage={member.profile_image}
                       size="sm"
-                      className="flex-shrink-0"
+                      className={cn(
+                        "flex-shrink-0",
+                        member.is_hidden && "opacity-50"
+                      )}
                     />
                     <div className="flex-1 min-w-0">
-                      <p className="text-sm font-medium text-gray-900 dark:text-white truncate">
+                      <p className={cn(
+                        "text-sm font-medium truncate",
+                        member.is_hidden 
+                          ? "text-gray-400 dark:text-gray-500 line-through" 
+                          : "text-gray-900 dark:text-white"
+                      )}>
                         {member.first_name} {member.last_name}
+                        {member.is_hidden && (
+                          <span className="ml-2 text-xs text-gray-400">(Hidden)</span>
+                        )}
                       </p>
                       {todayAvailability[member.id] && (
                         <p className="text-xs text-gray-500 dark:text-gray-400 truncate">
@@ -1363,7 +1581,7 @@ export function BulkUpdateDialog({ members, locale, onUpdate }: BulkUpdateDialog
               <Label className="text-sm font-medium mb-3 block">{t("bulk.selectDates")}</Label>
               
               {/* Quick Date Selection */}
-              <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-2 mb-4">
+              <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-5 gap-2 mb-4">
                 <Button
                   variant="outline"
                   size="sm"
@@ -1394,6 +1612,15 @@ export function BulkUpdateDialog({ members, locale, onUpdate }: BulkUpdateDialog
                 <Button
                   variant="outline"
                   size="sm"
+                  onClick={handleSmartDateSelection}
+                  className="h-8 text-xs bg-blue-50 hover:bg-blue-100 border-blue-200"
+                >
+                  <Bolt className="h-3 w-3 mr-1" />
+                  <span className="truncate">Smart Select</span>
+                </Button>
+                <Button
+                  variant="outline"
+                  size="sm"
                   onClick={() => setSelectedDates([])}
                   className="h-8 text-xs"
                 >
@@ -1406,7 +1633,7 @@ export function BulkUpdateDialog({ members, locale, onUpdate }: BulkUpdateDialog
               <div className="border rounded-lg p-3">
                 <div className="mb-3">
                   <Label className="text-xs text-gray-600 dark:text-gray-400 mb-2 block">
-                    💡 Tip: Klik op een maandnaam om de hele maand te selecteren
+                    💡 Tips: Use "Smart Select" for next 5 workdays. Click individual dates or use quick selection buttons above. Weekends are highlighted in red.
                   </Label>
                 </div>
                 <Calendar
@@ -1450,21 +1677,21 @@ export function BulkUpdateDialog({ members, locale, onUpdate }: BulkUpdateDialog
                     onClick={() => handleMonthSelect(new Date())}
                     className="text-xs"
                   >
-                    Hele maand selecteren
+                    {t("bulk.thisMonth")}
                   </Button>
                 </div>
                 <div className="mt-3 text-xs text-gray-500 dark:text-gray-400 space-y-1">
                   <div className="flex items-center gap-2">
                     <div className="w-3 h-3 bg-green-50 border border-green-200 rounded"></div>
-                    <span>{t("bulk.weekdaysGreen")}</span>
+                    <span>Weekdays (green)</span>
                   </div>
                   <div className="flex items-center gap-2">
                     <div className="w-3 h-3 bg-red-50 border border-red-200 rounded"></div>
-                    <span>{t("bulk.weekendsRed")}</span>
+                    <span>Weekends (red)</span>
                   </div>
                   <div className="flex items-center gap-2">
                     <div className="w-3 h-3 bg-blue-500 rounded"></div>
-                    <span>{t("bulk.selectedDays")}</span>
+                    <span>Selected days</span>
                   </div>
                 </div>
               </div>
@@ -1517,12 +1744,27 @@ export function BulkUpdateDialog({ members, locale, onUpdate }: BulkUpdateDialog
               </div>
             </div>
 
+            {/* Quick Preview when selections are made */}
+            {selectedMembers.length > 0 && selectedDates.length > 0 && (
+              <div className="bg-green-50 dark:bg-green-900/20 border border-green-200 dark:border-green-700 rounded-lg p-3">
+                <div className="flex items-center gap-2 text-sm text-green-800 dark:text-green-200">
+                  <CheckCircle className="h-4 w-4" />
+                  <span className="font-medium">Ready to update:</span>
+                  <span>{selectedMembers.length} {selectedMembers.length === 1 ? t("bulk.member") : t("bulk.members")}</span>
+                  <span>×</span>
+                  <span>{selectedDates.length} {selectedDates.length === 1 ? t("bulk.date") : t("bulk.dates")}</span>
+                  <span>=</span>
+                  <span className="font-bold">{selectedMembers.length * selectedDates.length} updates</span>
+                </div>
+              </div>
+            )}
+
             {/* Changes Preview */}
             {selectedMembers.length > 0 && selectedDates.length > 0 && (
               <div className="bg-yellow-50 dark:bg-yellow-900/20 border border-yellow-200 dark:border-yellow-700 rounded-lg p-4">
                 <h4 className="text-sm font-medium text-yellow-900 dark:text-yellow-100 mb-3 flex items-center gap-2">
                   <span className="text-lg">📋</span>
-                  Wijzigingen overzicht
+                  Changes Overview
                 </h4>
                 <div className="max-h-64 overflow-y-auto space-y-2">
                   {selectedMembers.map(memberId => {
@@ -1570,6 +1812,62 @@ export function BulkUpdateDialog({ members, locale, onUpdate }: BulkUpdateDialog
                       </div>
                     )
                   })}
+                </div>
+              </div>
+            )}
+
+            {/* Debug Information */}
+            {selectedMembers.length > 0 && selectedDates.length > 0 && (
+              <div className="bg-gray-50 dark:bg-gray-900/20 border border-gray-200 dark:border-gray-700 rounded-lg p-3">
+                <h4 className="text-xs font-medium text-gray-700 dark:text-gray-300 mb-2 flex items-center gap-2">
+                  <span>🔍</span>
+                  Debug Information
+                </h4>
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 text-xs text-gray-600 dark:text-gray-400">
+                  <div>
+                    <strong>Selected Dates:</strong> {selectedDates.length > 0 ? selectedDates.sort((a, b) => a.getTime() - b.getTime()).map(d => {
+                      // Use local date formatting to avoid timezone issues
+                      const year = d.getFullYear()
+                      const month = String(d.getMonth() + 1).padStart(2, '0')
+                      const day = String(d.getDate()).padStart(2, '0')
+                      return `${year}-${month}-${day}`
+                    }).join(', ') : 'None'}
+                  </div>
+                  <div>
+                    <strong>Status:</strong> {statusOptions.find(s => s.value === selectedStatus)?.label}
+                  </div>
+                  <div>
+                    <strong>Members:</strong> {selectedMembers.length} selected
+                  </div>
+                  <div>
+                    <strong>Total Operations:</strong> {selectedMembers.length * selectedDates.length}
+                  </div>
+                </div>
+                <div className="mt-2 text-xs text-gray-500 dark:text-gray-400">
+                  💡 This information will help with troubleshooting if updates don't appear in the calendar
+                </div>
+                <div className="mt-2 text-xs text-orange-600 dark:text-orange-400 bg-orange-50 dark:bg-orange-900/20 p-2 rounded border">
+                  <strong>📍 Visibility Note:</strong> Updates will only be visible in the calendar if the selected dates fall within the currently displayed time period. 
+                  {selectedDates.length > 0 && (() => {
+                    // Check if selected dates are in October 2025
+                    const hasOctoberDates = selectedDates.some(date => 
+                      date.getMonth() === 9 && date.getFullYear() === 2025 // October = month 9
+                    )
+                    const currentMonth = new Date().toLocaleString('en-US', { month: 'long', year: 'numeric' })
+                    
+                    if (hasOctoberDates) {
+                      return (
+                        <div className="mt-1">
+                          <strong>🗓️ Current period:</strong> {currentMonth} | <strong>Selected dates in:</strong> October 2025<br/>
+                          <strong>⚠️ Action needed:</strong> Navigate to October 2025 in the calendar to see your updates!
+                        </div>
+                      )
+                    }
+                    return null
+                  })()}
+                  <div className="mt-1">
+                    If you don't see your updates, navigate to the correct week/month in the calendar or extend the view to more weeks.
+                  </div>
                 </div>
               </div>
             )}
@@ -1628,7 +1926,7 @@ export function BulkUpdateDialog({ members, locale, onUpdate }: BulkUpdateDialog
                 ) : (
                   <>
                     <CheckCircle className="h-4 w-4 mr-2" />
-                    {t("bulk.update")}
+                    {t("bulk.apply")}
                   </>
                 )}
               </Button>
