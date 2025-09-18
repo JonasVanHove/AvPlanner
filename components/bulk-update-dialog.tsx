@@ -52,6 +52,13 @@ export function AnalyticsButton({ members, locale, weeksToShow, currentDate, tea
   const [simplifiedMode, setSimplifiedMode] = useState(false)
   const [showPersonalCharts, setShowPersonalCharts] = useState(false)
   const [selectedMemberForChart, setSelectedMemberForChart] = useState<string | null>(null)
+  const [selectedPeriod, setSelectedPeriod] = useState<'current' | 'custom'>('current')
+  const [customStartDate, setCustomStartDate] = useState<Date>(new Date())
+  const [customEndDate, setCustomEndDate] = useState<Date>(() => {
+    const date = new Date()
+    date.setDate(date.getDate() + 6)
+    return date
+  })
   const { t } = useTranslation(locale)
 
   // Check for simplified mode preference
@@ -155,10 +162,25 @@ export function AnalyticsButton({ members, locale, weeksToShow, currentDate, tea
 
   const fetchAnalyticsData = async () => {
     try {
-      // Use the calendar's current date and weeksToShow to determine the period
-      const startDate = new Date(currentDate)
-      const endDate = new Date(currentDate)
-      endDate.setDate(startDate.getDate() + weeksToShow * 7 - 1)
+      let startDate: Date, endDate: Date
+      
+      if (selectedPeriod === 'custom') {
+        startDate = new Date(customStartDate)
+        endDate = new Date(customEndDate)
+      } else {
+        // Calculate the Monday of the current week (start of period)
+        const getMondayOfWeek = (date: Date): Date => {
+          const d = new Date(date)
+          const day = d.getDay()
+          const diff = d.getDate() - day + (day === 0 ? -6 : 1)
+          return new Date(d.setDate(diff))
+        }
+        
+        // Use Monday of the current week as start date
+        startDate = getMondayOfWeek(currentDate)
+        endDate = new Date(startDate)
+        endDate.setDate(startDate.getDate() + weeksToShow * 7 - 1)
+      }
 
       const { data, error } = await supabase
         .from('availability')
@@ -192,7 +214,7 @@ export function AnalyticsButton({ members, locale, weeksToShow, currentDate, tea
       fetchAnalyticsData()
       fetchMemberStats()
     }
-  }, [showAnalytics, weeksToShow, currentDate])
+  }, [showAnalytics, weeksToShow, currentDate, selectedPeriod, customStartDate, customEndDate])
 
   const handleShowAnalytics = () => {
     setShowAnalytics(true)
@@ -290,6 +312,26 @@ export function AnalyticsButton({ members, locale, weeksToShow, currentDate, tea
   const fetchMemberStats = async () => {
     setMemberStatsLoading(true)
     try {
+      let startDate: Date, endDate: Date
+      
+      if (selectedPeriod === 'custom') {
+        startDate = new Date(customStartDate)
+        endDate = new Date(customEndDate)
+      } else {
+        // Calculate the Monday of the current week (start of period)
+        const getMondayOfWeek = (date: Date): Date => {
+          const d = new Date(date)
+          const day = d.getDay()
+          const diff = d.getDate() - day + (day === 0 ? -6 : 1)
+          return new Date(d.setDate(diff))
+        }
+        
+        // Use Monday of the current week as start date
+        startDate = getMondayOfWeek(currentDate)
+        endDate = new Date(startDate)
+        endDate.setDate(startDate.getDate() + weeksToShow * 7 - 1)
+      }
+      
       const { data, error } = await supabase
         .from('availability')
         .select(`
@@ -300,6 +342,8 @@ export function AnalyticsButton({ members, locale, weeksToShow, currentDate, tea
           members!inner(team_id)
         `)
         .eq('members.team_id', teamId) // Filter by team_id
+        .gte('date', startDate.toISOString().split('T')[0])
+        .lte('date', endDate.toISOString().split('T')[0])
         .order('date', { ascending: true })
 
       if (error) {
@@ -371,12 +415,29 @@ export function AnalyticsButton({ members, locale, weeksToShow, currentDate, tea
     }
   }
 
-  const getPeriodDescription = () => {
-    const startDate = new Date(currentDate)
-    const endDate = new Date(currentDate)
+  // Get the current view period description (always shows the calendar's current period)
+  const getCurrentViewPeriodDescription = () => {
+    const getMondayOfWeek = (date: Date): Date => {
+      const d = new Date(date)
+      const day = d.getDay()
+      const diff = d.getDate() - day + (day === 0 ? -6 : 1)
+      return new Date(d.setDate(diff))
+    }
+    
+    const startDate = getMondayOfWeek(currentDate)
+    const endDate = new Date(startDate)
     endDate.setDate(startDate.getDate() + weeksToShow * 7 - 1)
     
     return `${format(startDate, 'dd MMM', { locale: nl })} - ${format(endDate, 'dd MMM', { locale: nl })}`
+  }
+
+  // Get the selected period description (for analytics data display)
+  const getPeriodDescription = () => {
+    if (selectedPeriod === 'custom') {
+      return `${format(customStartDate, 'dd MMM', { locale: nl })} - ${format(customEndDate, 'dd MMM', { locale: nl })}`
+    }
+    
+    return getCurrentViewPeriodDescription()
   }
 
   // Get general status distribution for the entire team over the selected period
@@ -433,6 +494,124 @@ export function AnalyticsButton({ members, locale, weeksToShow, currentDate, tea
             <DialogDescription className="text-xs sm:text-sm text-gray-600 dark:text-gray-300">
               {t("analytics.description")} - {getPeriodDescription()}
             </DialogDescription>
+            
+            {/* Period Selector */}
+            <div className="bg-gray-50 dark:bg-gray-900/50 border border-gray-200 dark:border-gray-700 rounded-lg p-3 mt-2">
+              <div className="flex flex-col gap-3">
+                <div className="flex items-center gap-4">
+                  <label className="flex items-center gap-2 cursor-pointer">
+                    <input 
+                      type="radio" 
+                      name="period" 
+                      checked={selectedPeriod === 'current'} 
+                      onChange={() => setSelectedPeriod('current')}
+                      className="text-blue-600"
+                    />
+                    <span className="text-sm font-medium">Current view ({getCurrentViewPeriodDescription()})</span>
+                  </label>
+                  <label className="flex items-center gap-2 cursor-pointer">
+                    <input 
+                      type="radio" 
+                      name="period" 
+                      checked={selectedPeriod === 'custom'} 
+                      onChange={() => setSelectedPeriod('custom')}
+                      className="text-blue-600"
+                    />
+                    <span className="text-sm font-medium">Custom period</span>
+                  </label>
+                </div>
+                
+                {selectedPeriod === 'custom' && (
+                  <div className="space-y-3 ml-6">
+                    <div className="flex items-center gap-2 text-xs">
+                      <span className="text-gray-600 dark:text-gray-400">Quick selection:</span>
+                      <Button 
+                        variant="outline" 
+                        size="sm" 
+                        className="h-6 px-2 text-xs"
+                        onClick={() => {
+                          const today = new Date()
+                          const nextWeek = new Date(today)
+                          nextWeek.setDate(today.getDate() + 7)
+                          setCustomStartDate(today)
+                          setCustomEndDate(nextWeek)
+                        }}
+                      >
+                        This week
+                      </Button>
+                      <Button 
+                        variant="outline" 
+                        size="sm" 
+                        className="h-6 px-2 text-xs"
+                        onClick={() => {
+                          const today = new Date()
+                          const nextMonth = new Date(today)
+                          nextMonth.setMonth(today.getMonth() + 1)
+                          setCustomStartDate(today)
+                          setCustomEndDate(nextMonth)
+                        }}
+                      >
+                        This month
+                      </Button>
+                      <Button 
+                        variant="outline" 
+                        size="sm" 
+                        className="h-6 px-2 text-xs"
+                        onClick={() => {
+                          const today = new Date()
+                          const lastMonth = new Date(today)
+                          lastMonth.setMonth(today.getMonth() - 1)
+                          setCustomStartDate(lastMonth)
+                          setCustomEndDate(today)
+                        }}
+                      >
+                        Last month
+                      </Button>
+                    </div>
+                    <div className="flex items-center gap-2">
+                      <label className="text-xs text-gray-600 dark:text-gray-400">From:</label>
+                      <Popover>
+                        <PopoverTrigger asChild>
+                          <Button variant="outline" size="sm" className="h-8 px-2 text-xs">
+                            <CalendarIcon className="h-3 w-3 mr-1" />
+                            {format(customStartDate, 'dd MMM yyyy', { locale: nl })}
+                          </Button>
+                        </PopoverTrigger>
+                        <PopoverContent className="w-auto p-0" align="start">
+                          <Calendar
+                            mode="single"
+                            selected={customStartDate}
+                            onSelect={(date) => date && setCustomStartDate(date)}
+                            initialFocus
+                          />
+                        </PopoverContent>
+                      </Popover>
+                    </div>
+                    <span className="text-xs text-gray-400">to</span>
+                    <div className="flex items-center gap-2">
+                      <label className="text-xs text-gray-600 dark:text-gray-400">To:</label>
+                      <Popover>
+                        <PopoverTrigger asChild>
+                          <Button variant="outline" size="sm" className="h-8 px-2 text-xs">
+                            <CalendarIcon className="h-3 w-3 mr-1" />
+                            {format(customEndDate, 'dd MMM yyyy', { locale: nl })}
+                          </Button>
+                        </PopoverTrigger>
+                        <PopoverContent className="w-auto p-0" align="start">
+                          <Calendar
+                            mode="single"
+                            selected={customEndDate}
+                            onSelect={(date) => date && setCustomEndDate(date)}
+                            initialFocus
+                          />
+                        </PopoverContent>
+                      </Popover>
+                    </div>
+                  </div>
+                )}
+              </div>
+            </div>
+
             <div className="bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-700 rounded-lg p-2 mt-2">
               <p className="text-xs text-blue-800 dark:text-blue-200">
                 💡 {t("analytics.dataExplanation")}
@@ -1472,8 +1651,10 @@ export function PlannerButton({ members, locale, teamId }: { members: Member[], 
   const fetchPlannerData = async () => {
     setIsLoading(true)
     try {
-      const today = new Date()
-      const endDate = new Date(today.getTime() + plannerPeriod * 24 * 60 * 60 * 1000)
+      // Start from tomorrow instead of today for better planning insight
+      const tomorrow = new Date()
+      tomorrow.setDate(tomorrow.getDate() + 1)
+      const endDate = new Date(tomorrow.getTime() + plannerPeriod * 24 * 60 * 60 * 1000)
       
       const { data, error } = await supabase
         .from('availability')
@@ -1483,7 +1664,7 @@ export function PlannerButton({ members, locale, teamId }: { members: Member[], 
           member_id,
           members!inner(first_name, last_name, team_id)
         `)
-        .gte('date', today.toISOString().split('T')[0])
+        .gte('date', tomorrow.toISOString().split('T')[0])
         .lte('date', endDate.toISOString().split('T')[0])
         .eq('members.team_id', teamId) // Filter by team_id
         .order('date', { ascending: true })
