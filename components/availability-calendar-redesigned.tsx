@@ -16,10 +16,14 @@ import {
   MessageSquare,
   BarChart3,
   Users,
+  Keyboard,
 } from "lucide-react"
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu"
 import { Switch } from "@/components/ui/switch"
 import { Progress } from "@/components/ui/progress"
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog"
+import { Input } from "@/components/ui/input"
+import { Label } from "@/components/ui/label"
 import { supabase } from "@/lib/supabase"
 import { useTranslation, type Locale } from "@/lib/i18n"
 import { cn } from "@/lib/utils"
@@ -29,6 +33,7 @@ import { SettingsDropdown } from "./settings-dropdown"
 import { MemberAvatar } from "./member-avatar"
 import { EditModePasswordDialog } from "./edit-mode-password-dialog"
 import { useTodayAvailability } from "@/hooks/use-today-availability"
+import { useVersion } from "@/hooks/use-version"
 
 interface Member {
   id: string
@@ -91,11 +96,16 @@ const AvailabilityCalendarRedesigned = ({
   const [isPasswordVerified, setIsPasswordVerified] = useState(false)
   const [passwordError, setPasswordError] = useState("")
   const [isPasswordLoading, setIsPasswordLoading] = useState(false)
+  const [showDatePicker, setShowDatePicker] = useState(false)
+  const [showKeyboardHelp, setShowKeyboardHelp] = useState(false)
   const { t } = useTranslation(locale)
 
   // Hook to get today's availability for all members (always shows today regardless of visible week)
   const memberIds = members.map(member => member.id)
   const { todayAvailability } = useTodayAvailability(memberIds)
+
+  // Hook to get version info (same as settings menu)
+  const { version, isLoading: versionLoading } = useVersion()
 
   // Filter out inactive members
   const activeMembers = members.filter(member => !member.status || member.status === 'active')
@@ -121,6 +131,55 @@ const AvailabilityCalendarRedesigned = ({
       window.removeEventListener('simplifiedModeChanged', handleSimplifiedModeChange as EventListener)
     }
   }, [])
+
+  // Keyboard shortcuts for navigation (like Google Calendar)
+  useEffect(() => {
+    const handleKeyPress = (event: KeyboardEvent) => {
+      // Only handle shortcuts when not typing in input fields
+      const target = event.target as HTMLElement
+      if (target.tagName === 'INPUT' || target.tagName === 'TEXTAREA' || target.isContentEditable) {
+        return
+      }
+
+      // Prevent default behavior for our shortcuts
+      switch (event.key.toLowerCase()) {
+        case 'j':
+        case 'n':
+          event.preventDefault()
+          navigateDate("next")
+          break
+        case 'k':
+        case 'p':
+          event.preventDefault()
+          navigateDate("prev")
+          break
+        case 't':
+          event.preventDefault()
+          goToToday()
+          break
+        case 's':
+          event.preventDefault()
+          // Trigger settings dropdown click
+          const settingsButton = document.querySelector('[data-settings-trigger]') as HTMLButtonElement
+          if (settingsButton) {
+            settingsButton.click()
+          }
+          break
+        case 'g':
+          event.preventDefault()
+          setShowDatePicker(true)
+          break
+      }
+    }
+
+    // Add event listener
+    document.addEventListener('keydown', handleKeyPress)
+
+    // Cleanup
+    return () => {
+      document.removeEventListener('keydown', handleKeyPress)
+    }
+  }, [weeksToShow]) // Include weeksToShow as dependency since navigateDate uses it
 
   // Get localized day names
   const getDayNames = () => [
@@ -528,6 +587,14 @@ const AvailabilityCalendarRedesigned = ({
 
   const goToToday = () => {
     setCurrentDate(new Date())
+  }
+
+  const goToSpecificDate = (dateString: string) => {
+    const date = new Date(dateString)
+    if (!isNaN(date.getTime())) {
+      setCurrentDate(date)
+      setShowDatePicker(false)
+    }
   }
 
   // Calculate availability score for a member in a specific week
@@ -1172,8 +1239,95 @@ const AvailabilityCalendarRedesigned = ({
                   )}
                 </div>
 
-                <div className="w-full sm:w-auto">
-                  <SettingsDropdown currentLocale={locale} members={members} team={team} />
+                <div className="w-full sm:w-auto flex items-center gap-2">
+                  {/* Keyboard shortcuts help */}
+                  <Dialog open={showKeyboardHelp} onOpenChange={setShowKeyboardHelp}>
+                    <DialogTrigger asChild>
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        className="h-9 w-9 p-0 bg-white/10 backdrop-blur-sm border-white/20 text-white hover:bg-white/20"
+                      >
+                        <Keyboard className="h-4 w-4" />
+                      </Button>
+                    </DialogTrigger>
+                    <DialogContent className="max-w-md">
+                      <DialogHeader>
+                        <DialogTitle>Keyboard Shortcuts</DialogTitle>
+                      </DialogHeader>
+                      <div className="space-y-4">
+                        <div className="grid grid-cols-2 gap-4">
+                          <div>
+                            <h4 className="font-medium mb-2">Navigation</h4>
+                            <div className="space-y-2 text-sm">
+                              <div className="flex justify-between">
+                                <span>Next period:</span>
+                                <div className="flex gap-1">
+                                  <kbd className="px-2 py-1 text-xs bg-gray-100 rounded">J</kbd>
+                                  <kbd className="px-2 py-1 text-xs bg-gray-100 rounded">N</kbd>
+                                </div>
+                              </div>
+                              <div className="flex justify-between">
+                                <span>Previous period:</span>
+                                <div className="flex gap-1">
+                                  <kbd className="px-2 py-1 text-xs bg-gray-100 rounded">K</kbd>
+                                  <kbd className="px-2 py-1 text-xs bg-gray-100 rounded">P</kbd>
+                                </div>
+                              </div>
+                              <div className="flex justify-between">
+                                <span>Today:</span>
+                                <kbd className="px-2 py-1 text-xs bg-gray-100 rounded">T</kbd>
+                              </div>
+                            </div>
+                          </div>
+                          <div>
+                            <h4 className="font-medium mb-2">Actions</h4>
+                            <div className="space-y-2 text-sm">
+                              <div className="flex justify-between">
+                                <span>Go to date:</span>
+                                <kbd className="px-2 py-1 text-xs bg-gray-100 rounded">G</kbd>
+                              </div>
+                              <div className="flex justify-between">
+                                <span>Settings:</span>
+                                <kbd className="px-2 py-1 text-xs bg-gray-100 rounded">S</kbd>
+                              </div>
+                            </div>
+                          </div>
+                        </div>
+                        <div className="text-xs text-gray-500 mt-4">
+                          Shortcuts work when not typing in input fields
+                        </div>
+                      </div>
+                    </DialogContent>
+                  </Dialog>
+                  
+                  {/* Date picker dialog */}
+                  <Dialog open={showDatePicker} onOpenChange={setShowDatePicker}>
+                    <DialogContent className="max-w-sm">
+                      <DialogHeader>
+                        <DialogTitle>Go to Specific Date</DialogTitle>
+                      </DialogHeader>
+                      <div className="space-y-4">
+                        <div>
+                          <Label htmlFor="date-input">Select Date</Label>
+                          <Input
+                            id="date-input"
+                            type="date"
+                            defaultValue={currentDate.toISOString().split('T')[0]}
+                            onChange={(e) => goToSpecificDate(e.target.value)}
+                            className="mt-1"
+                          />
+                        </div>
+                        <div className="text-xs text-gray-500">
+                          The calendar will jump to the week containing this date
+                        </div>
+                      </div>
+                    </DialogContent>
+                  </Dialog>
+
+                  <div data-settings-trigger>
+                    <SettingsDropdown currentLocale={locale} members={members} team={team} />
+                  </div>
                 </div>
               </div>
             </div>
@@ -1273,6 +1427,9 @@ const AvailabilityCalendarRedesigned = ({
         <div className="text-center py-4 px-4 sm:px-6 border-t border-gray-200 dark:border-gray-700">
           <div className="text-sm text-gray-600 dark:text-gray-400">
             Developed with <span className="text-red-500">♥</span> by Jonas Van Hove
+          </div>
+          <div className="text-xs text-gray-500 dark:text-gray-500 mt-1">
+            {versionLoading ? "..." : version || "Git not available"}
           </div>
         </div>
 
