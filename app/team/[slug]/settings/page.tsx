@@ -15,7 +15,7 @@ import { supabase } from "@/lib/supabase"
 import { useAuth } from "@/hooks/useAuth"
 import { useVersion } from "@/hooks/use-version"
 import { LoadingSpinner } from "@/components/ui/loading-spinner"
-import { ArrowLeft, Users, Settings, Eye, EyeOff, Crown, Shield, Mail, Save, AlertCircle, UserCheck, UserX, MoreHorizontal } from "lucide-react"
+import { ArrowLeft, Users, Settings, Eye, EyeOff, Crown, Shield, Mail, Save, AlertCircle, UserCheck, UserX } from "lucide-react"
 import Link from "next/link"
 import { useRouter } from "next/navigation"
 import { MemberAvatar } from "@/components/member-avatar"
@@ -666,19 +666,25 @@ export default function TeamSettingsPage({ params }: TeamSettingsPageProps) {
                         {/* Actions - only for non-current user and admin permissions */}
                         {!member.is_current_user && !(teamSettings.user_is_creator && member.member_role === 'admin') && (
                           <div className="flex items-center gap-2">
-                            {/* Quick Visibility Toggle */}
+                            {/* Visibility Toggle Button */}
                             <Tooltip>
                               <TooltipTrigger asChild>
                                 <Button
                                   variant="ghost"
                                   size="sm"
-                                  className="h-8 w-8 p-0"
+                                  className="h-8 px-3 text-xs"
                                   onClick={() => toggleMemberVisibility(member.member_id, member.is_hidden)}
                                 >
                                   {member.is_hidden ? (
-                                    <EyeOff className="h-4 w-4 text-gray-400" />
+                                    <>
+                                      <Eye className="h-4 w-4 mr-1" />
+                                      Tonen
+                                    </>
                                   ) : (
-                                    <Eye className="h-4 w-4 text-green-500" />
+                                    <>
+                                      <EyeOff className="h-4 w-4 mr-1" />
+                                      Verbergen
+                                    </>
                                   )}
                                 </Button>
                               </TooltipTrigger>
@@ -697,48 +703,42 @@ export default function TeamSettingsPage({ params }: TeamSettingsPageProps) {
                               </TooltipContent>
                             </Tooltip>
 
-                            {/* More Actions Dropdown */}
-                            <DropdownMenu>
-                              <DropdownMenuTrigger asChild>
-                                <Button variant="ghost" size="sm" className="h-8 w-8 p-0">
-                                  <MoreHorizontal className="h-4 w-4" />
-                                </Button>
-                              </DropdownMenuTrigger>
-                              <DropdownMenuContent align="end">
-                                <DropdownMenuItem
-                                  onClick={() => toggleMemberVisibility(member.member_id, member.is_hidden)}
-                                >
-                                  {member.is_hidden ? (
-                                    <>
-                                      <Eye className="h-4 w-4 mr-2" />
-                                      Toon in overzicht
-                                    </>
-                                  ) : (
-                                    <>
-                                      <EyeOff className="h-4 w-4 mr-2" />
-                                      Verberg uit overzicht
-                                    </>
-                                  )}
-                                </DropdownMenuItem>
-                                <DropdownMenuSeparator />
-                                <DropdownMenuItem
+                            {/* Status Toggle Button */}
+                            <Tooltip>
+                              <TooltipTrigger asChild>
+                                <Button
+                                  variant="ghost"
+                                  size="sm"
+                                  className={`h-8 px-3 text-xs ${
+                                    member.member_status === 'active' ? 'text-orange-600 hover:text-orange-700' : 'text-green-600 hover:text-green-700'
+                                  }`}
                                   onClick={() => toggleMemberStatus(member.member_id, member.member_status)}
-                                  className={member.member_status === 'active' ? 'text-orange-600' : 'text-green-600'}
                                 >
                                   {member.member_status === 'active' ? (
                                     <>
-                                      <UserX className="h-4 w-4 mr-2" />
-                                      Zet op Inactief
+                                      <UserX className="h-4 w-4 mr-1" />
+                                      Inactief
                                     </>
                                   ) : (
                                     <>
-                                      <UserCheck className="h-4 w-4 mr-2" />
-                                      Zet op Actief
+                                      <UserCheck className="h-4 w-4 mr-1" />
+                                      Actief
                                     </>
                                   )}
-                                </DropdownMenuItem>
-                              </DropdownMenuContent>
-                            </DropdownMenu>
+                                </Button>
+                              </TooltipTrigger>
+                              <TooltipContent>
+                                <p className="font-medium">
+                                  {member.member_status === 'active' ? 'Zet op Inactief' : 'Zet op Actief'}
+                                </p>
+                                <p className="text-xs text-gray-600 mt-1">
+                                  {member.member_status === 'active' 
+                                    ? 'Lid wordt inactief maar blijft in het team'
+                                    : 'Lid wordt weer actief en krijgt toegang'
+                                  }
+                                </p>
+                              </TooltipContent>
+                            </Tooltip>
                           </div>
                         )}
                       </div>

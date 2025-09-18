@@ -25,6 +25,8 @@ interface Member {
   email: string
   role: string
   status: string
+  member_status?: string
+  is_hidden?: boolean
   profile_image?: string
   created_at: string
   last_active?: string
@@ -92,32 +94,33 @@ export default function TeamPage({ params }: TeamPageProps) {
         setIsAuthenticated(true)
       }
 
-      // Fetch active members for this team only using database function
-      const { data: membersData, error: membersError } = await supabase.rpc('get_team_active_members', {
-        team_id_param: teamData.id,
-        user_email: user?.email || ''
-      })
+      // Fetch all members for this team (including inactive ones)
+      const { data: allMembersData, error: membersError } = await supabase
+        .from("members")
+        .select("*")
+        .eq("team_id", teamData.id)
+        .order("order_index", { ascending: true })
+        .order("created_at", { ascending: true })
 
       if (membersError) throw membersError
       
-      // Transform database function output to Member interface format
-      const transformedMembers: Member[] = (membersData || []).map((member: any) => {
-        const nameParts = member.member_name.split(' ')
-        return {
-          id: member.member_id,
-          first_name: nameParts[0] || '',
-          last_name: nameParts.slice(1).join(' ') || '',
-          email: member.member_email,
-          role: member.member_role,
-          status: member.member_status,
-          profile_image: member.profile_image_url, // This now contains the correct profile_image or profile_image_url
-          created_at: member.joined_at,
-          last_active: member.last_active,
-          order_index: 0 // Default value since not returned by function
-        }
-      })
+      // Transform to consistent format
+      const allMembers: Member[] = (allMembersData || []).map((member: any) => ({
+        id: member.id,
+        first_name: member.first_name,
+        last_name: member.last_name,
+        email: member.email,
+        role: member.role || 'member',
+        status: member.status || 'active',
+        member_status: member.status || 'active',
+        is_hidden: member.is_hidden || false,
+        profile_image: member.profile_image || member.profile_image_url,
+        created_at: member.created_at,
+        last_active: member.last_active,
+        order_index: member.order_index || 0
+      }))
       
-      setMembers(transformedMembers)
+      setMembers(allMembers)
     } catch (error) {
       console.error("Error fetching team data:", error)
     } finally {
@@ -150,7 +153,24 @@ export default function TeamPage({ params }: TeamPageProps) {
           .order("created_at", { ascending: true })
 
         if (membersError) throw membersError
-        setMembers(membersData || [])
+        
+        // Transform to consistent format
+        const transformedMembers: Member[] = (membersData || []).map((member: any) => ({
+          id: member.id,
+          first_name: member.first_name,
+          last_name: member.last_name,
+          email: member.email,
+          role: member.role || 'member',
+          status: member.status || 'active',
+          member_status: member.status || 'active',
+          is_hidden: member.is_hidden || false,
+          profile_image: member.profile_image || member.profile_image_url,
+          created_at: member.created_at,
+          last_active: member.last_active,
+          order_index: member.order_index || 0
+        }))
+        
+        setMembers(transformedMembers)
       } else {
         setPasswordError("Incorrect password. Please try again.")
       }

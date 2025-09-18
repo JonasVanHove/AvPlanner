@@ -21,13 +21,28 @@ export function LanguageSelector({ currentLocale }: LanguageSelectorProps) {
 
   return (
     <Select value={currentLocale} onValueChange={handleLanguageChange}>
-      <SelectTrigger className="w-20">
+      <SelectTrigger className="w-20 transition-all duration-200 hover:bg-gray-50 hover:border-gray-300 hover:shadow-sm focus:ring-2 focus:ring-blue-200 focus:ring-offset-1">
         <SelectValue />
       </SelectTrigger>
-      <SelectContent>
-        <SelectItem value="en">🇺🇸 EN</SelectItem>
-        <SelectItem value="nl">🇳🇱 NL</SelectItem>
-        <SelectItem value="fr">🇫🇷 FR</SelectItem>
+      <SelectContent className="bg-white/95 backdrop-blur-sm border border-gray-200 shadow-lg">
+        <SelectItem 
+          value="en" 
+          className="cursor-pointer transition-all duration-200 hover:bg-blue-50 hover:text-blue-700 focus:bg-blue-50 focus:text-blue-700"
+        >
+          🇺🇸 EN
+        </SelectItem>
+        <SelectItem 
+          value="nl" 
+          className="cursor-pointer transition-all duration-200 hover:bg-blue-50 hover:text-blue-700 focus:bg-blue-50 focus:text-blue-700"
+        >
+          🇳🇱 NL
+        </SelectItem>
+        <SelectItem 
+          value="fr" 
+          className="cursor-pointer transition-all duration-200 hover:bg-blue-50 hover:text-blue-700 focus:bg-blue-50 focus:text-blue-700"
+        >
+          🇫🇷 FR
+        </SelectItem>
       </SelectContent>
     </Select>
   )

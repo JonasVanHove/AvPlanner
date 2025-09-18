@@ -43,6 +43,8 @@ interface Member {
   profile_image?: string
   role?: string
   status?: string
+  member_status?: string
+  is_hidden?: boolean
   created_at?: string
   last_active?: string
   order_index?: number
@@ -98,6 +100,7 @@ const AvailabilityCalendarRedesigned = ({
   const [isPasswordLoading, setIsPasswordLoading] = useState(false)
   const [showDatePicker, setShowDatePicker] = useState(false)
   const [showKeyboardHelp, setShowKeyboardHelp] = useState(false)
+  const [openSettings, setOpenSettings] = useState(false)
   const { t } = useTranslation(locale)
 
   // Hook to get today's availability for all members (always shows today regardless of visible week)
@@ -107,8 +110,72 @@ const AvailabilityCalendarRedesigned = ({
   // Hook to get version info (same as settings menu)
   const { version, isLoading: versionLoading } = useVersion()
 
-  // Filter out inactive members
-  const activeMembers = members.filter(member => !member.status || member.status === 'active')
+  // Helper function to get Monday of the week
+  const getMondayOfWeek = (date: Date): Date => {
+    const d = new Date(date)
+    const day = d.getDay()
+    const diff = d.getDate() - day + (day === 0 ? -6 : 1)
+    return new Date(d.setDate(diff))
+  }
+
+  // Alias for getMondayOfWeek for consistency with usage in smart filtering
+  const getWeekStart = getMondayOfWeek
+
+  // Helper function to check if a date is in the current visible week
+  const isDateInCurrentWeek = (date: Date) => {
+    const weekStart = getWeekStart(currentDate)
+    const weekEnd = new Date(weekStart)
+    weekEnd.setDate(weekEnd.getDate() + 6)
+    return date >= weekStart && date <= weekEnd
+  }
+
+  // Smart member filtering based on visibility and activity status for the current week
+  // Rules:
+  // 1. Hidden members (is_hidden=true): Only show if they have availability records for this week
+  // 2. Visible members (is_hidden=false): Always show
+  // 3. Active members (status=active): Always show
+  // 4. Inactive members (status=inactive): Only show if they have availability records for this week
+  const getVisibleMembers = () => {
+    return members.filter(member => {
+      // Check if member has availability records for current week
+      const hasRecordsThisWeek = availability.some(record => 
+        record.member_id === member.id && 
+        isDateInCurrentWeek(new Date(record.date))
+      )
+      
+      // Get member visibility and status (handle both old and new data structures)
+      const isHidden = member.is_hidden || false
+      const isActive = !member.member_status || member.member_status === 'active' || !member.status || member.status === 'active'
+      
+      // Logic based on your requirements:
+      if (isHidden) {
+        // Hidden members: only show if they have records for this week
+        return hasRecordsThisWeek
+      }
+      
+      if (isActive) {
+        // Active members: always show
+        return true
+      } else {
+        // Inactive members: hide if they have no records for this week
+        return hasRecordsThisWeek
+      }
+    })
+  }
+
+  const visibleMembers = getVisibleMembers()
+
+  // Get all active members for analytics (regardless of visibility settings)
+  // Analytics should include all active members to give accurate team insights
+  const getActiveMembersForAnalytics = () => {
+    return members.filter(member => {
+      // Get member activity status (handle both old and new data structures)
+      const isActive = !member.member_status || member.member_status === 'active' || !member.status || member.status === 'active'
+      return isActive
+    })
+  }
+
+  const activeMembersForAnalytics = getActiveMembersForAnalytics()
 
   // Check for simplified mode preference
   useEffect(() => {
@@ -159,11 +226,8 @@ const AvailabilityCalendarRedesigned = ({
           break
         case 's':
           event.preventDefault()
-          // Trigger settings dropdown click
-          const settingsButton = document.querySelector('[data-settings-trigger]') as HTMLButtonElement
-          if (settingsButton) {
-            settingsButton.click()
-          }
+          // Trigger settings dropdown via state
+          setOpenSettings(true)
           break
         case 'g':
           event.preventDefault()
@@ -308,19 +372,11 @@ const AvailabilityCalendarRedesigned = ({
     return Math.ceil(((d.getTime() - yearStart.getTime()) / 86400000 + 1) / 7)
   }
 
-  // Helper function to get Monday of the week
-  const getMondayOfWeek = (date: Date): Date => {
-    const d = new Date(date)
-    const day = d.getDay()
-    const diff = d.getDate() - day + (day === 0 ? -6 : 1)
-    return new Date(d.setDate(diff))
-  }
-
   // Calculate the maximum name width needed
   const getMaxNameWidth = () => {
     if (members.length === 0) return "200px"
 
-    const maxNameLength = Math.max(...activeMembers.map((member) => `${member.first_name} ${member.last_name}`.length))
+    const maxNameLength = Math.max(...visibleMembers.map((member) => `${member.first_name} ${member.last_name}`.length))
     const baseWidth = 180
     const charWidth = 8
     const iconSpace = 60
@@ -341,12 +397,14 @@ const AvailabilityCalendarRedesigned = ({
       const endDate = new Date(startDate)
       endDate.setDate(startDate.getDate() + weeksToShow * 7 - 1)
 
+      // Fetch availability for ALL members to support proper filtering and analytics
+      // This ensures we have data to determine who should be visible and analytics work correctly
       const { data, error } = await supabase
         .from("availability")
         .select("*")
         .in(
           "member_id",
-          activeMembers.map((m) => m.id),
+          members.map((m) => m.id), // Changed from visibleMembers to ALL members
         )
         .gte("date", startDate.toISOString().split("T")[0])
         .lte("date", endDate.toISOString().split("T")[0])
@@ -623,7 +681,7 @@ const AvailabilityCalendarRedesigned = ({
   const calculateTeamWeeklyScore = (weekDays: Date[]) => {
     if (members.length === 0) return 0
     
-    const memberScores = activeMembers.map(member => calculateMemberWeeklyScore(member, weekDays))
+    const memberScores = visibleMembers.map(member => calculateMemberWeeklyScore(member, weekDays))
     const averageScore = memberScores.reduce((sum, score) => sum + score, 0) / memberScores.length
     
     return Math.round(averageScore)
@@ -770,7 +828,7 @@ const AvailabilityCalendarRedesigned = ({
                             Member Breakdown:
                           </div>
                           <div className="space-y-2 max-h-64 overflow-y-auto">
-                            {activeMembers.map(member => {
+                            {visibleMembers.map(member => {
                               const memberScore = calculateMemberWeeklyScore(member, week.days)
                               const memberStats = getMemberWeeklyStats(member, week.days)
                               
@@ -899,7 +957,7 @@ const AvailabilityCalendarRedesigned = ({
                 </div>
 
                 {/* Member Rows - More subtle styling */}
-                {activeMembers.map((member, memberIndex) => (
+                {visibleMembers.map((member, memberIndex) => (
                   <div
                     key={member.id}
                     className={cn(
@@ -1159,7 +1217,7 @@ const AvailabilityCalendarRedesigned = ({
                   <div className="flex items-center gap-2 flex-wrap">
                     <p className="text-sm sm:text-base font-medium text-blue-100 dark:text-gray-300 truncate">{teamName}</p>
                     <span className="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-white/20 text-white backdrop-blur-sm border border-white/20 flex-shrink-0">
-                      {activeMembers.length} {activeMembers.length === 1 ? 'member' : 'members'}
+                      {visibleMembers.length} {visibleMembers.length === 1 ? 'member' : 'members'}
                     </span>
                   </div>
                 </div>
@@ -1199,14 +1257,14 @@ const AvailabilityCalendarRedesigned = ({
                 {/* Analytics and Planner Buttons - Optimized */}
                 <div className="flex items-center gap-1 w-full sm:w-auto">
                   <AnalyticsButton 
-                    members={activeMembers} 
+                    members={activeMembersForAnalytics} 
                     locale={locale} 
                     weeksToShow={weeksToShow}
                     currentDate={currentDate}
                     teamId={teamId}
                   />
                   <PlannerButton 
-                    members={activeMembers} 
+                    members={visibleMembers} 
                     locale={locale} 
                     teamId={teamId}
                   />
@@ -1325,9 +1383,13 @@ const AvailabilityCalendarRedesigned = ({
                     </DialogContent>
                   </Dialog>
 
-                  <div data-settings-trigger>
-                    <SettingsDropdown currentLocale={locale} members={members} team={team} />
-                  </div>
+                  <SettingsDropdown 
+                    currentLocale={locale} 
+                    members={members} 
+                    team={team} 
+                    forceOpen={openSettings}
+                    onOpenChange={() => setOpenSettings(false)}
+                  />
                 </div>
               </div>
             </div>

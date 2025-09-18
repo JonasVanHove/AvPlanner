@@ -47,11 +47,14 @@ interface SettingsDropdownProps {
   currentLocale: Locale
   members: Member[]
   team?: Team
+  forceOpen?: boolean
+  onOpenChange?: (open: boolean) => void
 }
 
-export function SettingsDropdown({ currentLocale, members, team }: SettingsDropdownProps) {
+export function SettingsDropdown({ currentLocale, members, team, forceOpen, onOpenChange }: SettingsDropdownProps) {
   const [exportDialogOpen, setExportDialogOpen] = useState(false)
   const [drawerOpen, setDrawerOpen] = useState(false)
+  const [dropdownOpen, setDropdownOpen] = useState(false)
   const [isGeneratingQR, setIsGeneratingQR] = useState(false)
   const [qrDataUrl, setQrDataUrl] = useState<string | null>(null)
   const [showQR, setShowQR] = useState(false)
@@ -63,6 +66,19 @@ export function SettingsDropdown({ currentLocale, members, team }: SettingsDropd
   const { t } = useTranslation(currentLocale)
   const isMobile = useIsMobile()
   const { version, isLoading: versionLoading } = useVersion()
+
+  // Handle forceOpen prop
+  useEffect(() => {
+    if (forceOpen) {
+      if (isMobile) {
+        setDrawerOpen(true)
+      } else {
+        setDropdownOpen(true)
+      }
+      // Reset the forceOpen state
+      onOpenChange?.(true)
+    }
+  }, [forceOpen, isMobile, onOpenChange])
 
   // Load preferences on mount
   useEffect(() => {
@@ -514,6 +530,7 @@ export function SettingsDropdown({ currentLocale, members, team }: SettingsDropd
               variant="outline"
               size="sm"
               className="rounded-lg bg-white/10 backdrop-blur-sm border-white/20 text-white hover:bg-white/20 settings-button-mobile"
+              data-settings-trigger
             >
               <Settings className="h-4 w-4" />
             </Button>
@@ -531,12 +548,13 @@ export function SettingsDropdown({ currentLocale, members, team }: SettingsDropd
         </Drawer>
       ) : (
         // Desktop: Use regular dropdown
-        <DropdownMenu>
+        <DropdownMenu open={dropdownOpen} onOpenChange={setDropdownOpen}>
           <DropdownMenuTrigger asChild>
             <Button
               variant="outline"
               size="sm"
               className="rounded-lg bg-white/10 backdrop-blur-sm border-white/20 text-white hover:bg-white/20"
+              data-settings-trigger
             >
               <Settings className="h-4 w-4" />
             </Button>

@@ -1,4 +1,4 @@
-# 📅 AvPlanner
+# AvPlanner
 
 <div align="center">
   <img src="public/web-app-manifest-512x512.png" alt="AvPlanner Logo" width="120" height="120" />

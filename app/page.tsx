@@ -138,7 +138,10 @@ export default function HomePage() {
               {user ? (
                 <DropdownMenu>
                   <DropdownMenuTrigger asChild>
-                    <Button variant="outline" className="flex items-center gap-2 px-3">
+                    <Button 
+                      variant="outline" 
+                      className="flex items-center gap-2 px-3 transition-all duration-200 hover:bg-blue-50 hover:border-blue-200 hover:shadow-md focus:ring-2 focus:ring-blue-200 focus:ring-offset-1"
+                    >
                       <Avatar className="h-6 w-6">
                         <AvatarImage src={user.user_metadata?.avatar_url} />
                         <AvatarFallback className="text-xs">
@@ -152,19 +155,28 @@ export default function HomePage() {
                     </Button>
                   </DropdownMenuTrigger>
                   <DropdownMenuContent align="end" className="w-48">
-                    <DropdownMenuItem onClick={handleViewDashboard}>
-                      <UserIcon className="h-4 w-4 mr-2" />
+                    <DropdownMenuItem 
+                      onClick={handleViewDashboard}
+                      className="cursor-pointer transition-all duration-200 hover:bg-blue-50 hover:text-blue-700 focus:bg-blue-50 focus:text-blue-700"
+                    >
+                      <UserIcon className="h-4 w-4 mr-2 transition-colors duration-200" />
                       My Teams
                     </DropdownMenuItem>
                     {isAdmin && (
-                      <DropdownMenuItem onClick={() => router.push('/admin')}>
-                        <Shield className="h-4 w-4 mr-2" />
+                      <DropdownMenuItem 
+                        onClick={() => router.push('/admin')}
+                        className="cursor-pointer transition-all duration-200 hover:bg-purple-50 hover:text-purple-700 focus:bg-purple-50 focus:text-purple-700"
+                      >
+                        <Shield className="h-4 w-4 mr-2 transition-colors duration-200" />
                         Admin Panel
                       </DropdownMenuItem>
                     )}
                     <DropdownMenuSeparator />
-                    <DropdownMenuItem onClick={handleLogout}>
-                      <LogOut className="h-4 w-4 mr-2" />
+                    <DropdownMenuItem 
+                      onClick={handleLogout}
+                      className="cursor-pointer transition-all duration-200 hover:bg-red-50 hover:text-red-700 focus:bg-red-50 focus:text-red-700"
+                    >
+                      <LogOut className="h-4 w-4 mr-2 transition-colors duration-200" />
                       Logout
                     </DropdownMenuItem>
                   </DropdownMenuContent>

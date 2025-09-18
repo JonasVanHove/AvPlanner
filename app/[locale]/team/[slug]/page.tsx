@@ -22,8 +22,15 @@ interface Member {
   id: string
   first_name: string
   last_name: string
-  email?: string
-  team_id: string
+  email: string
+  role: string
+  status: string
+  member_status?: string
+  is_hidden?: boolean
+  profile_image?: string
+  created_at: string
+  last_active?: string
+  order_index?: number
 }
 
 interface LocaleTeamPageProps {
@@ -92,8 +99,8 @@ export default function LocaleTeamPage({ params }: LocaleTeamPageProps) {
         setIsAuthenticated(true)
       }
 
-      // Fetch members
-      const { data: membersData, error: membersError } = await supabase
+      // Fetch all members for this team (including inactive ones)
+      const { data: allMembersData, error: membersError } = await supabase
         .from("members")
         .select("*")
         .eq("team_id", teamData.id)
@@ -101,7 +108,24 @@ export default function LocaleTeamPage({ params }: LocaleTeamPageProps) {
         .order("created_at", { ascending: true })
 
       if (membersError) throw membersError
-      setMembers(membersData || [])
+      
+      // Transform to consistent format
+      const allMembers: Member[] = (allMembersData || []).map((member: any) => ({
+        id: member.id,
+        first_name: member.first_name,
+        last_name: member.last_name,
+        email: member.email,
+        role: member.role || 'member',
+        status: member.status || 'active',
+        member_status: member.status || 'active',
+        is_hidden: member.is_hidden || false,
+        profile_image: member.profile_image || member.profile_image_url,
+        created_at: member.created_at,
+        last_active: member.last_active,
+        order_index: member.order_index || 0
+      }))
+      
+      setMembers(allMembers)
     } catch (error) {
       console.error("Error fetching team data:", error)
     } finally {
@@ -125,8 +149,8 @@ export default function LocaleTeamPage({ params }: LocaleTeamPageProps) {
         sessionStorage.setItem(sessionKey, "true")
         setIsAuthenticated(true)
         
-        // Fetch members now
-        const { data: membersData, error: membersError } = await supabase
+        // Fetch all members now (including inactive ones)
+        const { data: allMembersData, error: membersError } = await supabase
           .from("members")
           .select("*")
           .eq("team_id", team.id)
@@ -134,7 +158,24 @@ export default function LocaleTeamPage({ params }: LocaleTeamPageProps) {
           .order("created_at", { ascending: true })
 
         if (membersError) throw membersError
-        setMembers(membersData || [])
+        
+        // Transform to consistent format
+        const allMembers: Member[] = (allMembersData || []).map((member: any) => ({
+          id: member.id,
+          first_name: member.first_name,
+          last_name: member.last_name,
+          email: member.email,
+          role: member.role || 'member',
+          status: member.status || 'active',
+          member_status: member.status || 'active',
+          is_hidden: member.is_hidden || false,
+          profile_image: member.profile_image || member.profile_image_url,
+          created_at: member.created_at,
+          last_active: member.last_active,
+          order_index: member.order_index || 0
+        }))
+        
+        setMembers(allMembers)
       } else {
         setPasswordError(
           locale === "en" ? "Incorrect password. Please try again." :
