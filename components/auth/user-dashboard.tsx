@@ -13,6 +13,8 @@ import { JoinTeamForm } from "@/components/join-team-form"
 import { Loader2, Users, Calendar, Settings, LogOut, Crown, Shield, Home, Plus, UserPlus, RefreshCw } from "lucide-react"
 import { User } from "@supabase/supabase-js"
 import { useRouter } from "next/navigation"
+import { MemberAvatar } from "@/components/member-avatar"
+import { useTodayAvailability } from "@/hooks/use-today-availability"
 
 interface Team {
   id: string
@@ -67,6 +69,12 @@ export function UserDashboard({ user, onLogout, onGoHome }: UserDashboardProps) 
   const [refreshKey, setRefreshKey] = useState(0)
   const [isRefreshing, setIsRefreshing] = useState(false)
   const router = useRouter()
+
+  // Get all member IDs from all teams for today's availability
+  const allMemberIds = teams.flatMap(team => 
+    team.members?.map(member => member.member_id) || []
+  )
+  const { todayAvailability } = useTodayAvailability(allMemberIds)
 
   useEffect(() => {
     fetchUserTeams()
@@ -499,12 +507,16 @@ export function UserDashboard({ user, onLogout, onGoHome }: UserDashboardProps) 
                               {team.members.slice(0, 5).map((member) => (
                                 <div key={member.member_id} className="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
                                   <div className="flex items-center gap-3">
-                                    <Avatar className="h-8 w-8">
-                                      <AvatarImage src={member.profile_image_url || undefined} />
-                                      <AvatarFallback className="text-xs">
-                                        {getInitials(member.member_name, member.member_email)}
-                                      </AvatarFallback>
-                                    </Avatar>
+                                    <MemberAvatar
+                                      firstName={member.member_name.trim() ? member.member_name.split(' ')[0] : member.member_email.split('@')[0]}
+                                      lastName={member.member_name.trim() ? member.member_name.split(' ').slice(1).join(' ') : ''}
+                                      profileImage={member.profile_image_url || undefined}
+                                      size="md"
+                                      statusIndicator={{
+                                        show: true,
+                                        status: todayAvailability[member.member_id]
+                                      }}
+                                    />
                                     <div className="min-w-0 flex-1">
                                       <div className="flex items-center gap-2">
                                         <p className="text-sm font-medium text-gray-900 truncate">

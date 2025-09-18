@@ -18,6 +18,8 @@ import { LoadingSpinner } from "@/components/ui/loading-spinner"
 import { ArrowLeft, Users, Settings, Eye, EyeOff, Crown, Shield, Mail, Save, AlertCircle, UserCheck, UserX, MoreHorizontal } from "lucide-react"
 import Link from "next/link"
 import { useRouter } from "next/navigation"
+import { MemberAvatar } from "@/components/member-avatar"
+import { useTodayAvailability } from "@/hooks/use-today-availability"
 
 interface TeamSettings {
   team_id: string
@@ -71,6 +73,10 @@ export default function TeamSettingsPage({ params }: TeamSettingsPageProps) {
   const { user } = useAuth()
   const { version, buildInfo, commitMessage } = useVersion()
   const router = useRouter()
+
+  // Get member IDs for today's availability
+  const memberIds = members.map(member => member.member_id)
+  const { todayAvailability } = useTodayAvailability(memberIds)
 
   useEffect(() => {
     if (user?.email) {
@@ -471,7 +477,7 @@ export default function TeamSettingsPage({ params }: TeamSettingsPageProps) {
                       </TooltipTrigger>
                       <TooltipContent>
                         <div className="text-xs space-y-1">
-                          <p className="font-medium">Availability Planner {buildInfo || version}</p>
+                          <p className="font-medium">AvPlanner {buildInfo || version}</p>
                           {commitMessage && (
                             <p className="text-gray-600 max-w-xs">Laatste commit: {commitMessage}</p>
                           )}
@@ -610,12 +616,16 @@ export default function TeamSettingsPage({ params }: TeamSettingsPageProps) {
                         member.is_hidden ? 'bg-gray-50 border-gray-200' : 'bg-white border-gray-300'
                       }`}>
                         <div className="flex items-center gap-3">
-                          <Avatar className="h-10 w-10">
-                            <AvatarImage src={member.profile_image_url || undefined} />
-                            <AvatarFallback>
-                              {getInitials(member.member_name, member.member_email)}
-                            </AvatarFallback>
-                          </Avatar>
+                          <MemberAvatar
+                            firstName={member.member_name.trim() ? member.member_name.split(' ')[0] : member.member_email.split('@')[0]}
+                            lastName={member.member_name.trim() ? member.member_name.split(' ').slice(1).join(' ') : ''}
+                            profileImage={member.profile_image_url || undefined}
+                            size="lg"
+                            statusIndicator={{
+                              show: true,
+                              status: todayAvailability[member.member_id]
+                            }}
+                          />
                           <div className="flex-1">
                             <div className="flex items-center gap-2">
                               <p className={`font-medium ${member.is_hidden ? 'text-gray-500' : 'text-gray-900'}`}>
@@ -758,7 +768,7 @@ export default function TeamSettingsPage({ params }: TeamSettingsPageProps) {
         {/* Subtle footer with version info */}
         <div className="text-center pt-8 pb-4">
           <p className="text-xs text-gray-400">
-            Availability Planner {buildInfo || version} 
+            AvPlanner {buildInfo || version} 
             {process.env.NODE_ENV === 'development' && (
               <span className="ml-2 px-2 py-1 bg-orange-100 text-orange-600 rounded text-xs">DEV</span>
             )}

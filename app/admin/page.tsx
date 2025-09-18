@@ -83,15 +83,18 @@ export default function AdminPage() {
           <div className="flex justify-between items-center h-16">
             <div className="flex items-center gap-4">
               <div className="flex items-center gap-3">
-                <div className="p-2 bg-blue-100 rounded-lg">
-                  <Shield className="h-6 w-6 text-blue-600" />
+                <div className="relative group cursor-pointer">
+                  <div className="absolute inset-0 bg-gradient-to-r from-red-500 to-red-600 rounded-xl blur-md opacity-30 group-hover:opacity-50 transition-opacity duration-300"></div>
+                  <div className="relative h-12 w-12 bg-gradient-to-r from-red-500 to-red-600 rounded-xl flex items-center justify-center shadow-lg group-hover:shadow-xl transition-all duration-300 group-hover:scale-105">
+                    <Shield className="h-7 w-7 text-white" strokeWidth="2.5" />
+                  </div>
                 </div>
-                <div>
-                  <h1 className="text-xl font-bold text-gray-900">Admin Panel</h1>
-                  <p className="text-sm text-gray-600">System Administration</p>
+                <div className="flex flex-col">
+                  <h1 className="text-xl font-bold text-gray-900 leading-none">Admin Panel</h1>
+                  <p className="text-sm text-gray-600 leading-none mt-0.5">System Administration</p>
                 </div>
               </div>
-              <Badge variant="destructive" className="ml-2">
+              <Badge variant="destructive" className="ml-2 shadow-md">
                 Admin Access
               </Badge>
             </div>

@@ -61,6 +61,8 @@ import {
   Edit
 } from "lucide-react"
 import { User } from "@supabase/supabase-js"
+import { MemberAvatar } from "@/components/member-avatar"
+import { useTodayAvailability } from "@/hooks/use-today-availability"
 
 interface DatabaseStats {
   total_users: number
@@ -139,6 +141,10 @@ export function AdminDatabaseOverview({ user }: AdminDatabaseOverviewProps) {
   const [actionLoading, setActionLoading] = useState<string | null>(null)
   const [teamToUpdate, setTeamToUpdate] = useState<{team: DetailedTeam, newStatus: string} | null>(null)
   const [refreshKey, setRefreshKey] = useState(0)
+
+  // Get user IDs for today's availability (from the users list)
+  const userIds = users.map(user => user.user_id)
+  const { todayAvailability } = useTodayAvailability(userIds)
 
   useEffect(() => {
     checkAdminStatus()
@@ -760,12 +766,16 @@ export function AdminDatabaseOverview({ user }: AdminDatabaseOverviewProps) {
                         <TableRow key={user.user_id}>
                           <TableCell>
                             <div className="flex items-center gap-3">
-                              <Avatar className="h-8 w-8">
-                                <AvatarImage src={user.profile_image_url} />
-                                <AvatarFallback>
-                                  {user.user_name.slice(0, 2).toUpperCase()}
-                                </AvatarFallback>
-                              </Avatar>
+                              <MemberAvatar
+                                firstName={user.user_name.split(' ')[0] || user.user_email.split('@')[0]}
+                                lastName={user.user_name.split(' ').slice(1).join(' ') || ''}
+                                profileImage={user.profile_image_url || undefined}
+                                size="md"
+                                statusIndicator={{
+                                  show: true,
+                                  status: todayAvailability[user.user_id]
+                                }}
+                              />
                               <div>
                                 <p className="font-medium">{user.user_name}</p>
                                 <p className="text-xs text-gray-500">{user.user_email}</p>

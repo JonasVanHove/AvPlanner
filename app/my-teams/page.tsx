@@ -70,14 +70,18 @@ export default function MyTeamsPage() {
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="flex items-center justify-between h-16">
             <div className="flex items-center gap-3">
-              <img 
-                src="/favicon.svg" 
-                alt="Availability Planner Logo" 
-                className="h-8 w-8"
-              />
-              <h1 className="text-xl font-bold text-black">
-                My Teams Dashboard
-              </h1>
+              <div className="relative group cursor-pointer">
+                <div className="absolute inset-0 bg-gradient-to-r from-blue-500 to-purple-600 rounded-xl blur-md opacity-30 group-hover:opacity-50 transition-opacity duration-300"></div>
+                <div className="relative h-10 w-10 bg-white rounded-xl flex items-center justify-center shadow-lg group-hover:shadow-xl transition-all duration-300 group-hover:scale-105 p-1">
+                  <img src="/web-app-manifest-512x512.png" alt="AvPlanner Logo" className="h-8 w-8 rounded-lg" />
+                </div>
+              </div>
+              <div className="flex flex-col">
+                <h1 className="text-xl font-bold text-black leading-none">
+                  AvPlanner Dashboard
+                </h1>
+                <p className="text-xs text-gray-500 leading-none mt-0.5">Manage Your Team Access</p>
+              </div>
             </div>
             <Button 
               variant="outline" 

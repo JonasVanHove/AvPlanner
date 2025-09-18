@@ -127,14 +127,14 @@ export function SettingsDropdown({ currentLocale, members, team }: SettingsDropd
          "Notification de test d'AvPlanner!")
 
       if (Notification.permission === "granted") {
-        new Notification("Availability Planner", {
+        new Notification("AvPlanner", {
           body: message,
           icon: "/placeholder-logo.png",
         })
       } else if (Notification.permission !== "denied") {
         const permission = await Notification.requestPermission()
         if (permission === "granted") {
-          new Notification("Availability Planner", {
+          new Notification("AvPlanner", {
             body: message,
             icon: "/placeholder-logo.png",
           })

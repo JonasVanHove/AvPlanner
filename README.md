@@ -1,6 +1,10 @@
-# 📅 Availability Planner
+# 📅 AvPlanner
 
-A modern, full-stack team availability management application built with Next.js, TypeScript, and Supabase.
+<div align="center">
+  <img src="public/web-app-manifest-512x512.png" alt="AvPlanner Logo" width="120" height="120" />
+  
+  <p><strong>A modern, full-stack team availability management application built with Next.js, TypeScript, and Supabase.</strong></p>
+</div>
 
 [![Deployed on Vercel](https://img.shields.io/badge/Deployed%20on-Vercel-black?style=for-the-badge&logo=vercel)](https://vercel.com/jonasvh39-gmailcoms-projects/v0-full-stack-availability-planner)
 [![TypeScript](https://img.shields.io/badge/TypeScript-007ACC?style=for-the-badge&logo=typescript&logoColor=white)](https://www.typescriptlang.org/)
@@ -67,7 +71,7 @@ A modern, full-stack team availability management application built with Next.js
 ## 🛠️ Tech Stack
 
 - **Frontend**: Next.js 14, React, TypeScript
-- **Styling**: Tailwind CSS, shadcn/ui components
+- **Styling**: Tailwind CSS, shadcn/ui components  
 - **Backend**: Supabase (PostgreSQL, Auth, Real-time)
 - **State Management**: React hooks and context
 - **Deployment**: Vercel
@@ -92,7 +96,7 @@ A modern, full-stack team availability management application built with Next.js
 
 ## 🌐 Live Demo
 
-Experience the app live at: **[Availability Planner](https://vercel.com/jonasvh39-gmailcoms-projects/v0-full-stack-availability-planner)**
+Experience **AvPlanner** live at: **[AvPlanner](https://vercel.com/jonasvh39-gmailcoms-projects/v0-full-stack-availability-planner)**
 
 ## 🤝 Contributing
 

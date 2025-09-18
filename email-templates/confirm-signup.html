@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Confirm Your Email - Availability Planner</title>
+  <title>Confirm Your Email - AvPlanner</title>
   <style>
     body {
       font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
@@ -80,9 +80,24 @@
 <body>
   <div class="container">
     <div class="content">
-      <div class="logo">📅 Availability Planner</div>
+      <div class="logo">
+        <svg width="32" height="32" viewBox="0 0 180 180" fill="none" xmlns="http://www.w3.org/2000/svg" style="vertical-align: middle; margin-right: 8px;">
+          <rect width="180" height="180" rx="32" fill="#2563EB"/>
+          <rect x="30" y="45" width="120" height="105" rx="12" fill="white"/>
+          <rect x="30" y="45" width="120" height="36" rx="12" fill="#1E40AF"/>
+          <rect x="60" y="21" width="12" height="48" rx="6" fill="#1E40AF"/>
+          <rect x="108" y="21" width="12" height="48" rx="6" fill="#1E40AF"/>
+          <circle cx="60" cy="105" r="9" fill="#10B981"/>
+          <circle cx="90" cy="105" r="9" fill="#EF4444"/>
+          <circle cx="120" cy="105" r="9" fill="#3B82F6"/>
+          <circle cx="60" cy="129" r="9" fill="#F59E0B"/>
+          <circle cx="90" cy="129" r="9" fill="#10B981"/>
+          <circle cx="120" cy="129" r="9" fill="#EF4444"/>
+        </svg>
+        AvPlanner
+      </div>
       
-      <h1 class="title">Welcome to Availability Planner!</h1>
+      <h1 class="title">Welcome to AvPlanner!</h1>
       <p class="subtitle">Please confirm your email address to get started with managing your team's availability.</p>
       
       <a href="{{ .ConfirmationURL }}" class="button">Confirm Email Address</a>
@@ -96,7 +111,7 @@
         <p style="word-break: break-all; color: #4f46e5;">{{ .ConfirmationURL }}</p>
         <p style="margin-top: 20px;">
           Thanks,<br>
-          The Availability Planner Team
+          The AvPlanner Team
         </p>
       </div>
     </div>

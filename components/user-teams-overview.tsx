@@ -7,6 +7,8 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
 import { Alert, AlertDescription } from "@/components/ui/alert"
+import { MemberAvatar } from "@/components/member-avatar"
+import { useTodayAvailability } from "@/hooks/use-today-availability"
 import { 
   AlertDialog, 
   AlertDialogAction, 

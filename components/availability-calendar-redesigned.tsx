@@ -28,6 +28,7 @@ import { BulkUpdateDialog, AnalyticsButton, PlannerButton } from "./bulk-update-
 import { SettingsDropdown } from "./settings-dropdown"
 import { MemberAvatar } from "./member-avatar"
 import { EditModePasswordDialog } from "./edit-mode-password-dialog"
+import { useTodayAvailability } from "@/hooks/use-today-availability"
 
 interface Member {
   id: string
@@ -35,6 +36,11 @@ interface Member {
   last_name: string
   email?: string
   profile_image?: string
+  role?: string
+  status?: string
+  created_at?: string
+  last_active?: string
+  order_index?: number
 }
 
 interface Availability {
@@ -86,6 +92,13 @@ const AvailabilityCalendarRedesigned = ({
   const [passwordError, setPasswordError] = useState("")
   const [isPasswordLoading, setIsPasswordLoading] = useState(false)
   const { t } = useTranslation(locale)
+
+  // Hook to get today's availability for all members (always shows today regardless of visible week)
+  const memberIds = members.map(member => member.id)
+  const { todayAvailability } = useTodayAvailability(memberIds)
+
+  // Filter out inactive members
+  const activeMembers = members.filter(member => !member.status || member.status === 'active')
 
   // Check for simplified mode preference
   useEffect(() => {
@@ -248,7 +261,7 @@ const AvailabilityCalendarRedesigned = ({
   const getMaxNameWidth = () => {
     if (members.length === 0) return "200px"
 
-    const maxNameLength = Math.max(...members.map((member) => `${member.first_name} ${member.last_name}`.length))
+    const maxNameLength = Math.max(...activeMembers.map((member) => `${member.first_name} ${member.last_name}`.length))
     const baseWidth = 180
     const charWidth = 8
     const iconSpace = 60
@@ -274,7 +287,7 @@ const AvailabilityCalendarRedesigned = ({
         .select("*")
         .in(
           "member_id",
-          members.map((m) => m.id),
+          activeMembers.map((m) => m.id),
         )
         .gte("date", startDate.toISOString().split("T")[0])
         .lte("date", endDate.toISOString().split("T")[0])
@@ -458,8 +471,12 @@ const AvailabilityCalendarRedesigned = ({
   }
 
   const getTodayAvailability = (memberId: string) => {
-    const today = new Date()
-    return getAvailabilityForDate(memberId, today)
+    // Always return today's availability from the hook, regardless of visible week
+    return todayAvailability[memberId] ? {
+      member_id: memberId,
+      date: new Date().toISOString().split("T")[0],
+      status: todayAvailability[memberId]!
+    } : undefined
   }
 
   // Get availability for the current week being viewed (prefer today if in range, otherwise first workday)
@@ -539,7 +556,7 @@ const AvailabilityCalendarRedesigned = ({
   const calculateTeamWeeklyScore = (weekDays: Date[]) => {
     if (members.length === 0) return 0
     
-    const memberScores = members.map(member => calculateMemberWeeklyScore(member, weekDays))
+    const memberScores = activeMembers.map(member => calculateMemberWeeklyScore(member, weekDays))
     const averageScore = memberScores.reduce((sum, score) => sum + score, 0) / memberScores.length
     
     return Math.round(averageScore)
@@ -686,7 +703,7 @@ const AvailabilityCalendarRedesigned = ({
                             Member Breakdown:
                           </div>
                           <div className="space-y-2 max-h-64 overflow-y-auto">
-                            {members.map(member => {
+                            {activeMembers.map(member => {
                               const memberScore = calculateMemberWeeklyScore(member, week.days)
                               const memberStats = getMemberWeeklyStats(member, week.days)
                               
@@ -783,31 +800,39 @@ const AvailabilityCalendarRedesigned = ({
                   <div className="p-3 border-r border-gray-200 dark:border-gray-600">
                     <span className="text-sm font-medium text-gray-700 dark:text-gray-300">Team</span>
                   </div>
-                  {week.days.map((date, index) => (
-                    <div
-                      key={index}
-                      className={cn(
-                        "p-3 text-center border-r border-gray-200 dark:border-gray-600 last:border-r-0",
-                        isToday(date) && "bg-blue-50 dark:bg-blue-900/20",
-                      )}
-                    >
-                      <div className="text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wide">
-                        {getDayNames()[index]}
-                      </div>
+                  {week.days.map((date, index) => {
+                    const isWeekendDay = isWeekend(date)
+                    return (
                       <div
+                        key={index}
                         className={cn(
-                          "text-lg font-semibold mt-1",
-                          isToday(date) ? "text-blue-600 dark:text-blue-400" : "text-gray-900 dark:text-white",
+                          "p-3 text-center border-r border-gray-200 dark:border-gray-600 last:border-r-0",
+                          isToday(date) && "bg-blue-50 dark:bg-blue-900/20",
+                          isWeekendDay && !isToday(date) && "bg-gray-100/80 dark:bg-gray-600/40",
                         )}
                       >
-                        {date.getDate()}
+                        <div className={cn(
+                          "text-xs font-medium uppercase tracking-wide",
+                          isWeekendDay ? "text-gray-400 dark:text-gray-500" : "text-gray-500 dark:text-gray-400"
+                        )}>
+                          {getDayNames()[index]}
+                        </div>
+                        <div
+                          className={cn(
+                            "text-lg font-semibold mt-1",
+                            isToday(date) ? "text-blue-600 dark:text-blue-400" : 
+                            isWeekendDay ? "text-gray-500 dark:text-gray-400" : "text-gray-900 dark:text-white",
+                          )}
+                        >
+                          {date.getDate()}
+                        </div>
                       </div>
-                    </div>
-                  ))}
+                    )
+                  })}
                 </div>
 
                 {/* Member Rows - More subtle styling */}
-                {members.map((member, memberIndex) => (
+                {activeMembers.map((member, memberIndex) => (
                   <div
                     key={member.id}
                     className={cn(
@@ -945,6 +970,7 @@ const AvailabilityCalendarRedesigned = ({
                       const availability = getAvailabilityForDate(member.id, date)
                       const isWeekendDay = isWeekend(date)
                       const isTodayCell = isToday(date)
+                      const isHolidayCell = availability?.status === 'holiday'
 
                       return (
                         <div
@@ -952,11 +978,14 @@ const AvailabilityCalendarRedesigned = ({
                           className={cn(
                             "p-3 border-r border-gray-200 dark:border-gray-600 last:border-r-0",
                             isTodayCell && "bg-blue-50/50 dark:bg-blue-900/10",
+                            (isWeekendDay || isHolidayCell) && !isTodayCell && "bg-gray-50/80 dark:bg-gray-700/50",
                           )}
                         >
                           {isWeekendDay ? (
-                            <div className="h-10 flex items-center justify-center text-gray-400">
-                              <span className="text-lg opacity-50">×</span>
+                            <div className="h-10 flex items-center justify-center">
+                              <div className="w-full h-full bg-gray-100 dark:bg-gray-600 rounded-lg flex items-center justify-center border border-gray-200 dark:border-gray-500">
+                                <span className="text-gray-400 dark:text-gray-500 text-sm font-medium">Weekend</span>
+                              </div>
                             </div>
                           ) : (
                             <div className="h-10 flex items-center gap-1">
@@ -1056,14 +1085,14 @@ const AvailabilityCalendarRedesigned = ({
             <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3">
               <div className="flex items-center gap-3">
                 <div className="w-10 h-10 rounded-xl bg-white/10 backdrop-blur-sm flex items-center justify-center shadow-lg border border-white/20">
-                  <img src="/favicon.svg" alt="Availability Planner" className="h-6 w-6" />
+                  <img src="/favicon.svg" alt="Availability Planner" className="h-6 w-6 filter brightness-0 invert" />
                 </div>
                 <div className="min-w-0 flex-1">
                   <h1 className="text-lg sm:text-xl font-bold text-white truncate">Availability Planner</h1>
                   <div className="flex items-center gap-2 flex-wrap">
                     <p className="text-sm sm:text-base font-medium text-blue-100 dark:text-gray-300 truncate">{teamName}</p>
                     <span className="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-white/20 text-white backdrop-blur-sm border border-white/20 flex-shrink-0">
-                      {members.length} {members.length === 1 ? 'member' : 'members'}
+                      {activeMembers.length} {activeMembers.length === 1 ? 'member' : 'members'}
                     </span>
                   </div>
                 </div>
@@ -1103,14 +1132,14 @@ const AvailabilityCalendarRedesigned = ({
                 {/* Analytics and Planner Buttons - Optimized */}
                 <div className="flex items-center gap-1 w-full sm:w-auto">
                   <AnalyticsButton 
-                    members={members} 
+                    members={activeMembers} 
                     locale={locale} 
                     weeksToShow={weeksToShow}
                     currentDate={currentDate}
                     teamId={teamId}
                   />
                   <PlannerButton 
-                    members={members} 
+                    members={activeMembers} 
                     locale={locale} 
                     teamId={teamId}
                   />

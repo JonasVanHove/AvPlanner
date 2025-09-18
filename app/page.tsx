@@ -130,14 +130,8 @@ export default function HomePage() {
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="flex justify-between items-center h-16">
             <div className="flex items-center gap-3">
-              <img 
-                src="/favicon.svg" 
-                alt="Availability Planner Logo" 
-                className="h-8 w-8"
-              />
-              <h1 className="text-xl font-bold text-black">
-                {t("landing.title")}
-              </h1>
+              <img src="/favicon.svg" alt="Availability Planner Logo" className="h-8 w-8" />
+              <h1 className="text-xl font-bold text-black">Availability Planner</h1>
             </div>
             <div className="flex items-center gap-4">
               <LanguageSelector currentLocale="en" />
@@ -433,12 +427,16 @@ export default function HomePage() {
         <div className="max-w-7xl mx-auto">
           <div className="border-t border-gray-800 pt-8 text-center">
             <div className="flex items-center justify-center gap-3 mb-4">
-              <img 
-                src="/favicon.svg" 
-                alt="Availability Planner Logo" 
-                className="h-8 w-8"
-              />
-              <span className="text-white font-semibold">Availability Planner</span>
+              <div className="relative group cursor-pointer">
+                <div className="absolute inset-0 bg-gradient-to-r from-blue-500 to-purple-600 rounded-xl blur-md opacity-30 group-hover:opacity-50 transition-opacity duration-300"></div>
+                <div className="relative h-10 w-10 bg-gradient-to-r from-blue-500 to-purple-600 rounded-xl flex items-center justify-center shadow-lg group-hover:shadow-xl transition-all duration-300 group-hover:scale-105">
+                  <img src="/apple-touch-icon.svg" alt="AvPlanner Logo" className="h-8 w-8" />
+                </div>
+              </div>
+              <div className="flex flex-col items-center">
+                <span className="text-white font-semibold text-lg leading-none">AvPlanner</span>
+                <span className="text-gray-400 text-sm leading-none mt-1">Team Planning Made Simple</span>
+              </div>
             </div>
             <p className="text-gray-400">
               {t("landing.madeWith")} ❤️ {t("landing.forTeams")}

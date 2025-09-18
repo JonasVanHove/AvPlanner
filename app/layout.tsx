@@ -4,7 +4,7 @@ import "./globals.css"
 import { ThemeProvider } from "@/components/theme-provider"
 
 export const metadata: Metadata = {
-  title: "Availability Planner",
+  title: "AvPlanner",
   description: "Modern team availability planning and scheduling",
   generator: "v0.dev",
   manifest: "/site.webmanifest",
