@@ -440,9 +440,9 @@ export default function HomePage() {
           <div className="border-t border-gray-800 pt-8 text-center">
             <div className="flex items-center justify-center gap-3 mb-4">
               <div className="relative group cursor-pointer">
-                <div className="absolute inset-0 bg-gradient-to-r from-blue-500 to-purple-600 rounded-xl blur-md opacity-30 group-hover:opacity-50 transition-opacity duration-300"></div>
-                <div className="relative h-10 w-10 bg-gradient-to-r from-blue-500 to-purple-600 rounded-xl flex items-center justify-center shadow-lg group-hover:shadow-xl transition-all duration-300 group-hover:scale-105">
-                  <img src="/apple-touch-icon.svg" alt="AvPlanner Logo" className="h-8 w-8" />
+                <div className="absolute inset-0 bg-gradient-to-r from-white-500 to-gray-600 rounded-xl blur-md opacity-30 group-hover:opacity-50 transition-opacity duration-300"></div>
+                <div className="relative h-10 w-10 bg-gradient-to-r from-white-500 to-gray-600 rounded-xl flex items-center justify-center shadow-lg group-hover:shadow-xl transition-all duration-300 group-hover:scale-105">
+                  <img src="/favicon.svg" alt="AvPlanner Logo" className="h-8 w-8" />
                 </div>
               </div>
               <div className="flex flex-col items-center">
@@ -454,7 +454,7 @@ export default function HomePage() {
               {t("landing.madeWith")} ❤️ {t("landing.forTeams")}
             </p>
             <p className="text-gray-500 text-sm mt-2">
-              Made by <span className="font-semibold text-gray-300">Jonas Van Hove</span>
+              by <span className="font-semibold text-gray-300">Jonas Van Hove</span>
             </p>
           </div>
         </div>
