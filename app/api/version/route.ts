@@ -1,10 +1,10 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { getVersionInfo, getDetailedVersionInfo } from '@/lib/version'
+import { getVersionInfoAsync, getDetailedVersionInfoAsync } from '@/lib/version'
 
 export async function GET(request: NextRequest) {
   try {
-    const versionInfo = getVersionInfo()
-    const detailedInfo = getDetailedVersionInfo()
+    const versionInfo = await getVersionInfoAsync()
+    const detailedInfo = await getDetailedVersionInfoAsync()
 
     return NextResponse.json({
       version: versionInfo.version,

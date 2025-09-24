@@ -38,6 +38,7 @@ import { useTodayAvailability } from "@/hooks/use-today-availability"
 import { useVersion } from "@/hooks/use-version"
 import { HamburgerMenu, HamburgerMenuItem } from "@/components/ui/hamburger-menu"
 import { useIsMobile } from "@/hooks/use-mobile"
+import { useSwipe } from "@/hooks/use-swipe"
 
 interface Member {
   id: string
@@ -105,6 +106,7 @@ const AvailabilityCalendarRedesigned = ({
   const [showDatePicker, setShowDatePicker] = useState(false)
   const [showKeyboardHelp, setShowKeyboardHelp] = useState(false)
   const [openSettings, setOpenSettings] = useState(false)
+  const [swipeDirection, setSwipeDirection] = useState<"left" | "right" | null>(null)
   const { t } = useTranslation(locale)
 
   // Hook to get today's availability for all members (always shows today regardless of visible week)
@@ -116,6 +118,27 @@ const AvailabilityCalendarRedesigned = ({
   
   // Mobile responsive hook
   const isMobile = useIsMobile()
+
+  // Swipe controls for mobile week navigation
+  const swipeRef = useSwipe({
+    onSwipeLeft: () => {
+      if (isMobile) {
+        setSwipeDirection("left")
+        setTimeout(() => setSwipeDirection(null), 300) // Reset after animation
+        navigateDate("next") // Swipe left = go to next week
+      }
+    },
+    onSwipeRight: () => {
+      if (isMobile) {
+        setSwipeDirection("right")
+        setTimeout(() => setSwipeDirection(null), 300) // Reset after animation
+        navigateDate("prev") // Swipe right = go to previous week
+      }
+    }
+  }, {
+    threshold: 50,   // Minimum 50px swipe distance
+    velocity: 0.3    // Minimum swipe velocity
+  })
 
   // Helper function to get Monday of the week
   const getMondayOfWeek = (date: Date): Date => {
@@ -1424,6 +1447,9 @@ const AvailabilityCalendarRedesigned = ({
                   <div className="flex flex-col">
                     <h1 className="text-sm lg:text-lg xl:text-xl font-bold text-white truncate">Availability Planner</h1>
                     <p className="text-xs sm:text-sm lg:text-sm font-medium sm:font-semibold text-white lg:text-blue-100 dark:text-gray-300 truncate">{teamName}</p>
+                    {isMobile && (
+                      <p className="text-xs text-blue-200/80 dark:text-gray-400 mt-0.5">👈 👉 Swipe to navigate weeks</p>
+                    )}
                   </div>
                 </div>
               </div>
@@ -1776,8 +1802,33 @@ const AvailabilityCalendarRedesigned = ({
           </div>
         </div>
 
-        {/* Calendar Grid */}
-        <div className="p-4 sm:p-6">
+        {/* Calendar Grid with Swipe Support */}
+        <div ref={swipeRef} className={cn(
+          "p-4 sm:p-6 touch-pan-y overflow-y-auto transition-transform duration-300 relative",
+          swipeDirection === "left" && "transform -translate-x-2",
+          swipeDirection === "right" && "transform translate-x-2"
+        )}>
+          {/* Swipe Indicators */}
+          {isMobile && (
+            <>
+              {/* Left swipe indicator (next week) */}
+              <div className={cn(
+                "absolute left-2 top-1/2 -translate-y-1/2 z-10 bg-blue-600 text-white rounded-full p-2 shadow-lg transition-all duration-300",
+                swipeDirection === "left" ? "opacity-100 scale-100" : "opacity-0 scale-75 pointer-events-none"
+              )}>
+                <ChevronRight className="h-4 w-4" />
+              </div>
+              
+              {/* Right swipe indicator (previous week) */}
+              <div className={cn(
+                "absolute right-2 top-1/2 -translate-y-1/2 z-10 bg-blue-600 text-white rounded-full p-2 shadow-lg transition-all duration-300",
+                swipeDirection === "right" ? "opacity-100 scale-100" : "opacity-0 scale-75 pointer-events-none"
+              )}>
+                <ChevronLeft className="h-4 w-4" />
+              </div>
+            </>
+          )}
+          
           {isLoading ? (
             <div className="text-center py-12">
               <div className="inline-flex items-center gap-3 bg-white dark:bg-gray-800 rounded-lg px-6 py-4 shadow-sm border border-gray-200 dark:border-gray-700">

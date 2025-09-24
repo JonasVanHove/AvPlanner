@@ -31,7 +31,23 @@ function extractVersionFromCommitMessage(commitMessage: string): string | null {
   return null
 }
 
-function getVersionFromGit(): string {
+async function getVersionFromGitHub(): Promise<string> {
+  try {
+    const response = await fetch('https://api.github.com/repos/JonasVanHove/AvPlanner/commits/main')
+    const commit = await response.json()
+    
+    if (commit && commit.commit && commit.commit.message) {
+      return commit.commit.message
+    }
+    
+    return 'Unable to fetch latest commit'
+  } catch (error) {
+    console.warn('Failed to fetch from GitHub API:', error)
+    return 'GitHub API unavailable'
+  }
+}
+
+function getVersionFromLocalGit(): string | null {
   try {
     // Get the latest commit message and use it as the version
     const latestCommitMessage = execSync('git log -1 --pretty=%s', { 
@@ -43,51 +59,85 @@ function getVersionFromGit(): string {
     return latestCommitMessage || 'No commit message'
     
   } catch (error) {
-    // Git not available or not in a git repo
-    return 'Git not available'
+    // Git not available locally
+    return null
   }
 }
 
-export function getVersionInfo(): VersionInfo {
+function getVersionFromGit(): string {
+  // First try local git (for development)
+  const localVersion = getVersionFromLocalGit()
+  if (localVersion) {
+    return localVersion
+  }
+  
+  // If local git fails, we'll fetch from GitHub API later
+  return 'Fetching from GitHub...'
+}
+
+// Cached version info to avoid multiple API calls
+let cachedVersionInfo: VersionInfo | null = null
+
+export async function getVersionInfoAsync(): Promise<VersionInfo> {
   try {
-    // Get version from git commits
-    const version = getVersionFromGit()
-    
+    let version: string
     let gitCommit: string | undefined
     let gitBranch: string | undefined
     let commitMessage: string | undefined
 
-    try {
-      // Get git commit hash (short)
-      gitCommit = execSync('git rev-parse --short HEAD', { 
-        encoding: 'utf8',
-        stdio: ['pipe', 'pipe', 'ignore']
-      }).trim()
-    } catch {
-      // Git command failed, ignore
+    // Try local git first (development)
+    const localVersion = getVersionFromLocalGit()
+    if (localVersion) {
+      version = localVersion
+      
+      try {
+        // Get git commit hash (short)
+        gitCommit = execSync('git rev-parse --short HEAD', { 
+          encoding: 'utf8',
+          stdio: ['pipe', 'pipe', 'ignore']
+        }).trim()
+      } catch {
+        // Git command failed, ignore
+      }
+
+      try {
+        // Get git branch name
+        gitBranch = execSync('git branch --show-current', { 
+          encoding: 'utf8',
+          stdio: ['pipe', 'pipe', 'ignore']
+        }).trim()
+      } catch {
+        // Git command failed, ignore
+      }
+
+      try {
+        // Get latest commit message
+        commitMessage = execSync('git log -1 --pretty=%s', { 
+          encoding: 'utf8',
+          stdio: ['pipe', 'pipe', 'ignore']
+        }).trim()
+      } catch {
+        // Git command failed, ignore
+      }
+    } else {
+      // Fetch from GitHub API
+      version = await getVersionFromGitHub()
+      
+      // Try to get commit info from GitHub API
+      try {
+        const response = await fetch('https://api.github.com/repos/JonasVanHove/AvPlanner/commits/main')
+        const commit = await response.json()
+        
+        if (commit && commit.sha) {
+          gitCommit = commit.sha.substring(0, 7) // Short hash
+          commitMessage = commit.commit?.message
+        }
+      } catch {
+        // GitHub API failed, ignore
+      }
     }
 
-    try {
-      // Get git branch name
-      gitBranch = execSync('git branch --show-current', { 
-        encoding: 'utf8',
-        stdio: ['pipe', 'pipe', 'ignore']
-      }).trim()
-    } catch {
-      // Git command failed, ignore
-    }
-
-    try {
-      // Get latest commit message
-      commitMessage = execSync('git log -1 --pretty=%s', { 
-        encoding: 'utf8',
-        stdio: ['pipe', 'pipe', 'ignore']
-      }).trim()
-    } catch {
-      // Git command failed, ignore
-    }
-
-    return {
+    const versionInfo = {
       version,
       gitCommit,
       gitBranch,
@@ -95,13 +145,66 @@ export function getVersionInfo(): VersionInfo {
       buildDate: new Date().toISOString(),
       environment: process.env.NODE_ENV || 'development'
     }
+    
+    // Cache the result
+    cachedVersionInfo = versionInfo
+    return versionInfo
+    
   } catch (error) {
     console.warn('Could not get version info:', error)
-    return {
-      version: '1.5.0',
+    const fallbackInfo = {
+      version: 'Unable to fetch version',
       buildDate: new Date().toISOString(),
       environment: process.env.NODE_ENV || 'development'
     }
+    cachedVersionInfo = fallbackInfo
+    return fallbackInfo
+  }
+}
+
+export function getVersionInfo(): VersionInfo {
+  // Return cached version if available
+  if (cachedVersionInfo) {
+    return cachedVersionInfo
+  }
+  
+  // Fallback for sync usage - try local git only
+  try {
+    const localVersion = getVersionFromLocalGit()
+    if (localVersion) {
+      let gitCommit: string | undefined
+      let gitBranch: string | undefined
+      
+      try {
+        gitCommit = execSync('git rev-parse --short HEAD', { 
+          encoding: 'utf8',
+          stdio: ['pipe', 'pipe', 'ignore']
+        }).trim()
+      } catch {}
+
+      try {
+        gitBranch = execSync('git branch --show-current', { 
+          encoding: 'utf8',
+          stdio: ['pipe', 'pipe', 'ignore']
+        }).trim()
+      } catch {}
+      
+      return {
+        version: localVersion,
+        gitCommit,
+        gitBranch,
+        commitMessage: localVersion,
+        buildDate: new Date().toISOString(),
+        environment: process.env.NODE_ENV || 'development'
+      }
+    }
+  } catch {}
+  
+  // Final fallback
+  return {
+    version: 'Version loading...',
+    buildDate: new Date().toISOString(),
+    environment: process.env.NODE_ENV || 'development'
   }
 }
 
@@ -116,8 +219,36 @@ export function getVersionString(): string {
   return versionString
 }
 
+export async function getVersionStringAsync(): Promise<string> {
+  const info = await getVersionInfoAsync()
+  let versionString = info.version
+  
+  if (info.gitCommit) {
+    versionString += ` (${info.gitCommit})`
+  }
+  
+  return versionString
+}
+
 export function getDetailedVersionInfo(): string {
   const info = getVersionInfo()
+  let details = info.version
+  
+  if (info.gitCommit && info.gitBranch) {
+    details += ` • ${info.gitBranch}@${info.gitCommit}`
+  } else if (info.gitCommit) {
+    details += ` • ${info.gitCommit}`
+  }
+  
+  if (info.environment === 'development') {
+    details += ` • dev`
+  }
+  
+  return details
+}
+
+export async function getDetailedVersionInfoAsync(): Promise<string> {
+  const info = await getVersionInfoAsync()
   let details = info.version
   
   if (info.gitCommit && info.gitBranch) {
