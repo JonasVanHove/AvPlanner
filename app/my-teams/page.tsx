@@ -5,37 +5,86 @@ import { supabase } from '@/lib/supabase'
 import { UserDashboard } from '@/components/auth/user-dashboard'
 import { LoginForm } from '@/components/auth/login-form'
 import { Button } from '@/components/ui/button'
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
+import { DropdownMenu, DropdownMenuContent, DropdownMenuTrigger, DropdownMenuItem, DropdownMenuSeparator } from "@/components/ui/dropdown-menu"
+import { LogOut, UserIcon, ChevronDown, Shield, Home } from "lucide-react"
 import { User } from '@supabase/supabase-js'
 import { useRouter } from 'next/navigation'
+import { HamburgerMenu, HamburgerMenuItem } from "@/components/ui/hamburger-menu"
+import { useIsMobile } from "@/hooks/use-mobile"
 
 export default function MyTeamsPage() {
   const [user, setUser] = useState<User | null>(null)
   const [loading, setLoading] = useState(true)
+  const [isAdmin, setIsAdmin] = useState(false)
   const router = useRouter()
+  const isMobile = useIsMobile()
 
   useEffect(() => {
     // Check current session
     supabase.auth.getSession().then(({ data: { session } }) => {
       setUser(session?.user ?? null)
       setLoading(false)
+      
+      // Check admin status if user is logged in
+      if (session?.user) {
+        checkAdminStatus(session.user.email!)
+      }
     })
 
     // Listen for auth changes
     const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
       setUser(session?.user ?? null)
       setLoading(false)
+      
+      // Check admin status if user is logged in
+      if (session?.user) {
+        checkAdminStatus(session.user.email!)
+      } else {
+        setIsAdmin(false)
+      }
     })
 
     return () => subscription.unsubscribe()
   }, [])
+
+  const checkAdminStatus = async (email: string) => {
+    try {
+      const { data, error } = await supabase.rpc('is_user_admin', {
+        user_email: email
+      })
+      
+      if (!error && data) {
+        setIsAdmin(true)
+      } else {
+        setIsAdmin(false)
+      }
+    } catch (error) {
+      // Gracefully handle if the function doesn't exist in the database
+      console.warn('Admin function not available - this is normal for basic setups:', error)
+      setIsAdmin(false)
+    }
+  }
 
   const handleLogout = async () => {
     await supabase.auth.signOut()
     router.push('/')
   }
 
-  const handleGoHome = () => {
-    router.push('/')
+  const handleGoHome = (e?: React.MouseEvent) => {
+    if (e && (e.ctrlKey || e.metaKey)) {
+      window.open('/', '_blank')
+    } else {
+      router.push('/')
+    }
+  }
+
+  const handleAdminNavigation = (e?: React.MouseEvent) => {
+    if (e && (e.ctrlKey || e.metaKey)) {
+      window.open('/admin', '_blank')
+    } else {
+      router.push('/admin')
+    }
   }
 
   if (loading) {
@@ -64,41 +113,96 @@ export default function MyTeamsPage() {
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100">
-      {/* Header */}
-      <div className="bg-white/90 backdrop-blur-sm border-b border-gray-200 sticky top-0 z-10">
+    <div className="min-h-screen bg-gradient-to-br from-blue-50 via-indigo-50 to-purple-50">
+      {/* Header - Consistent with Landing Page */}
+      <header className="bg-white/80 backdrop-blur-md shadow-sm border-b border-white/20 sticky top-0 z-50 will-change-transform">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="flex items-center justify-between h-16">
+          <div className="flex justify-between items-center h-16">
             <div className="flex items-center gap-3">
-              <div className="relative group cursor-pointer">
-                <div className="absolute inset-0 bg-gradient-to-r from-blue-500 to-purple-600 rounded-xl blur-md opacity-30 group-hover:opacity-50 transition-opacity duration-300"></div>
-                <div className="relative h-10 w-10 bg-white rounded-xl flex items-center justify-center shadow-lg group-hover:shadow-xl transition-all duration-300 group-hover:scale-105 p-1">
-                  <img src="/web-app-manifest-512x512.png" alt="AvPlanner Logo" className="h-8 w-8 rounded-lg" />
-                </div>
-              </div>
-              <div className="flex flex-col">
-                <h1 className="text-xl font-bold text-black leading-none">
-                  AvPlanner Dashboard
-                </h1>
-                <p className="text-xs text-gray-500 leading-none mt-0.5">Manage Your Team Access</p>
-              </div>
+              <img src="/favicon.svg" alt="Availability Planner Logo" className="h-8 w-8" />
+              <h1 className="text-xl font-bold text-black hidden sm:block">My Teams</h1>
+              <h1 className="text-lg font-bold text-black sm:hidden">My Teams</h1>
             </div>
-            <Button 
-              variant="outline" 
-              onClick={handleGoHome}
-              className="flex items-center gap-2"
-            >
-              <svg className="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6" />
-              </svg>
-              Back to Home
-            </Button>
+            <div className="flex items-center gap-4">
+              {/* Desktop Navigation */}
+              <div className="hidden md:flex items-center gap-4">
+                <DropdownMenu>
+                  <DropdownMenuTrigger asChild>
+                    <Button 
+                      variant="outline" 
+                      className="flex items-center gap-2 px-3 transition-all duration-200 hover:bg-blue-50 hover:border-blue-200 hover:shadow-md focus:ring-2 focus:ring-blue-200 focus:ring-offset-1"
+                    >
+                      <Avatar className="h-6 w-6">
+                        <AvatarImage src={user?.user_metadata?.avatar_url} />
+                        <AvatarFallback className="text-xs">
+                          {user?.user_metadata?.first_name?.[0] || user?.email?.[0]?.toUpperCase()}
+                        </AvatarFallback>
+                      </Avatar>
+                      <span className="text-sm font-medium max-w-[100px] truncate">
+                        {user?.user_metadata?.first_name || user?.email?.split('@')[0]}
+                      </span>
+                      <ChevronDown className="h-4 w-4" />
+                    </Button>
+                  </DropdownMenuTrigger>
+                  <DropdownMenuContent align="end" className="w-48">
+                    <DropdownMenuItem 
+                      onClick={handleGoHome}
+                      className="cursor-pointer transition-all duration-200 hover:bg-blue-50 hover:text-blue-700 focus:bg-blue-50 focus:text-blue-700"
+                    >
+                      <Home className="h-4 w-4 mr-2 transition-colors duration-200" />
+                      Back to Home
+                    </DropdownMenuItem>
+                    {isAdmin && (
+                      <DropdownMenuItem 
+                        onClick={handleAdminNavigation}
+                        className="cursor-pointer transition-all duration-200 hover:bg-purple-50 hover:text-purple-700 focus:bg-purple-50 focus:text-purple-700"
+                      >
+                        <Shield className="h-4 w-4 mr-2 transition-colors duration-200" />
+                        Admin Panel
+                      </DropdownMenuItem>
+                    )}
+                    <DropdownMenuSeparator />
+                    <DropdownMenuItem 
+                      onClick={handleLogout}
+                      className="cursor-pointer transition-all duration-200 hover:bg-red-50 hover:text-red-700 focus:bg-red-50 focus:text-red-700"
+                    >
+                      <LogOut className="h-4 w-4 mr-2 transition-colors duration-200" />
+                      Logout
+                    </DropdownMenuItem>
+                  </DropdownMenuContent>
+                </DropdownMenu>
+              </div>
+              
+              {/* Mobile Navigation */}
+              <HamburgerMenu title="Menu">
+                <HamburgerMenuItem onClick={handleGoHome}>
+                  <div className="flex items-center gap-3">
+                    <Home className="h-5 w-5" />
+                    <span>Back to Home</span>
+                  </div>
+                </HamburgerMenuItem>
+                {isAdmin && (
+                  <HamburgerMenuItem onClick={handleAdminNavigation}>
+                    <div className="flex items-center gap-3">
+                      <Shield className="h-5 w-5" />
+                      <span>Admin Panel</span>
+                    </div>
+                  </HamburgerMenuItem>
+                )}
+                <HamburgerMenuItem onClick={handleLogout}>
+                  <div className="flex items-center gap-3 text-red-600">
+                    <LogOut className="h-5 w-5" />
+                    <span>Logout</span>
+                  </div>
+                </HamburgerMenuItem>
+              </HamburgerMenu>
+            </div>
           </div>
         </div>
-      </div>
+      </header>
 
       {/* Main Content */}
-      <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+      <div className="max-w-6xl mx-auto px-3 sm:px-6 lg:px-8 py-4 sm:py-8">
         <div className="flex justify-center">
           <UserDashboard 
             user={user} 

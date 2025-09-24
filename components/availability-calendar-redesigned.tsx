@@ -17,6 +17,7 @@ import {
   BarChart3,
   Users,
   Keyboard,
+  Settings,
 } from "lucide-react"
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu"
 import { Switch } from "@/components/ui/switch"
@@ -32,8 +33,11 @@ import { BulkUpdateDialog, AnalyticsButton, PlannerButton } from "./bulk-update-
 import { SettingsDropdown } from "./settings-dropdown"
 import { MemberAvatar } from "./member-avatar"
 import { EditModePasswordDialog } from "./edit-mode-password-dialog"
+import { AvailabilityDropdown } from "./availability-dropdown"
 import { useTodayAvailability } from "@/hooks/use-today-availability"
 import { useVersion } from "@/hooks/use-version"
+import { HamburgerMenu, HamburgerMenuItem } from "@/components/ui/hamburger-menu"
+import { useIsMobile } from "@/hooks/use-mobile"
 
 interface Member {
   id: string
@@ -109,6 +113,9 @@ const AvailabilityCalendarRedesigned = ({
 
   // Hook to get version info (same as settings menu)
   const { version, isLoading: versionLoading } = useVersion()
+  
+  // Mobile responsive hook
+  const isMobile = useIsMobile()
 
   // Helper function to get Monday of the week
   const getMondayOfWeek = (date: Date): Date => {
@@ -262,6 +269,11 @@ const AvailabilityCalendarRedesigned = ({
   ]
 
   const dutchMonthNames = ["JAN", "FEB", "MAR", "APR", "MEI", "JUN", "JUL", "AUG", "SEP", "OKT", "NOV", "DEC"]
+
+  // Helper function to check if two dates are the same day
+  const isSameDay = (date1: Date, date2: Date) => {
+    return date1.toISOString().split('T')[0] === date2.toISOString().split('T')[0]
+  }
 
   const getStatusConfig = (status: string) => {
     if (simplifiedMode) {
@@ -938,7 +950,170 @@ const AvailabilityCalendarRedesigned = ({
 
             {/* Responsive Table Container */}
             <div className="overflow-x-auto">
-              <div className="min-w-full">
+              {/* Mobile & Tablet View - Weekly Overview */}
+              <div className="block xl:hidden">
+                {/* Week Days Header */}
+                <div className="bg-gray-50 dark:bg-gray-700/50 border-b border-gray-200 dark:border-gray-600 mb-4">
+                  <div className="grid grid-cols-7 gap-1 p-2">
+                    {week.days.map((date, dayIndex) => {
+                      const dayName = getDayNames()[dayIndex]
+                      const isWeekendDay = isWeekend(date)
+                      const shortDayName = dayName.slice(0, 3) // Mon, Tue, etc.
+                      
+                      return (
+                        <div
+                          key={dayIndex}
+                          className={cn(
+                            "text-center p-2 rounded-md",
+                            isToday(date) && "bg-blue-500 text-white",
+                            isWeekendDay && !isToday(date) && "bg-gray-100 dark:bg-gray-600",
+                            !isToday(date) && !isWeekendDay && "bg-white dark:bg-gray-800"
+                          )}
+                        >
+                          <div className={cn(
+                            "text-xs font-medium",
+                            isToday(date) ? "text-blue-100 font-semibold" : "text-gray-500 dark:text-gray-400"
+                          )}>
+                            {isToday(date) ? "Today" : shortDayName}
+                          </div>
+                          <div className={cn(
+                            "text-sm font-bold mt-1",
+                            isToday(date) ? "text-white" : 
+                            isWeekendDay ? "text-gray-500 dark:text-gray-400" : "text-gray-900 dark:text-white"
+                          )}>
+                            {date.getDate()}
+                          </div>
+                        </div>
+                      )
+                    })}
+                  </div>
+                </div>
+
+                {/* Members with their week availability */}
+                {visibleMembers.map((member, memberIndex) => (
+                  <div
+                    key={member.id}
+                    className={cn(
+                      "border border-gray-200 dark:border-gray-700 rounded-lg mb-3 overflow-hidden",
+                      memberIndex % 2 === 0 ? "bg-white dark:bg-gray-800" : "bg-gray-50/50 dark:bg-gray-700/30",
+                    )}
+                  >
+                    {/* Member Header */}
+                    <div className="bg-gray-50 dark:bg-gray-700/50 p-3 border-b border-gray-200 dark:border-gray-600">
+                      <div className="flex items-center justify-between">
+                        <div className="flex items-center gap-3 min-w-0 flex-1">
+                          <MemberAvatar
+                            firstName={member.first_name}
+                            lastName={member.last_name}
+                            profileImage={member.profile_image}
+                            size="sm"
+                            className="ring-1 ring-gray-200 dark:ring-gray-600"
+                            statusIndicator={{
+                              show: true,
+                              status: getTodayAvailability(member.id)?.status
+                            }}
+                          />
+                          <div className="min-w-0 flex-1">
+                            <div className="text-sm font-semibold text-gray-900 dark:text-white truncate">
+                              {member.first_name} {member.last_name}
+                            </div>
+                            <div className="flex items-center gap-2 mt-1">
+                              {member.email && (
+                                <a
+                                  href={`mailto:${member.email}`}
+                                  className="text-blue-500 hover:text-blue-600 dark:text-blue-400 dark:hover:text-blue-300 transition-colors"
+                                  onClick={(e) => e.stopPropagation()}
+                                >
+                                  <Mail className="h-3 w-3" />
+                                </a>
+                              )}
+                              {member.email && (
+                                <a
+                                  href={`https://teams.microsoft.com/l/chat/0/0?users=${member.email}`}
+                                  target="_blank"
+                                  rel="noopener noreferrer"
+                                  className="text-purple-500 hover:text-purple-600 dark:text-purple-400 dark:hover:text-purple-300 transition-colors"
+                                  onClick={(e) => e.stopPropagation()}
+                                >
+                                  <MessageSquare className="h-3 w-3" />
+                                </a>
+                              )}
+                            </div>
+                          </div>
+                        </div>
+                        {editMode && (
+                          <DropdownMenu>
+                            <DropdownMenuTrigger asChild>
+                              <Button
+                                variant="ghost"
+                                size="sm"
+                                className="h-8 w-8 p-0 rounded-full hover:bg-gray-100 dark:hover:bg-gray-600 flex-shrink-0"
+                              >
+                                <MoreHorizontal className="h-4 w-4" />
+                              </Button>
+                            </DropdownMenuTrigger>
+                            <DropdownMenuContent align="end">
+                              <DropdownMenuItem onClick={() => moveMemberUp(member.id)} disabled={memberIndex === 0}>
+                                Move Up
+                              </DropdownMenuItem>
+                              <DropdownMenuItem onClick={() => moveMemberDown(member.id)} disabled={memberIndex === members.length - 1}>
+                                Move Down
+                              </DropdownMenuItem>
+                              <DropdownMenuItem onClick={() => deleteMember(member.id)}>
+                                Delete Member
+                              </DropdownMenuItem>
+                            </DropdownMenuContent>
+                          </DropdownMenu>
+                        )}
+                      </div>
+                    </div>
+
+                    {/* Week Days Availability - Horizontal Scroll */}
+                    <div className="p-3">
+                      <div className="grid grid-cols-7 gap-1">
+                        {week.days.map((date, dayIndex) => {
+                          const record = availability.find(
+                            (r) => r.member_id === member.id && isSameDay(new Date(r.date), date)
+                          )
+                          const isWeekendDay = isWeekend(date)
+
+                          return (
+                            <div
+                              key={dayIndex}
+                              className={cn(
+                                "flex flex-col items-center justify-center p-2 rounded-md border min-h-[60px]",
+                                isToday(date) && "bg-blue-50 dark:bg-blue-900/20 border-blue-200 dark:border-blue-700",
+                                isWeekendDay && !isToday(date) && "bg-gray-50 dark:bg-gray-700/50 border-gray-200 dark:border-gray-600",
+                                !isToday(date) && !isWeekendDay && "bg-white dark:bg-gray-800 border-gray-200 dark:border-gray-600"
+                              )}
+                            >
+                              {isWeekendDay ? (
+                                <span className="text-gray-400 dark:text-gray-500 text-2xl font-light">×</span>
+                              ) : editMode ? (
+                                <AvailabilityDropdown
+                                  value={record?.status}
+                                  onValueChange={(status: "available" | "unavailable" | "need_to_check" | "absent" | "holiday" | "remote") => 
+                                    updateAvailability(member.id, date.toISOString().split("T")[0], status)
+                                  }
+                                  locale={locale}
+                                  size="sm"
+                                />
+                              ) : (
+                                <div className="text-xl">
+                                  {getStatusConfig(record?.status || "").icon}
+                                </div>
+                              )}
+                            </div>
+                          )
+                        })}
+                      </div>
+                    </div>
+                  </div>
+                ))}
+              </div>
+
+              {/* Desktop View */}
+              <div className="hidden xl:block min-w-full">
                 {/* Day Headers - More subtle */}
                 <div
                   className="grid bg-gray-50/50 dark:bg-gray-700/30 border-b border-gray-200 dark:border-gray-600"
@@ -1148,12 +1323,21 @@ const AvailabilityCalendarRedesigned = ({
                                     : "bg-gray-50 dark:bg-gray-700 border-gray-200 dark:border-gray-600",
                                   editMode && !availability && "hover:bg-gray-100 dark:hover:bg-gray-600",
                                 )}
-                                onClick={() => {
+                                onClick={(e) => {
                                   if (!editMode) return
+                                  
+                                  // Ctrl+Click for quick status toggle
+                                  if (e.ctrlKey || e.metaKey) {
+                                    const newStatus = availability?.status === "available" ? "unavailable" : "available"
+                                    updateAvailability(member.id, date.toISOString().split("T")[0], newStatus)
+                                    return
+                                  }
+                                  
+                                  // Regular click cycles through all statuses
                                   const current = availability
                                   const statuses: Availability["status"][] = [
                                     "available",
-                                    "remote",
+                                    "remote", 
                                     "unavailable",
                                     "need_to_check",
                                     "absent",
@@ -1228,219 +1412,346 @@ const AvailabilityCalendarRedesigned = ({
   return (
     <TooltipProvider>
       <div className="min-h-screen bg-gray-50 dark:bg-gray-900">
-        {/* Header - Optimized and Beautiful */}
+        {/* Header - Compact Mobile & Tablet Optimized */}
         <div className="bg-gradient-to-r from-blue-600 via-blue-700 to-indigo-700 dark:from-gray-800 dark:via-gray-800 dark:to-gray-900 border-b border-blue-500/20 dark:border-gray-700 shadow-lg">
-          <div className="px-4 sm:px-6 py-3">
-            <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3">
-              <div className="flex items-center gap-3">
-                <div className="w-10 h-10 rounded-xl bg-white/10 backdrop-blur-sm flex items-center justify-center shadow-lg border border-white/20">
-                  <img src="/favicon.svg" alt="Availability Planner" className="h-6 w-6 filter brightness-0 invert" />
+          <div className="px-3 lg:px-6 py-2 lg:py-3">
+            <div className="flex flex-row items-center justify-between gap-2 lg:gap-3">
+              <div className="flex items-center gap-2 lg:gap-3 min-w-0 flex-1">
+                <div className="w-8 h-8 lg:w-10 lg:h-10 rounded-lg lg:rounded-xl bg-white/10 backdrop-blur-sm flex items-center justify-center shadow-lg border border-white/20 flex-shrink-0">
+                  <img src="/favicon.svg" alt="Availability Planner" className="h-5 w-5 lg:h-6 lg:w-6 filter brightness-0 invert" />
                 </div>
                 <div className="min-w-0 flex-1">
-                  <h1 className="text-lg sm:text-xl font-bold text-white truncate">Availability Planner</h1>
-                  <div className="flex items-center gap-2 flex-wrap">
-                    <p className="text-sm sm:text-base font-medium text-blue-100 dark:text-gray-300 truncate">{teamName}</p>
-                    <span className="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-white/20 text-white backdrop-blur-sm border border-white/20 flex-shrink-0">
-                      {visibleMembers.length} {visibleMembers.length === 1 ? 'member' : 'members'}
-                    </span>
+                  <div className="flex flex-col">
+                    <h1 className="text-sm lg:text-lg xl:text-xl font-bold text-white truncate">Availability Planner</h1>
+                    <p className="text-xs sm:text-sm lg:text-sm font-medium sm:font-semibold text-white lg:text-blue-100 dark:text-gray-300 truncate">{teamName}</p>
                   </div>
                 </div>
               </div>
 
               <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-2 w-full sm:w-auto">
-                {/* Week selector - Optimized */}
-                <DropdownMenu>
-                  <DropdownMenuTrigger asChild>
-                    <Button variant="outline" size="sm" className="flex items-center gap-2 bg-white/10 backdrop-blur-sm border-white/20 text-white hover:bg-white/20 w-full sm:w-auto">
-                      <Calendar className="h-4 w-4" />
-                      <span className="text-sm font-medium">
-                        {weeksToShow === 1 ? t("calendar.1week") : 
-                         weeksToShow === 2 ? t("calendar.2weeks") : 
-                         weeksToShow === 4 ? t("calendar.4weeks") : 
-                         t("calendar.8weeks")}
-                      </span>
-                      <ChevronDown className="h-4 w-4" />
-                    </Button>
-                  </DropdownMenuTrigger>
-                  <DropdownMenuContent align="end" className="bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700">
-                    <DropdownMenuItem onClick={() => setWeeksToShow(1)}>
-                      {t("calendar.1week")}
-                    </DropdownMenuItem>
-                    <DropdownMenuItem onClick={() => setWeeksToShow(2)}>
-                      {t("calendar.2weeks")}
-                    </DropdownMenuItem>
-                    <DropdownMenuItem onClick={() => setWeeksToShow(4)}>
-                      {t("calendar.4weeks")}
-                    </DropdownMenuItem>
-                    <DropdownMenuItem onClick={() => setWeeksToShow(8)}>
-                      {t("calendar.8weeks")}
-                    </DropdownMenuItem>
-                  </DropdownMenuContent>
-                </DropdownMenu>
+                {/* Desktop Navigation */}
+                <div className="hidden xl:flex flex-row items-center gap-2">
+                  {/* Week selector */}
+                  <DropdownMenu>
+                    <DropdownMenuTrigger asChild>
+                      <Button variant="outline" size="sm" className="flex items-center gap-2 bg-white/10 backdrop-blur-sm border-white/20 text-white hover:bg-white/20">
+                        <Calendar className="h-4 w-4" />
+                        <span className="text-sm font-medium">
+                          {weeksToShow === 1 ? t("calendar.1week") : 
+                           weeksToShow === 2 ? t("calendar.2weeks") : 
+                           weeksToShow === 4 ? t("calendar.4weeks") : 
+                           t("calendar.8weeks")}
+                        </span>
+                        <ChevronDown className="h-4 w-4" />
+                      </Button>
+                    </DropdownMenuTrigger>
+                    <DropdownMenuContent align="end" className="bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700">
+                      <DropdownMenuItem onClick={() => setWeeksToShow(1)}>
+                        {t("calendar.1week")}
+                      </DropdownMenuItem>
+                      <DropdownMenuItem onClick={() => setWeeksToShow(2)}>
+                        {t("calendar.2weeks")}
+                      </DropdownMenuItem>
+                      <DropdownMenuItem onClick={() => setWeeksToShow(4)}>
+                        {t("calendar.4weeks")}
+                      </DropdownMenuItem>
+                      <DropdownMenuItem onClick={() => setWeeksToShow(8)}>
+                        {t("calendar.8weeks")}
+                      </DropdownMenuItem>
+                    </DropdownMenuContent>
+                  </DropdownMenu>
 
-                {/* Analytics and Planner Buttons - Optimized */}
-                <div className="flex items-center gap-1 w-full sm:w-auto">
-                  <AnalyticsButton 
-                    members={activeMembersForAnalytics} 
-                    locale={locale} 
-                    weeksToShow={weeksToShow}
-                    currentDate={currentDate}
-                    teamId={teamId}
-                  />
-                  <PlannerButton 
-                    members={visibleMembers} 
-                    locale={locale} 
-                    teamId={teamId}
-                  />
-                </div>
+                  {/* Analytics and Planner Buttons */}
+                  <div className="flex items-center gap-1">
+                    <AnalyticsButton 
+                      members={activeMembersForAnalytics} 
+                      locale={locale} 
+                      weeksToShow={weeksToShow}
+                      currentDate={currentDate}
+                      teamId={teamId}
+                    />
+                    <PlannerButton 
+                      members={visibleMembers} 
+                      locale={locale} 
+                      teamId={teamId}
+                    />
+                  </div>
 
-                {/* Edit Mode Actions - Optimized */}
-                <div className="flex items-center gap-2 w-full sm:w-auto">
-                  {editMode ? (
-                    <div className="flex items-center gap-1 bg-orange-500/20 backdrop-blur-sm rounded-lg p-1 border border-orange-400/30">
-                      <div className="flex items-center gap-2 px-2 py-1">
-                        <Edit3 className="h-4 w-4 text-orange-100" />
-                        <span className="text-sm font-medium text-orange-100 hidden sm:inline">Edit Mode</span>
+                  {/* Edit Mode Actions */}
+                  <div className="flex items-center gap-2">
+                    {editMode ? (
+                      <div className="flex items-center gap-1 bg-orange-500/20 backdrop-blur-sm rounded-lg p-1 border border-orange-400/30">
+                        <div className="flex items-center gap-2 px-2 py-1">
+                          <Edit3 className="h-4 w-4 text-orange-100" />
+                          <span className="text-sm font-medium text-orange-100">Edit Mode</span>
+                        </div>
+                        <div className="w-px h-6 bg-orange-300/30"></div>
+                        <BulkUpdateDialog members={members} locale={locale} onUpdate={fetchAvailability} />
+                        <MemberForm teamId={teamId} locale={locale} onMemberAdded={onMembersUpdate} />
+                        <div className="w-px h-6 bg-orange-300/30"></div>
+                        <div className="flex items-center gap-1 px-2">
+                          <Switch checked={editMode} onCheckedChange={handleEditModeToggle} />
+                        </div>
                       </div>
-                      <div className="w-px h-6 bg-orange-300/30"></div>
-                      <BulkUpdateDialog members={members} locale={locale} onUpdate={fetchAvailability} />
-                      <MemberForm teamId={teamId} locale={locale} onMemberAdded={onMembersUpdate} />
-                      <div className="w-px h-6 bg-orange-300/30"></div>
-                      <div className="flex items-center gap-1 px-2">
+                    ) : (
+                      <div className="flex items-center gap-2 bg-green-500/20 backdrop-blur-sm rounded-lg p-2 border border-green-400/30">
+                        <div className="flex items-center gap-2">
+                          <Lock className="h-4 w-4 text-green-100" />
+                          <span className="text-sm font-medium text-green-100">View Mode</span>
+                        </div>
                         <Switch checked={editMode} onCheckedChange={handleEditModeToggle} />
                       </div>
-                    </div>
-                  ) : (
-                    <div className="flex items-center gap-2 bg-green-500/20 backdrop-blur-sm rounded-lg p-2 border border-green-400/30">
-                      <div className="flex items-center gap-2">
-                        <Lock className="h-4 w-4 text-green-100" />
-                        <span className="text-sm font-medium text-green-100 hidden sm:inline">View Mode</span>
-                      </div>
-                      <Switch checked={editMode} onCheckedChange={handleEditModeToggle} />
-                    </div>
-                  )}
+                    )}
+                  </div>
+
+                  <div className="flex items-center gap-2">
+                    {/* Keyboard shortcuts help */}
+                    <Dialog open={showKeyboardHelp} onOpenChange={setShowKeyboardHelp}>
+                      <DialogTrigger asChild>
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          className="h-9 w-9 p-0 bg-white/10 backdrop-blur-sm border-white/20 text-white hover:bg-white/20"
+                        >
+                          <Keyboard className="h-4 w-4" />
+                        </Button>
+                      </DialogTrigger>
+                      <DialogContent className="max-w-md">
+                        <DialogHeader>
+                          <DialogTitle>Keyboard Shortcuts</DialogTitle>
+                        </DialogHeader>
+                        <div className="space-y-4">
+                          <div className="grid grid-cols-2 gap-4">
+                            <div>
+                              <h4 className="font-medium mb-2">Navigation</h4>
+                              <div className="space-y-2 text-sm">
+                                <div className="flex justify-between">
+                                  <span>Next period:</span>
+                                  <div className="flex gap-1">
+                                    <kbd className="px-2 py-1 text-xs bg-gray-100 rounded">J</kbd>
+                                    <kbd className="px-2 py-1 text-xs bg-gray-100 rounded">N</kbd>
+                                  </div>
+                                </div>
+                                <div className="flex justify-between">
+                                  <span>Previous period:</span>
+                                  <div className="flex gap-1">
+                                    <kbd className="px-2 py-1 text-xs bg-gray-100 rounded">K</kbd>
+                                    <kbd className="px-2 py-1 text-xs bg-gray-100 rounded">P</kbd>
+                                  </div>
+                                </div>
+                                <div className="flex justify-between">
+                                  <span>Today:</span>
+                                  <kbd className="px-2 py-1 text-xs bg-gray-100 rounded">T</kbd>
+                                </div>
+                              </div>
+                            </div>
+                            <div>
+                              <h4 className="font-medium mb-2">Actions</h4>
+                              <div className="space-y-2 text-sm">
+                                <div className="flex justify-between">
+                                  <span>Go to date:</span>
+                                  <kbd className="px-2 py-1 text-xs bg-gray-100 rounded">G</kbd>
+                                </div>
+                                <div className="flex justify-between">
+                                  <span>Settings:</span>
+                                  <kbd className="px-2 py-1 text-xs bg-gray-100 rounded">S</kbd>
+                                </div>
+                              </div>
+                            </div>
+                          </div>
+                          <div className="mt-4">
+                            <h4 className="font-medium mb-2">Edit Mode</h4>
+                            <div className="space-y-2 text-sm">
+                              <div className="flex justify-between">
+                                <span>Quick toggle:</span>
+                                <kbd className="px-2 py-1 text-xs bg-gray-100 rounded">Ctrl+Click</kbd>
+                              </div>
+                              <div className="text-xs text-gray-500">
+                                Ctrl+Click on availability cells to quickly toggle between available/unavailable
+                              </div>
+                            </div>
+                          </div>
+                          <div className="text-xs text-gray-500 mt-4">
+                            Shortcuts work when not typing in input fields
+                          </div>
+                        </div>
+                      </DialogContent>
+                    </Dialog>
+
+                    {/* Date picker dialog */}
+                    <Dialog open={showDatePicker} onOpenChange={setShowDatePicker}>
+                      <DialogTrigger asChild>
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          className="h-9 w-9 p-0 bg-white/10 backdrop-blur-sm border-white/20 text-white hover:bg-white/20"
+                        >
+                          <Calendar className="h-4 w-4" />
+                        </Button>
+                      </DialogTrigger>
+                      <DialogContent className="max-w-sm">
+                        <DialogHeader>
+                          <DialogTitle>Go to Specific Date</DialogTitle>
+                        </DialogHeader>
+                        <div className="space-y-4">
+                          <div>
+                            <Label htmlFor="date-input">Select Date</Label>
+                            <Input
+                              id="date-input"
+                              type="date"
+                              defaultValue={currentDate.toISOString().split('T')[0]}
+                              onChange={(e) => goToSpecificDate(e.target.value)}
+                              className="mt-1"
+                            />
+                          </div>
+                          <div className="text-xs text-gray-500">
+                            The calendar will jump to the week containing this date
+                          </div>
+                        </div>
+                      </DialogContent>
+                    </Dialog>
+
+                    <SettingsDropdown 
+                      currentLocale={locale} 
+                      members={members} 
+                      team={team} 
+                      forceOpen={openSettings}
+                      onOpenChange={() => setOpenSettings(false)}
+                    />
+                  </div>
                 </div>
 
-                <div className="w-full sm:w-auto flex items-center gap-2">
-                  {/* Keyboard shortcuts help */}
-                  <Dialog open={showKeyboardHelp} onOpenChange={setShowKeyboardHelp}>
-                    <DialogTrigger asChild>
-                      <Button
-                        variant="outline"
-                        size="sm"
-                        className="h-9 w-9 p-0 bg-white/10 backdrop-blur-sm border-white/20 text-white hover:bg-white/20"
-                      >
+                {/* Mobile & Tablet Navigation - Icon Only */}
+                <div className="xl:hidden flex items-center justify-end">
+                  {/* Icon-Only Hamburger Menu */}
+                  <HamburgerMenu 
+                    title="Menu" 
+                    triggerClassName="h-8 w-8 p-0 bg-white/15 hover:bg-white/25 border-white/25 text-white shadow-sm"
+                    appName="Availability Planner"
+                    teamName={teamName}
+                  >
+                    {/* Edit Mode Toggle */}
+                    <HamburgerMenuItem>
+                      <div className="flex items-center justify-between w-full">
+                        <span>Edit Mode</span>
+                        <Switch 
+                          checked={editMode} 
+                          onCheckedChange={handleEditModeToggle}
+                          className="scale-90"
+                        />
+                      </div>
+                    </HamburgerMenuItem>
+                    
+                    {/* View Options */}
+                    <HamburgerMenuItem onClick={() => setWeeksToShow(1)}>
+                      <span className={weeksToShow === 1 ? "font-semibold" : ""}>1 Week</span>
+                    </HamburgerMenuItem>
+                    <HamburgerMenuItem onClick={() => setWeeksToShow(2)}>
+                      <span className={weeksToShow === 2 ? "font-semibold" : ""}>2 Weeks</span>
+                    </HamburgerMenuItem>
+                    <HamburgerMenuItem onClick={() => setWeeksToShow(4)}>
+                      <span className={weeksToShow === 4 ? "font-semibold" : ""}>4 Weeks</span>
+                    </HamburgerMenuItem>
+                    
+                    {/* Analytics & Planning */}
+                    <HamburgerMenuItem>
+                      <AnalyticsButton 
+                        members={activeMembersForAnalytics} 
+                        locale={locale} 
+                        weeksToShow={weeksToShow}
+                        currentDate={currentDate}
+                        teamId={teamId}
+                      />
+                    </HamburgerMenuItem>
+                    <HamburgerMenuItem>
+                      <PlannerButton 
+                        members={visibleMembers} 
+                        locale={locale} 
+                        teamId={teamId}
+                      />
+                    </HamburgerMenuItem>
+                    
+                    {/* Edit Actions (only in edit mode) */}
+                    {editMode && (
+                      <>
+                        <HamburgerMenuItem>
+                          <BulkUpdateDialog members={members} locale={locale} onUpdate={fetchAvailability} />
+                        </HamburgerMenuItem>
+                        <HamburgerMenuItem>
+                          <MemberForm teamId={teamId} locale={locale} onMemberAdded={onMembersUpdate} />
+                        </HamburgerMenuItem>
+                      </>
+                    )}
+                    
+                    {/* Date Navigation */}
+                    <HamburgerMenuItem onClick={() => navigateDate("prev")}>
+                      <div className="flex items-center gap-2">
+                        <ChevronLeft className="h-4 w-4" />
+                        <span>Previous Week</span>
+                      </div>
+                    </HamburgerMenuItem>
+                    <HamburgerMenuItem onClick={() => navigateDate("next")}>
+                      <div className="flex items-center gap-2">
+                        <ChevronRight className="h-4 w-4" />
+                        <span>Next Week</span>
+                      </div>
+                    </HamburgerMenuItem>
+                    
+                    {/* Quick Actions */}
+                    <HamburgerMenuItem onClick={goToToday}>
+                      <div className="flex items-center gap-2">
+                        <Calendar className="h-4 w-4" />
+                        <span>Today</span>
+                      </div>
+                    </HamburgerMenuItem>
+                    <HamburgerMenuItem onClick={() => setShowDatePicker(true)}>
+                      <div className="flex items-center gap-2">
+                        <Calendar className="h-4 w-4" />
+                        <span>Go to Date</span>
+                      </div>
+                    </HamburgerMenuItem>
+                    <HamburgerMenuItem onClick={() => setShowKeyboardHelp(true)}>
+                      <div className="flex items-center gap-2">
                         <Keyboard className="h-4 w-4" />
-                      </Button>
-                    </DialogTrigger>
-                    <DialogContent className="max-w-md">
-                      <DialogHeader>
-                        <DialogTitle>Keyboard Shortcuts</DialogTitle>
-                      </DialogHeader>
-                      <div className="space-y-4">
-                        <div className="grid grid-cols-2 gap-4">
-                          <div>
-                            <h4 className="font-medium mb-2">Navigation</h4>
-                            <div className="space-y-2 text-sm">
-                              <div className="flex justify-between">
-                                <span>Next period:</span>
-                                <div className="flex gap-1">
-                                  <kbd className="px-2 py-1 text-xs bg-gray-100 rounded">J</kbd>
-                                  <kbd className="px-2 py-1 text-xs bg-gray-100 rounded">N</kbd>
-                                </div>
-                              </div>
-                              <div className="flex justify-between">
-                                <span>Previous period:</span>
-                                <div className="flex gap-1">
-                                  <kbd className="px-2 py-1 text-xs bg-gray-100 rounded">K</kbd>
-                                  <kbd className="px-2 py-1 text-xs bg-gray-100 rounded">P</kbd>
-                                </div>
-                              </div>
-                              <div className="flex justify-between">
-                                <span>Today:</span>
-                                <kbd className="px-2 py-1 text-xs bg-gray-100 rounded">T</kbd>
-                              </div>
-                            </div>
-                          </div>
-                          <div>
-                            <h4 className="font-medium mb-2">Actions</h4>
-                            <div className="space-y-2 text-sm">
-                              <div className="flex justify-between">
-                                <span>Go to date:</span>
-                                <kbd className="px-2 py-1 text-xs bg-gray-100 rounded">G</kbd>
-                              </div>
-                              <div className="flex justify-between">
-                                <span>Settings:</span>
-                                <kbd className="px-2 py-1 text-xs bg-gray-100 rounded">S</kbd>
-                              </div>
-                            </div>
-                          </div>
-                        </div>
-                        <div className="text-xs text-gray-500 mt-4">
-                          Shortcuts work when not typing in input fields
-                        </div>
+                        <span>Shortcuts</span>
                       </div>
-                    </DialogContent>
-                  </Dialog>
-                  
-                  {/* Date picker dialog */}
-                  <Dialog open={showDatePicker} onOpenChange={setShowDatePicker}>
-                    <DialogContent className="max-w-sm">
-                      <DialogHeader>
-                        <DialogTitle>Go to Specific Date</DialogTitle>
-                      </DialogHeader>
-                      <div className="space-y-4">
-                        <div>
-                          <Label htmlFor="date-input">Select Date</Label>
-                          <Input
-                            id="date-input"
-                            type="date"
-                            defaultValue={currentDate.toISOString().split('T')[0]}
-                            onChange={(e) => goToSpecificDate(e.target.value)}
-                            className="mt-1"
-                          />
-                        </div>
-                        <div className="text-xs text-gray-500">
-                          The calendar will jump to the week containing this date
-                        </div>
-                      </div>
-                    </DialogContent>
-                  </Dialog>
-
-                  <SettingsDropdown 
-                    currentLocale={locale} 
-                    members={members} 
-                    team={team} 
-                    forceOpen={openSettings}
-                    onOpenChange={() => setOpenSettings(false)}
-                  />
+                    </HamburgerMenuItem>
+                    <HamburgerMenuItem>
+                      <SettingsDropdown 
+                        currentLocale={locale} 
+                        members={members} 
+                        team={team} 
+                        forceOpen={false}
+                        onOpenChange={() => {}}
+                      />
+                    </HamburgerMenuItem>
+                  </HamburgerMenu>
                 </div>
               </div>
             </div>
           </div>
 
-          {/* Date Navigation - Integrated and Compact */}
-          <div className="bg-black/10 backdrop-blur-sm border-t border-white/10">
-            <div className="px-4 sm:px-6 py-2">
-              <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3">
-                <div className="flex items-center gap-3 flex-wrap">
-                  <div className="flex items-center gap-2">
-                    <div className="w-6 h-6 bg-white/20 backdrop-blur-sm rounded-md flex items-center justify-center flex-shrink-0">
-                      <Calendar className="h-3 w-3 text-white" />
-                    </div>
-                    <span className="font-semibold text-sm sm:text-base text-white">{formatDateRange()}</span>
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      onClick={goToToday}
-                      className="text-xs bg-white/10 backdrop-blur-sm text-white border-white/20 hover:bg-white/20 font-medium rounded-full px-2 py-1 h-6"
-                    >
-                      Today
-                    </Button>
+          {/* Date Navigation - Compact Integration */}
+          <div className="xl:bg-black/10 xl:backdrop-blur-sm xl:border-t xl:border-white/10">
+            <div className="px-3 lg:px-6 py-1 xl:py-2">
+              {/* Desktop: Full layout, Mobile/Tablet: Ultra compact */}
+              <div className="flex items-center justify-center xl:justify-between gap-1 xl:gap-3">
+                <div className="flex items-center gap-2 xl:gap-2">
+                  <div className="w-4 h-4 xl:w-6 xl:h-6 bg-white/25 backdrop-blur-sm rounded flex items-center justify-center flex-shrink-0 shadow-sm">
+                    <Calendar className="h-2.5 w-2.5 xl:h-3 xl:w-3 text-white" />
                   </div>
+                  <span className="font-semibold text-xs xl:text-sm text-white xl:text-white">{formatDateRange()}</span>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={goToToday}
+                    className="text-xs bg-white/15 xl:bg-white/10 backdrop-blur-sm text-white xl:text-white border-white/25 xl:border-white/20 hover:bg-white/25 xl:hover:bg-white/20 font-semibold rounded-full px-2 xl:px-2 py-0.5 xl:py-1 h-5 xl:h-6 shadow-sm"
+                  >
+                    Today
+                  </Button>
                 </div>
 
-                <div className="flex items-center gap-1 w-full sm:w-auto justify-end">
+                <div className="hidden xl:flex items-center gap-1 w-full sm:w-auto justify-end">
                   <Button 
                     variant="outline" 
                     size="sm" 
@@ -1458,6 +1769,8 @@ const AvailabilityCalendarRedesigned = ({
                     <ChevronRight className="h-3 w-3" />
                   </Button>
                 </div>
+                
+                {/* Mobile: Integrated navigation buttons in hamburger menu */}
               </div>
             </div>
           </div>

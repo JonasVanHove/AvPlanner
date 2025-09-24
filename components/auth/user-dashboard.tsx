@@ -239,46 +239,50 @@ export function UserDashboard({ user, onLogout, onGoHome }: UserDashboardProps) 
   }
 
   return (
-    <div className="w-full max-w-5xl space-y-8">
+    <div className="w-full max-w-5xl space-y-4 sm:space-y-8">
       {/* User Profile Header */}
       <Card className="bg-gradient-to-r from-blue-50 to-indigo-50 border-blue-200">
-        <CardHeader className="pb-4">
-          <div className="flex items-center justify-between">
-            <div className="flex items-center gap-6">
-              <Avatar className="h-20 w-20 border-4 border-white shadow-lg">
+        <CardHeader className="p-4 sm:pb-4">
+          <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+            <div className="flex items-center gap-3 sm:gap-6">
+              <Avatar className="h-16 w-16 sm:h-20 sm:w-20 border-4 border-white shadow-lg flex-shrink-0">
                 <AvatarImage src={user.user_metadata?.avatar_url} />
-                <AvatarFallback className="bg-gradient-to-r from-blue-600 to-purple-600 text-white text-xl">
+                <AvatarFallback className="bg-gradient-to-r from-blue-600 to-purple-600 text-white text-lg sm:text-xl">
                   {user.user_metadata?.first_name?.[0] || user.email?.[0]?.toUpperCase()}
                 </AvatarFallback>
               </Avatar>
-              <div>
-                <h2 className="text-3xl font-bold text-gray-900">
+              <div className="min-w-0 flex-1">
+                <h2 className="text-xl sm:text-3xl font-bold text-gray-900 truncate">
                   {user.user_metadata?.first_name || 'User'} {user.user_metadata?.last_name || ''}
                 </h2>
-                <p className="text-gray-600 text-lg">{user.email}</p>
-                <p className="text-sm text-gray-500 mt-1">
+                <p className="text-gray-600 text-sm sm:text-lg truncate">{user.email}</p>
+                <p className="text-xs sm:text-sm text-gray-500 mt-1">
                   Member since {formatDate(user.created_at)}
                 </p>
               </div>
             </div>
-            <div className="flex items-center gap-3">
+            <div className="flex items-center gap-2 sm:gap-3 self-start sm:self-auto">
               {onGoHome && (
                 <Button
                   onClick={onGoHome}
                   variant="outline"
-                  className="flex items-center gap-2"
+                  size="sm"
+                  className="flex items-center gap-1 sm:gap-2 text-xs sm:text-sm"
                 >
-                  <Home className="h-4 w-4" />
-                  Home
+                  <Home className="h-3 w-3 sm:h-4 sm:w-4" />
+                  <span className="hidden sm:inline">Home</span>
+                  <span className="sm:hidden">Home</span>
                 </Button>
               )}
               <Button
                 onClick={handleLogout}
                 variant="outline"
-                className="flex items-center gap-2 hover:bg-red-50 hover:text-red-600 hover:border-red-300"
+                size="sm"
+                className="flex items-center gap-1 sm:gap-2 hover:bg-red-50 hover:text-red-600 hover:border-red-300 text-xs sm:text-sm"
               >
-                <LogOut className="h-4 w-4" />
-                Logout
+                <LogOut className="h-3 w-3 sm:h-4 sm:w-4" />
+                <span className="hidden sm:inline">Logout</span>
+                <span className="sm:hidden">Logout</span>
               </Button>
             </div>
           </div>
@@ -287,38 +291,40 @@ export function UserDashboard({ user, onLogout, onGoHome }: UserDashboardProps) 
 
       {/* Team Actions */}
       <Card className="border-purple-200 bg-gradient-to-r from-purple-50 to-pink-50">
-        <CardHeader className="pb-4">
-          <div className="flex items-center justify-between">
+        <CardHeader className="p-4 sm:pb-4">
+          <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
             <div className="flex items-center gap-3">
-              <div className="p-2 bg-purple-100 rounded-lg">
-                <Users className="h-6 w-6 text-purple-600" />
+              <div className="p-2 bg-purple-100 rounded-lg flex-shrink-0">
+                <Users className="h-5 w-5 sm:h-6 sm:w-6 text-purple-600" />
               </div>
-              <div>
-                <CardTitle className="text-xl">Team Management</CardTitle>
-                <p className="text-sm text-gray-600 mt-1">Create new teams or join existing ones</p>
+              <div className="min-w-0 flex-1">
+                <CardTitle className="text-lg sm:text-xl">Team Management</CardTitle>
+                <p className="text-xs sm:text-sm text-gray-600 mt-1">Create new teams or join existing ones</p>
               </div>
             </div>
-            <div className="flex items-center gap-3">
+            <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-2 sm:gap-3">
               <Dialog>
                 <DialogTrigger asChild>
-                  <Button className="flex items-center gap-2 bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700 shadow-lg">
+                  <Button className="flex items-center justify-center gap-2 bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700 shadow-lg text-sm w-full sm:w-auto">
                     <Plus className="h-4 w-4" />
-                    Create Team
+                    <span className="sm:hidden">Create Team</span>
+                    <span className="hidden sm:inline">Create Team</span>
                   </Button>
                 </DialogTrigger>
-                <DialogContent className="sm:max-w-md">
+                <DialogContent className="mx-2 sm:mx-0 sm:max-w-md">
                   <TeamForm locale="en" />
                 </DialogContent>
               </Dialog>
               
               <Dialog>
                 <DialogTrigger asChild>
-                  <Button variant="outline" className="flex items-center gap-2 border-purple-200 hover:bg-purple-50">
+                  <Button variant="outline" className="flex items-center justify-center gap-2 border-purple-200 hover:bg-purple-50 text-sm w-full sm:w-auto">
                     <UserPlus className="h-4 w-4" />
-                    Join Team
+                    <span className="sm:hidden">Join Team</span>
+                    <span className="hidden sm:inline">Join Team</span>
                   </Button>
                 </DialogTrigger>
-                <DialogContent className="sm:max-w-md">
+                <DialogContent className="mx-2 sm:mx-0 sm:max-w-md">
                   <JoinTeamForm locale="en" />
                 </DialogContent>
               </Dialog>
@@ -329,15 +335,15 @@ export function UserDashboard({ user, onLogout, onGoHome }: UserDashboardProps) 
 
       {/* Teams Overview */}
       <Card className="border-green-200 bg-gradient-to-r from-green-50 to-emerald-50">
-        <CardHeader className="pb-4">
-          <div className="flex items-center justify-between">
+        <CardHeader className="p-4 sm:pb-4">
+          <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 sm:gap-4">
             <div className="flex items-center gap-3">
-              <div className="p-2 bg-green-100 rounded-lg">
-                <Users className="h-6 w-6 text-green-600" />
+              <div className="p-2 bg-green-100 rounded-lg flex-shrink-0">
+                <Users className="h-5 w-5 sm:h-6 sm:w-6 text-green-600" />
               </div>
-              <div>
-                <CardTitle className="text-xl">My Teams ({teams.length})</CardTitle>
-                <p className="text-sm text-gray-600 mt-1">
+              <div className="min-w-0 flex-1">
+                <CardTitle className="text-lg sm:text-xl">My Teams ({teams.length})</CardTitle>
+                <p className="text-xs sm:text-sm text-gray-600 mt-1">
                   {teams.length === 0 ? 'No teams yet' : `You're a member of ${teams.length} team${teams.length !== 1 ? 's' : ''}`}
                 </p>
               </div>
@@ -347,54 +353,54 @@ export function UserDashboard({ user, onLogout, onGoHome }: UserDashboardProps) 
               variant="outline"
               size="sm"
               disabled={isRefreshing}
-              className="flex items-center gap-2 border-green-200 hover:bg-green-50 disabled:opacity-50"
+              className="flex items-center gap-1 sm:gap-2 border-green-200 hover:bg-green-50 disabled:opacity-50 text-xs sm:text-sm self-start sm:self-auto"
             >
               <RefreshCw className={`h-4 w-4 ${isRefreshing ? 'animate-spin' : ''}`} />
               {isRefreshing ? 'Refreshing...' : 'Refresh'}
             </Button>
           </div>
         </CardHeader>
-        <CardContent className="pt-0">
+        <CardContent className="p-3 sm:p-6 pt-0">
           {error && (
-            <div className="bg-red-50 border border-red-200 rounded-lg p-4 mb-6">
-              <p className="text-red-600 font-medium">Error loading teams:</p>
-              <p className="text-red-500 text-sm">{error}</p>
+            <div className="bg-red-50 border border-red-200 rounded-lg p-3 sm:p-4 mb-4 sm:mb-6">
+              <p className="text-red-600 font-medium text-sm">Error loading teams:</p>
+              <p className="text-red-500 text-xs sm:text-sm">{error}</p>
             </div>
           )}
           
           {teams.length === 0 ? (
-            <div className="text-center py-12">
-              <div className="bg-gray-100 rounded-full p-6 w-24 h-24 mx-auto mb-4 flex items-center justify-center">
-                <Users className="h-12 w-12 text-gray-400" />
+            <div className="text-center py-8 sm:py-12">
+              <div className="bg-gray-100 rounded-full p-4 sm:p-6 w-16 h-16 sm:w-24 sm:h-24 mx-auto mb-3 sm:mb-4 flex items-center justify-center">
+                <Users className="h-8 w-8 sm:h-12 sm:w-12 text-gray-400" />
               </div>
-              <h3 className="text-lg font-semibold text-gray-900 mb-2">No teams yet</h3>
-              <p className="text-gray-600 mb-4">You're not a member of any teams yet.</p>
-              <p className="text-sm text-gray-500">Create a new team or join an existing one using the buttons above.</p>
+              <h3 className="text-base sm:text-lg font-semibold text-gray-900 mb-2">No teams yet</h3>
+              <p className="text-sm sm:text-base text-gray-600 mb-3 sm:mb-4">You're not a member of any teams yet.</p>
+              <p className="text-xs sm:text-sm text-gray-500">Create a new team or join an existing one using the buttons above.</p>
             </div>
           ) : (
-            <div className="grid gap-6">
+            <div className="space-y-4 sm:space-y-6">
               {teams.map((team) => (
                 <Card key={team.id} className="border-l-4 border-l-blue-500 hover:shadow-lg transition-shadow duration-200">
-                  <CardContent className="p-6">
-                    <div className="flex items-start justify-between">
+                  <CardContent className="p-4 sm:p-6">
+                    <div className="flex flex-col lg:flex-row lg:items-start lg:justify-between gap-4">
                       <div className="flex-1 min-w-0">
-                        <div className="flex items-center gap-2 mb-3">
-                          <h3 className="font-semibold text-lg">{team.name}</h3>
+                        <div className="flex flex-wrap items-center gap-2 mb-3">
+                          <h3 className="font-semibold text-base sm:text-lg truncate">{team.name}</h3>
                           {getRoleIcon(team.user_role, team.is_creator)}
                           {getRoleBadge(team.user_role, team.is_creator)}
                           {team.is_password_protected && (
-                            <Badge variant="outline" className="bg-yellow-50 text-yellow-700 border-yellow-200">
+                            <Badge variant="outline" className="bg-yellow-50 text-yellow-700 border-yellow-200 text-xs">
                               🔒 Protected
                             </Badge>
                           )}
                         </div>
                         
-                        <div className="grid grid-cols-1 md:grid-cols-2 gap-3 text-sm">
+                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 text-sm">
                           <div className="space-y-2">
                             <div className="flex items-center gap-2">
-                              <span className="font-medium text-gray-700">Your Profile:</span>
+                              <span className="font-medium text-gray-700 text-xs sm:text-sm">Your Profile:</span>
                               <div className="flex items-center gap-2">
-                                <Avatar className="h-6 w-6">
+                                <Avatar className="h-5 w-5 sm:h-6 sm:w-6">
                                   <AvatarImage src={team.profile_image_url || undefined} />
                                   <AvatarFallback className="text-xs">
                                     {user.user_metadata?.first_name?.[0] || user.email?.[0]?.toUpperCase()}
@@ -406,19 +412,19 @@ export function UserDashboard({ user, onLogout, onGoHome }: UserDashboardProps) 
                               </div>
                             </div>
                             <div className="flex items-center gap-2">
-                              <span className="font-medium text-gray-700">Team Name:</span>
-                              <span className="text-gray-600">{team.name}</span>
+                              <span className="font-medium text-gray-700 text-xs sm:text-sm">Team Name:</span>
+                              <span className="text-gray-600 text-xs sm:text-sm truncate">{team.name}</span>
                             </div>
-                            <div className="flex items-center gap-2">
-                              <span className="font-medium text-gray-700">Invite Code:</span>
-                              <div className="flex items-center gap-2">
-                                <code className="bg-gray-100 px-2 py-1 rounded text-xs font-mono select-all">
+                            <div className="flex items-start gap-2">
+                              <span className="font-medium text-gray-700 text-xs sm:text-sm flex-shrink-0">Invite Code:</span>
+                              <div className="flex items-center gap-1 sm:gap-2 min-w-0">
+                                <code className="bg-gray-100 px-1 sm:px-2 py-1 rounded text-xs font-mono select-all truncate">
                                   {team.invite_code}
                                 </code>
                                 <Button
                                   variant="ghost"
                                   size="sm"
-                                  className="h-6 w-6 p-0"
+                                  className="h-5 w-5 sm:h-6 sm:w-6 p-0 flex-shrink-0"
                                   onClick={() => navigator.clipboard.writeText(team.invite_code)}
                                   title="Copy Invite Code"
                                 >
@@ -429,14 +435,14 @@ export function UserDashboard({ user, onLogout, onGoHome }: UserDashboardProps) 
                               </div>
                             </div>
                             <div className="flex items-center gap-2">
-                              <span className="font-medium text-gray-700">Members:</span>
+                              <span className="font-medium text-gray-700 text-xs sm:text-sm">Members:</span>
                               <Badge variant="secondary" className="text-xs">
                                 {team.member_count} {team.member_count === 1 ? 'member' : 'members'}
                               </Badge>
                             </div>
                             <div className="flex items-center gap-2">
-                              <span className="font-medium text-gray-700">Security:</span>
-                              <Badge variant={team.is_password_protected ? "destructive" : "secondary"}>
+                              <span className="font-medium text-gray-700 text-xs sm:text-sm">Security:</span>
+                              <Badge variant={team.is_password_protected ? "destructive" : "secondary"} className="text-xs">
                                 {team.is_password_protected ? 'Protected' : 'Open'}
                               </Badge>
                             </div>
@@ -444,19 +450,19 @@ export function UserDashboard({ user, onLogout, onGoHome }: UserDashboardProps) 
                           
                           <div className="space-y-2">
                             <div className="flex items-center gap-2">
-                              <span className="font-medium text-gray-700">Created:</span>
-                              <span className="text-gray-600">{formatDate(team.created_at)}</span>
+                              <span className="font-medium text-gray-700 text-xs sm:text-sm">Created:</span>
+                              <span className="text-gray-600 text-xs sm:text-sm">{formatDate(team.created_at)}</span>
                             </div>
                               <div className="flex items-start gap-2">
-                                <span className="font-medium text-gray-700 mt-1 min-w-fit">Team ID:</span>
-                                <div className="flex items-center gap-2 flex-1">
-                                  <code className="bg-gray-100 px-2 py-1 rounded text-xs font-mono select-all break-all flex-1">
+                                <span className="font-medium text-gray-700 mt-1 text-xs sm:text-sm flex-shrink-0">Team ID:</span>
+                                <div className="flex items-center gap-1 sm:gap-2 flex-1 min-w-0">
+                                  <code className="bg-gray-100 px-1 sm:px-2 py-1 rounded text-xs font-mono select-all break-all flex-1">
                                     {team.id}
                                   </code>
                                   <Button
                                     variant="ghost"
                                     size="sm"
-                                    className="h-6 w-6 p-0 flex-shrink-0"
+                                    className="h-5 w-5 sm:h-6 sm:w-6 p-0 flex-shrink-0"
                                     onClick={() => navigator.clipboard.writeText(team.id)}
                                     title="Copy Team ID"
                                   >
@@ -467,22 +473,22 @@ export function UserDashboard({ user, onLogout, onGoHome }: UserDashboardProps) 
                                 </div>
                               </div>
                             <div className="flex items-center gap-2">
-                              <span className="font-medium text-gray-700">Your Role:</span>
-                              <Badge variant={team.is_creator ? "default" : "secondary"}>
+                              <span className="font-medium text-gray-700 text-xs sm:text-sm">Your Role:</span>
+                              <Badge variant={team.is_creator ? "default" : "secondary"} className="text-xs">
                                 {team.is_creator ? 'Creator' : team.user_role}
                               </Badge>
                             </div>
-                            <div className="flex items-center gap-2">
-                              <span className="font-medium text-gray-700">Slug:</span>
-                              <div className="flex items-center gap-2">
-                                <code className="bg-gray-100 px-2 py-1 rounded text-xs font-mono select-all">
+                            <div className="flex items-start gap-2">
+                              <span className="font-medium text-gray-700 text-xs sm:text-sm flex-shrink-0">Slug:</span>
+                              <div className="flex items-center gap-1 sm:gap-2 min-w-0">
+                                <code className="bg-gray-100 px-1 sm:px-2 py-1 rounded text-xs font-mono select-all truncate">
                                   {team.slug || 'Not set'}
                                 </code>
                                 {team.slug && (
                                   <Button
                                     variant="ghost"
                                     size="sm"
-                                    className="h-6 w-6 p-0"
+                                    className="h-5 w-5 sm:h-6 sm:w-6 p-0 flex-shrink-0"
                                     onClick={() => navigator.clipboard.writeText(team.slug)}
                                     title="Copy Team Slug"
                                   >
@@ -498,28 +504,28 @@ export function UserDashboard({ user, onLogout, onGoHome }: UserDashboardProps) 
 
                         {/* Team Members Section */}
                         {team.members && team.members.length > 0 && (
-                          <div className="mt-6 pt-4 border-t border-gray-200">
-                            <h4 className="font-medium text-gray-900 mb-3 flex items-center gap-2">
-                              <Users className="h-4 w-4" />
+                          <div className="mt-4 sm:mt-6 pt-3 sm:pt-4 border-t border-gray-200">
+                            <h4 className="font-medium text-gray-900 mb-2 sm:mb-3 flex items-center gap-2 text-sm sm:text-base">
+                              <Users className="h-3 w-3 sm:h-4 sm:w-4" />
                               Team Members ({team.members.length})
                             </h4>
-                            <div className="grid gap-2">
+                            <div className="space-y-2">
                               {team.members.slice(0, 5).map((member) => (
-                                <div key={member.member_id} className="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
-                                  <div className="flex items-center gap-3">
+                                <div key={member.member_id} className="flex items-center justify-between p-2 sm:p-3 bg-gray-50 rounded-lg">
+                                  <div className="flex items-center gap-2 sm:gap-3 min-w-0 flex-1">
                                     <MemberAvatar
                                       firstName={member.member_name.trim() ? member.member_name.split(' ')[0] : member.member_email.split('@')[0]}
                                       lastName={member.member_name.trim() ? member.member_name.split(' ').slice(1).join(' ') : ''}
                                       profileImage={member.profile_image_url || undefined}
-                                      size="md"
+                                      size="sm"
                                       statusIndicator={{
                                         show: true,
                                         status: todayAvailability[member.member_id]
                                       }}
                                     />
                                     <div className="min-w-0 flex-1">
-                                      <div className="flex items-center gap-2">
-                                        <p className="text-sm font-medium text-gray-900 truncate">
+                                      <div className="flex items-center gap-1 sm:gap-2">
+                                        <p className="text-xs sm:text-sm font-medium text-gray-900 truncate">
                                           {member.member_name.trim() !== '' && member.member_name.trim() !== ' ' 
                                             ? member.member_name 
                                             : member.member_email.split('@')[0]}
@@ -531,20 +537,22 @@ export function UserDashboard({ user, onLogout, onGoHome }: UserDashboardProps) 
                                       <p className="text-xs text-gray-500 truncate">{member.member_email}</p>
                                     </div>
                                   </div>
-                                  <div className="flex items-center gap-2">
-                                    <Badge variant="outline" className={getMemberStatusColor(member.member_status)}>
+                                  <div className="flex items-center gap-1 sm:gap-2 flex-shrink-0">
+                                    <Badge variant="outline" className={`${getMemberStatusColor(member.member_status)} text-xs`}>
                                       {member.member_status}
                                     </Badge>
-                                    {getRoleIcon(member.member_role, false)}
-                                    <Badge variant={member.member_role === 'admin' ? "default" : "secondary"} className="text-xs">
-                                      {member.member_role}
-                                    </Badge>
+                                    <div className="hidden sm:flex items-center gap-1">
+                                      {getRoleIcon(member.member_role, false)}
+                                      <Badge variant={member.member_role === 'admin' ? "default" : "secondary"} className="text-xs">
+                                        {member.member_role}
+                                      </Badge>
+                                    </div>
                                   </div>
                                 </div>
                               ))}
                               {team.members.length > 5 && (
                                 <div className="text-center py-2">
-                                  <span className="text-sm text-gray-500">
+                                  <span className="text-xs sm:text-sm text-gray-500">
                                     +{team.members.length - 5} more member{team.members.length - 5 !== 1 ? 's' : ''}
                                   </span>
                                 </div>
@@ -554,30 +562,40 @@ export function UserDashboard({ user, onLogout, onGoHome }: UserDashboardProps) 
                         )}
                       </div>
                       
-                      <div className="flex flex-col gap-2 ml-4">
+                      <div className="flex flex-row lg:flex-col gap-2 lg:ml-4 w-full lg:w-auto">
                         <Button
                           size="sm"
                           variant="outline"
-                          onClick={() => {
+                          onClick={(e) => {
                             const teamUrl = `/team/${team.invite_code}`
-                            router.push(teamUrl)
+                            if (e.ctrlKey || e.metaKey) {
+                              window.open(teamUrl, '_blank')
+                            } else {
+                              router.push(teamUrl)
+                            }
                           }}
-                          className="flex items-center gap-2 min-w-[140px] justify-start"
+                          className="flex items-center justify-center gap-1 sm:gap-2 flex-1 lg:flex-none lg:min-w-[140px] lg:justify-start text-xs sm:text-sm"
                         >
-                          <Calendar className="h-4 w-4" />
-                          View Calendar
+                          <Calendar className="h-3 w-3 sm:h-4 sm:w-4" />
+                          <span className="hidden sm:inline">View Calendar</span>
+                          <span className="sm:hidden">Calendar</span>
                         </Button>
                         <Button
                           size="sm"
                           variant="outline"
-                          onClick={() => {
+                          onClick={(e) => {
                             const settingsUrl = `/team/${team.invite_code}/settings`
-                            router.push(settingsUrl)
+                            if (e.ctrlKey || e.metaKey) {
+                              window.open(settingsUrl, '_blank')
+                            } else {
+                              router.push(settingsUrl)
+                            }
                           }}
-                          className="flex items-center gap-2 min-w-[140px] justify-start"
+                          className="flex items-center justify-center gap-1 sm:gap-2 flex-1 lg:flex-none lg:min-w-[140px] lg:justify-start text-xs sm:text-sm"
                         >
-                          <Settings className="h-4 w-4" />
-                          Settings
+                          <Settings className="h-3 w-3 sm:h-4 sm:w-4" />
+                          <span className="hidden sm:inline">Settings</span>
+                          <span className="sm:hidden">Settings</span>
                         </Button>
                         {canManageTeam(team.user_role, team.is_creator) && (
                           <Dialog>
@@ -585,13 +603,14 @@ export function UserDashboard({ user, onLogout, onGoHome }: UserDashboardProps) 
                               <Button
                                 size="sm"
                                 variant="outline"
-                                className="flex items-center gap-2 min-w-[140px] justify-start border-purple-200 hover:bg-purple-50"
+                                className="flex items-center justify-center gap-1 sm:gap-2 flex-1 lg:flex-none lg:min-w-[140px] lg:justify-start border-purple-200 hover:bg-purple-50 text-xs sm:text-sm"
                               >
-                                <Shield className="h-4 w-4" />
-                                Manage Team
+                                <Shield className="h-3 w-3 sm:h-4 sm:w-4" />
+                                <span className="hidden sm:inline">Manage Team</span>
+                                <span className="sm:hidden">Manage</span>
                               </Button>
                             </DialogTrigger>
-                            <DialogContent className="max-w-5xl">
+                            <DialogContent className="mx-2 sm:mx-0 max-w-5xl">
                               <TeamAdminPanel
                                 teamId={team.id}
                                 teamName={team.name}

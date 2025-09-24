@@ -13,10 +13,13 @@ import { supabase } from "@/lib/supabase"
 import { useEffect, useState } from "react"
 import { User } from "@supabase/supabase-js"
 import { useRouter } from "next/navigation"
+import { HamburgerMenu, HamburgerMenuItem } from "@/components/ui/hamburger-menu"
+import { useIsMobile } from "@/hooks/use-mobile"
 
 export default function HomePage() {
   const { t } = useTranslation("en")
   const router = useRouter()
+  const isMobile = useIsMobile()
   const [user, setUser] = useState<User | null>(null)
   const [loading, setLoading] = useState(true)
   const [isAdmin, setIsAdmin] = useState(false)
@@ -62,9 +65,13 @@ export default function HomePage() {
       
       if (!error && data) {
         setIsAdmin(true)
+      } else {
+        setIsAdmin(false)
       }
     } catch (error) {
-      console.error('Error checking admin status:', error)
+      // Gracefully handle if the function doesn't exist in the database
+      console.warn('Admin function not available - this is normal for basic setups:', error)
+      setIsAdmin(false)
     }
   }
 
@@ -92,8 +99,20 @@ export default function HomePage() {
     // Not needed anymore since we're on the main page
   }
 
-  const handleViewDashboard = () => {
-    router.push('/my-teams')
+  const handleViewDashboard = (e?: React.MouseEvent) => {
+    if (e && (e.ctrlKey || e.metaKey)) {
+      window.open('/my-teams', '_blank')
+    } else {
+      router.push('/my-teams')
+    }
+  }
+
+  const handleAdminNavigation = (e?: React.MouseEvent) => {
+    if (e && (e.ctrlKey || e.metaKey)) {
+      window.open('/admin', '_blank')
+    } else {
+      router.push('/admin')
+    }
   }
 
   const scrollToSection = (sectionId: string) => {
@@ -131,61 +150,106 @@ export default function HomePage() {
           <div className="flex justify-between items-center h-16">
             <div className="flex items-center gap-3">
               <img src="/favicon.svg" alt="Availability Planner Logo" className="h-8 w-8" />
-              <h1 className="text-xl font-bold text-black">Availability Planner</h1>
+              <h1 className="text-xl font-bold text-black hidden sm:block">Availability Planner</h1>
+              <h1 className="text-lg font-bold text-black sm:hidden">AvPlanner</h1>
             </div>
             <div className="flex items-center gap-4">
-              <LanguageSelector currentLocale="en" />
-              {user ? (
-                <DropdownMenu>
-                  <DropdownMenuTrigger asChild>
-                    <Button 
-                      variant="outline" 
-                      className="flex items-center gap-2 px-3 transition-all duration-200 hover:bg-blue-50 hover:border-blue-200 hover:shadow-md focus:ring-2 focus:ring-blue-200 focus:ring-offset-1"
-                    >
-                      <Avatar className="h-6 w-6">
-                        <AvatarImage src={user.user_metadata?.avatar_url} />
-                        <AvatarFallback className="text-xs">
-                          {user.user_metadata?.first_name?.[0] || user.email?.[0]?.toUpperCase()}
-                        </AvatarFallback>
-                      </Avatar>
-                      <span className="text-sm font-medium max-w-[100px] truncate">
-                        {user.user_metadata?.first_name || user.email?.split('@')[0]}
-                      </span>
-                      <ChevronDown className="h-4 w-4" />
-                    </Button>
-                  </DropdownMenuTrigger>
-                  <DropdownMenuContent align="end" className="w-48">
-                    <DropdownMenuItem 
-                      onClick={handleViewDashboard}
-                      className="cursor-pointer transition-all duration-200 hover:bg-blue-50 hover:text-blue-700 focus:bg-blue-50 focus:text-blue-700"
-                    >
-                      <UserIcon className="h-4 w-4 mr-2 transition-colors duration-200" />
-                      My Teams
-                    </DropdownMenuItem>
-                    {isAdmin && (
-                      <DropdownMenuItem 
-                        onClick={() => router.push('/admin')}
-                        className="cursor-pointer transition-all duration-200 hover:bg-purple-50 hover:text-purple-700 focus:bg-purple-50 focus:text-purple-700"
+              {/* Desktop Navigation */}
+              <div className="hidden md:flex items-center gap-4">
+                <LanguageSelector currentLocale="en" />
+                {user ? (
+                  <DropdownMenu>
+                    <DropdownMenuTrigger asChild>
+                      <Button 
+                        variant="outline" 
+                        className="flex items-center gap-2 px-3 transition-all duration-200 hover:bg-blue-50 hover:border-blue-200 hover:shadow-md focus:ring-2 focus:ring-blue-200 focus:ring-offset-1"
                       >
-                        <Shield className="h-4 w-4 mr-2 transition-colors duration-200" />
-                        Admin Panel
+                        <Avatar className="h-6 w-6">
+                          <AvatarImage src={user.user_metadata?.avatar_url} />
+                          <AvatarFallback className="text-xs">
+                            {user.user_metadata?.first_name?.[0] || user.email?.[0]?.toUpperCase()}
+                          </AvatarFallback>
+                        </Avatar>
+                        <span className="text-sm font-medium max-w-[100px] truncate">
+                          {user.user_metadata?.first_name || user.email?.split('@')[0]}
+                        </span>
+                        <ChevronDown className="h-4 w-4" />
+                      </Button>
+                    </DropdownMenuTrigger>
+                    <DropdownMenuContent align="end" className="w-48">
+                      <DropdownMenuItem 
+                        onClick={handleViewDashboard}
+                        className="cursor-pointer transition-all duration-200 hover:bg-blue-50 hover:text-blue-700 focus:bg-blue-50 focus:text-blue-700"
+                      >
+                        <UserIcon className="h-4 w-4 mr-2 transition-colors duration-200" />
+                        My Teams
                       </DropdownMenuItem>
-                    )}
-                    <DropdownMenuSeparator />
-                    <DropdownMenuItem 
-                      onClick={handleLogout}
-                      className="cursor-pointer transition-all duration-200 hover:bg-red-50 hover:text-red-700 focus:bg-red-50 focus:text-red-700"
-                    >
-                      <LogOut className="h-4 w-4 mr-2 transition-colors duration-200" />
-                      Logout
-                    </DropdownMenuItem>
-                  </DropdownMenuContent>
-                </DropdownMenu>
+                      {isAdmin && (
+                        <DropdownMenuItem 
+                          onClick={handleAdminNavigation}
+                          className="cursor-pointer transition-all duration-200 hover:bg-purple-50 hover:text-purple-700 focus:bg-purple-50 focus:text-purple-700"
+                        >
+                          <Shield className="h-4 w-4 mr-2 transition-colors duration-200" />
+                          Admin Panel
+                        </DropdownMenuItem>
+                      )}
+                      <DropdownMenuSeparator />
+                      <DropdownMenuItem 
+                        onClick={handleLogout}
+                        className="cursor-pointer transition-all duration-200 hover:bg-red-50 hover:text-red-700 focus:bg-red-50 focus:text-red-700"
+                      >
+                        <LogOut className="h-4 w-4 mr-2 transition-colors duration-200" />
+                        Logout
+                      </DropdownMenuItem>
+                    </DropdownMenuContent>
+                  </DropdownMenu>
+                ) : (
+                  <div className="flex items-center gap-2">
+                    <LoginButton />
+                    <RegisterButton />
+                  </div>
+                )}
+              </div>
+              
+              {/* Mobile Navigation */}
+              {user ? (
+                <HamburgerMenu title="Menu">
+                  <HamburgerMenuItem onClick={handleViewDashboard}>
+                    <div className="flex items-center gap-3">
+                      <UserIcon className="h-5 w-5" />
+                      <span>My Teams</span>
+                    </div>
+                  </HamburgerMenuItem>
+                  {isAdmin && (
+                    <HamburgerMenuItem onClick={handleAdminNavigation}>
+                      <div className="flex items-center gap-3">
+                        <Shield className="h-5 w-5" />
+                        <span>Admin Panel</span>
+                      </div>
+                    </HamburgerMenuItem>
+                  )}
+                  <HamburgerMenuItem>
+                    <LanguageSelector currentLocale="en" />
+                  </HamburgerMenuItem>
+                  <HamburgerMenuItem onClick={handleLogout}>
+                    <div className="flex items-center gap-3 text-red-600">
+                      <LogOut className="h-5 w-5" />
+                      <span>Logout</span>
+                    </div>
+                  </HamburgerMenuItem>
+                </HamburgerMenu>
               ) : (
-                <div className="flex items-center gap-2">
-                  <LoginButton />
-                  <RegisterButton />
-                </div>
+                <HamburgerMenu title="Menu">
+                  <HamburgerMenuItem>
+                    <LoginButton />
+                  </HamburgerMenuItem>
+                  <HamburgerMenuItem>
+                    <RegisterButton />
+                  </HamburgerMenuItem>
+                  <HamburgerMenuItem>
+                    <LanguageSelector currentLocale="en" />
+                  </HamburgerMenuItem>
+                </HamburgerMenu>
               )}
             </div>
           </div>
@@ -193,24 +257,24 @@ export default function HomePage() {
       </header>
 
       {/* Hero Section */}
-      <section className="relative py-20 px-4 sm:px-6 lg:px-8">
+      <section className="relative py-12 px-4 sm:py-20 sm:px-6 lg:px-8">
         <div className="max-w-7xl mx-auto text-center">
-          <h2 className="text-4xl sm:text-5xl lg:text-6xl font-bold bg-gradient-to-r from-blue-600 to-purple-600 bg-clip-text text-transparent mb-6">
+          <h2 className="text-3xl sm:text-4xl md:text-5xl lg:text-6xl font-bold bg-gradient-to-r from-blue-600 to-purple-600 bg-clip-text text-transparent mb-4 sm:mb-6">
             {t("landing.subtitle")}
           </h2>
-          <p className="text-xl text-gray-600 max-w-3xl mx-auto mb-8 leading-relaxed">
+          <p className="text-lg sm:text-xl text-gray-600 max-w-3xl mx-auto mb-6 sm:mb-8 leading-relaxed">
             {t("landing.description")}
           </p>
           <div className="flex flex-col sm:flex-row gap-4 justify-center items-center">
             <button
               onClick={() => scrollToSection('create-team')}
-              className="bg-gradient-to-r from-blue-600 to-purple-600 text-white px-8 py-4 rounded-lg font-semibold hover:from-blue-700 hover:to-purple-700 transform hover:scale-105 transition-all duration-200 shadow-lg hover:shadow-xl"
+              className="w-full sm:w-auto bg-gradient-to-r from-blue-600 to-purple-600 text-white px-6 sm:px-8 py-3 sm:py-4 rounded-lg font-semibold hover:from-blue-700 hover:to-purple-700 transform hover:scale-105 transition-all duration-200 shadow-lg hover:shadow-xl"
             >
               Create Team
             </button>
             <button
               onClick={() => scrollToSection('join-team')}
-              className="bg-white text-blue-600 px-8 py-4 rounded-lg font-semibold hover:bg-blue-50 transform hover:scale-105 transition-all duration-200 shadow-lg hover:shadow-xl border-2 border-blue-600"
+              className="w-full sm:w-auto bg-white text-blue-600 px-6 sm:px-8 py-3 sm:py-4 rounded-lg font-semibold hover:bg-blue-50 transform hover:scale-105 transition-all duration-200 shadow-lg hover:shadow-xl border-2 border-blue-600"
             >
               Join Team
             </button>

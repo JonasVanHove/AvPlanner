@@ -1,6 +1,6 @@
 "use client"
 
-import { useState, useEffect } from "react"
+import { useState, useEffect, use } from "react"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
@@ -48,12 +48,13 @@ interface TeamMember {
 }
 
 interface TeamSettingsPageProps {
-  params: {
+  params: Promise<{
     slug: string
-  }
+  }>
 }
 
 export default function TeamSettingsPage({ params }: TeamSettingsPageProps) {
+  const resolvedParams = use(params)
   const [teamSettings, setTeamSettings] = useState<TeamSettings | null>(null)
   const [members, setMembers] = useState<TeamMember[]>([])
   const [isLoading, setIsLoading] = useState(true)
@@ -82,7 +83,7 @@ export default function TeamSettingsPage({ params }: TeamSettingsPageProps) {
     if (user?.email) {
       fetchTeamSettings()
     }
-  }, [params.slug, user])
+  }, [resolvedParams.slug, user])
 
   const fetchTeamSettings = async () => {
     if (!user?.email) return
@@ -94,7 +95,7 @@ export default function TeamSettingsPage({ params }: TeamSettingsPageProps) {
       let { data: teamData, error: teamError } = await supabase
         .from("teams")
         .select("id")
-        .eq("invite_code", params.slug)
+        .eq("invite_code", resolvedParams.slug)
         .single()
 
       if (teamError && teamError.code === 'PGRST116') {

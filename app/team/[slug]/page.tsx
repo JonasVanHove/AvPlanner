@@ -1,6 +1,6 @@
 "use client"
 
-import { useState, useEffect } from "react"
+import { useState, useEffect, use } from "react"
 import { Button } from "@/components/ui/button"
 import { AvailabilityCalendarRedesigned } from "@/components/availability-calendar-redesigned"
 import { TeamPasswordForm } from "@/components/team-password-form"
@@ -34,12 +34,13 @@ interface Member {
 }
 
 interface TeamPageProps {
-  params: {
+  params: Promise<{
     slug: string // This is actually the invite_code now
-  }
+  }>
 }
 
 export default function TeamPage({ params }: TeamPageProps) {
+  const resolvedParams = use(params)
   const locale: Locale = "en" // Default to English for non-locale routes
   const { user } = useAuth()
 
@@ -53,7 +54,7 @@ export default function TeamPage({ params }: TeamPageProps) {
 
   useEffect(() => {
     fetchTeamData()
-  }, [params.slug])
+  }, [resolvedParams.slug])
 
   const fetchTeamData = async () => {
     try {
@@ -61,7 +62,7 @@ export default function TeamPage({ params }: TeamPageProps) {
       let { data: teamData, error: teamError } = await supabase
         .from("teams")
         .select("*")
-        .eq("invite_code", params.slug)
+        .eq("invite_code", resolvedParams.slug)
         .single()
 
       // If not found by invite_code, try by slug (friendly URL)
@@ -69,7 +70,7 @@ export default function TeamPage({ params }: TeamPageProps) {
         const { data: teamBySlug, error: slugError } = await supabase
           .from("teams")
           .select("*")
-          .eq("slug", params.slug)
+          .eq("slug", resolvedParams.slug)
           .single()
 
         teamData = teamBySlug
@@ -196,7 +197,7 @@ export default function TeamPage({ params }: TeamPageProps) {
         <div className="text-center">
           <h1 className="text-2xl font-bold mb-4">Team not found</h1>
           <p className="text-gray-600 mb-4">
-            The invite code "{params.slug}" doesn't match any existing team.
+            The invite code "{resolvedParams.slug}" doesn't match any existing team.
           </p>
           <Link href="/">
             <Button>Go Home</Button>
