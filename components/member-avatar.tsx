@@ -39,6 +39,16 @@ export function MemberAvatar({ firstName, lastName, profileImage, size = "md", c
     return lastChar ? `${firstChar}${lastChar}` : firstChar
   }
 
+  // Debug: Log profile image processing
+  const hasImage = profileImage && profileImage.length > 0
+  console.log(`🖼️ MemberAvatar for ${firstName} ${lastName}:`, {
+    hasImage,
+    imageType: profileImage?.startsWith('data:') ? 'base64' : profileImage?.startsWith('http') ? 'url' : 'unknown',
+    imageLength: profileImage?.length,
+    imagePreview: profileImage?.substring(0, 50) + '...',
+    initials: getInitials()
+  })
+
   const getStatusLabel = (status: string | undefined) => {
     switch (status) {
       case 'available': return 'Beschikbaar'
@@ -57,7 +67,14 @@ export function MemberAvatar({ firstName, lastName, profileImage, size = "md", c
     <TooltipProvider>
       <div className="relative">
         <Avatar className={`${sizeClasses[size]} ${className}`}>
-          {profileImage ? <AvatarImage src={profileImage || "/placeholder.svg"} alt={`${firstName} ${lastName}`} /> : null}
+          {profileImage && profileImage.length > 0 && (
+            <AvatarImage 
+              src={profileImage} 
+              alt={`${firstName} ${lastName}`}
+              onLoad={() => console.log(`✅ Profile image loaded for ${firstName} ${lastName}`)}
+              onError={() => console.log(`❌ Profile image failed for ${firstName} ${lastName}:`, profileImage)}
+            />
+          )}
           <AvatarFallback className="bg-blue-500 text-white font-medium">{initials}</AvatarFallback>
         </Avatar>
         {statusIndicator?.show && (

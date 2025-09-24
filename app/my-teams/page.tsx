@@ -17,6 +17,7 @@ export default function MyTeamsPage() {
   const [user, setUser] = useState<User | null>(null)
   const [loading, setLoading] = useState(true)
   const [isAdmin, setIsAdmin] = useState(false)
+  const [userProfileImage, setUserProfileImage] = useState<string | null>(null)
   const router = useRouter()
   const isMobile = useIsMobile()
 
@@ -29,6 +30,7 @@ export default function MyTeamsPage() {
       // Check admin status if user is logged in
       if (session?.user) {
         checkAdminStatus(session.user.email!)
+        fetchUserProfileImage(session.user.email!)
       }
     })
 
@@ -40,8 +42,10 @@ export default function MyTeamsPage() {
       // Check admin status if user is logged in
       if (session?.user) {
         checkAdminStatus(session.user.email!)
+        fetchUserProfileImage(session.user.email!)
       } else {
         setIsAdmin(false)
+        setUserProfileImage(null)
       }
     })
 
@@ -63,6 +67,35 @@ export default function MyTeamsPage() {
       // Gracefully handle if the function doesn't exist in the database
       console.warn('Admin function not available - this is normal for basic setups:', error)
       setIsAdmin(false)
+    }
+  }
+
+  const fetchUserProfileImage = async (email: string) => {
+    try {
+      // Haal de eerste profielfoto op uit de members table voor deze gebruiker
+      const { data, error } = await supabase
+        .from('members')
+        .select('profile_image, profile_image_url')
+        .eq('email', email)
+        .eq('status', 'active')
+        .limit(1)
+        .single()
+
+      if (error) {
+        console.log('No profile image found in members table:', error.message)
+        return
+      }
+
+      if (data) {
+        // Gebruik profile_image_url eerst, dan profile_image als fallback
+        const profileImg = data.profile_image_url || data.profile_image
+        if (profileImg) {
+          console.log('🖼️ Found my-teams user profile image:', profileImg.substring(0, 50) + '...')
+          setUserProfileImage(profileImg)
+        }
+      }
+    } catch (error) {
+      console.log('Error fetching my-teams user profile image:', error)
     }
   }
 
@@ -133,7 +166,13 @@ export default function MyTeamsPage() {
                       className="flex items-center gap-2 px-3 transition-all duration-200 hover:bg-blue-50 hover:border-blue-200 hover:shadow-md focus:ring-2 focus:ring-blue-200 focus:ring-offset-1"
                     >
                       <Avatar className="h-6 w-6">
-                        <AvatarImage src={user?.user_metadata?.avatar_url} />
+                        {(userProfileImage || user?.user_metadata?.avatar_url) && (
+                          <AvatarImage 
+                            src={userProfileImage || user?.user_metadata?.avatar_url} 
+                            onLoad={() => console.log('✅ My-teams avatar loaded')}
+                            onError={() => console.log('❌ My-teams avatar failed')}
+                          />
+                        )}
                         <AvatarFallback className="text-xs">
                           {user?.user_metadata?.first_name?.[0] || user?.email?.[0]?.toUpperCase()}
                         </AvatarFallback>

@@ -37,6 +37,7 @@ interface TeamMember {
   member_role: string
   member_status: string
   profile_image_url: string | null
+  profile_image: string | null
   joined_at: string
   last_active: string | null
   is_current_user: boolean
@@ -68,6 +69,7 @@ export function UserDashboard({ user, onLogout, onGoHome }: UserDashboardProps) 
   const [error, setError] = useState("")
   const [refreshKey, setRefreshKey] = useState(0)
   const [isRefreshing, setIsRefreshing] = useState(false)
+  const [userProfileImage, setUserProfileImage] = useState<string | null>(null)
   const router = useRouter()
 
   // Get all member IDs from all teams for today's availability
@@ -78,7 +80,37 @@ export function UserDashboard({ user, onLogout, onGoHome }: UserDashboardProps) 
 
   useEffect(() => {
     fetchUserTeams()
+    fetchUserProfileImage()
   }, [user, refreshKey])
+
+  const fetchUserProfileImage = async () => {
+    try {
+      // Haal de eerste profielfoto op uit de members table voor deze gebruiker
+      const { data, error } = await supabase
+        .from('members')
+        .select('profile_image, profile_image_url')
+        .eq('email', user.email)
+        .eq('status', 'active')
+        .limit(1)
+        .single()
+
+      if (error) {
+        console.log('No profile image found in members table:', error.message)
+        return
+      }
+
+      if (data) {
+        // Gebruik profile_image_url eerst, dan profile_image als fallback
+        const profileImg = data.profile_image_url || data.profile_image
+        if (profileImg) {
+          console.log('🖼️ Found user profile image:', profileImg.substring(0, 50) + '...')
+          setUserProfileImage(profileImg)
+        }
+      }
+    } catch (error) {
+      console.log('Error fetching user profile image:', error)
+    }
+  }
 
   const refreshTeams = async () => {
     setIsRefreshing(true)
@@ -138,9 +170,26 @@ export function UserDashboard({ user, onLogout, onGoHome }: UserDashboardProps) 
             })
             
             if (membersError) {
-              console.warn(`Failed to load members for team ${team.name}:`, membersError)
+              console.error(`❌ Failed to load members for team ${team.name}:`, membersError)
               return { ...team, members: [] }
             }
+            
+            if (!membersData || membersData.length === 0) {
+              console.warn(`⚠️ No members data returned for team ${team.name}`)
+              return { ...team, members: [] }
+            }
+            
+            // Debug: Log profile image data for each member
+            console.log(`🔍 Team "${team.name}" profile images debug:`)
+            membersData.forEach((member: any, index: number) => {
+              console.log(`  [${index}] ${member.member_name} (${member.member_email}):`)
+              console.log(`    profile_image_url: ${member.profile_image_url ? 'YES' : 'NO'} (${typeof member.profile_image_url})`)
+              console.log(`    profile_image: ${member.profile_image ? 'YES' : 'NO'} (${typeof member.profile_image})`)
+              if (member.profile_image) {
+                console.log(`    profile_image length: ${member.profile_image.length}`)
+                console.log(`    profile_image preview: ${member.profile_image.substring(0, 50)}...`)
+              }
+            })
             
             return { ...team, members: membersData || [] }
           } catch (err) {
@@ -246,7 +295,13 @@ export function UserDashboard({ user, onLogout, onGoHome }: UserDashboardProps) 
           <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
             <div className="flex items-center gap-3 sm:gap-6">
               <Avatar className="h-16 w-16 sm:h-20 sm:w-20 border-4 border-white shadow-lg flex-shrink-0">
-                <AvatarImage src={user.user_metadata?.avatar_url} />
+                {(userProfileImage || user.user_metadata?.avatar_url) && (
+                  <AvatarImage 
+                    src={userProfileImage || user.user_metadata?.avatar_url} 
+                    onLoad={() => console.log('✅ User profile image loaded')}
+                    onError={() => console.log('❌ User profile image failed to load')}
+                  />
+                )}
                 <AvatarFallback className="bg-gradient-to-r from-blue-600 to-purple-600 text-white text-lg sm:text-xl">
                   {user.user_metadata?.first_name?.[0] || user.email?.[0]?.toUpperCase()}
                 </AvatarFallback>
@@ -400,14 +455,32 @@ export function UserDashboard({ user, onLogout, onGoHome }: UserDashboardProps) 
                             <div className="flex items-center gap-2">
                               <span className="font-medium text-gray-700 text-xs sm:text-sm">Your Profile:</span>
                               <div className="flex items-center gap-2">
-                                <Avatar className="h-5 w-5 sm:h-6 sm:w-6">
-                                  <AvatarImage src={team.profile_image_url || undefined} />
-                                  <AvatarFallback className="text-xs">
-                                    {user.user_metadata?.first_name?.[0] || user.email?.[0]?.toUpperCase()}
-                                  </AvatarFallback>
-                                </Avatar>
+                                {(() => {
+                                  // Zoek de huidige gebruiker in de team members
+                                  const currentUserInTeam = team.members?.find(member => member.is_current_user)
+                                  const profileImage = currentUserInTeam?.profile_image_url || currentUserInTeam?.profile_image || userProfileImage
+                                  
+                                  return (
+                                    <Avatar className="h-5 w-5 sm:h-6 sm:w-6">
+                                      {profileImage && (
+                                        <AvatarImage 
+                                          src={profileImage} 
+                                          onLoad={() => console.log('✅ Team profile image loaded')}
+                                          onError={() => console.log('❌ Team profile image failed')}
+                                        />
+                                      )}
+                                      <AvatarFallback className="text-xs">
+                                        {user.user_metadata?.first_name?.[0] || user.email?.[0]?.toUpperCase()}
+                                      </AvatarFallback>
+                                    </Avatar>
+                                  )
+                                })()}
                                 <span className="text-gray-600 text-xs">
-                                  {team.profile_image_url && team.profile_image_url.trim() !== '' ? 'Custom image' : 'Default avatar'}
+                                  {(() => {
+                                    const currentUserInTeam = team.members?.find(member => member.is_current_user)
+                                    const hasProfileImage = currentUserInTeam?.profile_image_url || currentUserInTeam?.profile_image || userProfileImage
+                                    return hasProfileImage ? 'Profile image' : 'Default avatar'
+                                  })()}
                                 </span>
                               </div>
                             </div>
@@ -516,7 +589,7 @@ export function UserDashboard({ user, onLogout, onGoHome }: UserDashboardProps) 
                                     <MemberAvatar
                                       firstName={member.member_name.trim() ? member.member_name.split(' ')[0] : member.member_email.split('@')[0]}
                                       lastName={member.member_name.trim() ? member.member_name.split(' ').slice(1).join(' ') : ''}
-                                      profileImage={member.profile_image_url || undefined}
+                                      profileImage={member.profile_image_url || member.profile_image || undefined}
                                       size="sm"
                                       statusIndicator={{
                                         show: true,
