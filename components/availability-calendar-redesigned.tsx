@@ -1447,9 +1447,6 @@ const AvailabilityCalendarRedesigned = ({
                   <div className="flex flex-col">
                     <h1 className="text-sm lg:text-lg xl:text-xl font-bold text-white truncate">Availability Planner</h1>
                     <p className="text-xs sm:text-sm lg:text-sm font-medium sm:font-semibold text-white lg:text-blue-100 dark:text-gray-300 truncate">{teamName}</p>
-                    {isMobile && (
-                      <p className="text-xs text-blue-200/80 dark:text-gray-400 mt-0.5">👈 👉 Swipe to navigate weeks</p>
-                    )}
                   </div>
                 </div>
               </div>
