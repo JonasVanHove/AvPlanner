@@ -667,31 +667,10 @@ export function UserDashboard({ user, onLogout, onGoHome }: UserDashboardProps) 
                           className="flex items-center justify-center gap-1 sm:gap-2 flex-1 lg:flex-none lg:min-w-[140px] lg:justify-start text-xs sm:text-sm"
                         >
                           <Settings className="h-3 w-3 sm:h-4 sm:w-4" />
-                          <span className="hidden sm:inline">Settings</span>
-                          <span className="sm:hidden">Settings</span>
+                          <span className="hidden sm:inline">Manage Team</span>
+                          <span className="sm:hidden">Manage</span>
                         </Button>
-                        {canManageTeam(team.user_role, team.is_creator) && (
-                          <Dialog>
-                            <DialogTrigger asChild>
-                              <Button
-                                size="sm"
-                                variant="outline"
-                                className="flex items-center justify-center gap-1 sm:gap-2 flex-1 lg:flex-none lg:min-w-[140px] lg:justify-start border-purple-200 hover:bg-purple-50 text-xs sm:text-sm"
-                              >
-                                <Shield className="h-3 w-3 sm:h-4 sm:w-4" />
-                                <span className="hidden sm:inline">Manage Team</span>
-                                <span className="sm:hidden">Manage</span>
-                              </Button>
-                            </DialogTrigger>
-                            <DialogContent className="mx-2 sm:mx-0 max-w-5xl">
-                              <TeamAdminPanel
-                                teamId={team.id}
-                                teamName={team.name}
-                                user={user}
-                              />
-                            </DialogContent>
-                          </Dialog>
-                        )}
+
                       </div>
                     </div>
                   </CardContent>

@@ -11,11 +11,12 @@ import { Label } from "@/components/ui/label"
 import { Textarea } from "@/components/ui/textarea"
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip"
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger, DropdownMenuSeparator } from "@/components/ui/dropdown-menu"
+import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog"
 import { supabase } from "@/lib/supabase"
 import { useAuth } from "@/hooks/useAuth"
 import { useVersion } from "@/hooks/use-version"
 import { LoadingSpinner } from "@/components/ui/loading-spinner"
-import { ArrowLeft, Users, Settings, Eye, EyeOff, Crown, Shield, Mail, Save, AlertCircle, UserCheck, UserX } from "lucide-react"
+import { ArrowLeft, Users, Settings, Eye, EyeOff, Crown, Shield, Mail, Save, AlertCircle, UserCheck, UserX, Trash2 } from "lucide-react"
 import Link from "next/link"
 import { useRouter } from "next/navigation"
 import { MemberAvatar } from "@/components/member-avatar"
@@ -62,6 +63,9 @@ export default function TeamSettingsPage({ params }: TeamSettingsPageProps) {
   const [isSaving, setIsSaving] = useState(false)
   const [hasChanges, setHasChanges] = useState(false)
   const [successMessage, setSuccessMessage] = useState("")
+  const [showDeleteDialog, setShowDeleteDialog] = useState(false)
+  const [isDeleting, setIsDeleting] = useState(false)
+  const [deleteConfirmText, setDeleteConfirmText] = useState("")
   
   // Editable settings state
   const [editableSettings, setEditableSettings] = useState({
@@ -102,7 +106,7 @@ export default function TeamSettingsPage({ params }: TeamSettingsPageProps) {
         const { data: teamBySlug, error: slugError } = await supabase
           .from("teams")
           .select("id")
-          .eq("slug", params.slug)
+          .eq("slug", resolvedParams.slug)
           .single()
 
         teamData = teamBySlug
@@ -228,6 +232,40 @@ export default function TeamSettingsPage({ params }: TeamSettingsPageProps) {
     } catch (error: any) {
       console.error("Error updating member status:", error)
       alert(`Er is een fout opgetreden: ${error.message}`)
+    }
+  }
+
+  const deleteTeam = async () => {
+    if (!teamSettings || !user?.email || !teamSettings.user_is_admin) {
+      alert('Alleen team admins kunnen het team verwijderen.')
+      return
+    }
+
+    if (deleteConfirmText !== teamSettings.team_name) {
+      alert('De team naam moet exact overeenkomen om het team te verwijderen.')
+      return
+    }
+
+    try {
+      setIsDeleting(true)
+
+      // Delete team (this will cascade delete all related data like members, availability, etc.)
+      const { error } = await supabase
+        .from('teams')
+        .delete()
+        .eq('id', teamSettings.team_id)
+
+      if (error) throw error
+
+      // Redirect to my-teams page
+      router.push('/my-teams')
+    } catch (error: any) {
+      console.error("Error deleting team:", error)
+      alert(`Er is een fout opgetreden bij het verwijderen van het team: ${error.message}`)
+    } finally {
+      setIsDeleting(false)
+      setShowDeleteDialog(false)
+      setDeleteConfirmText('')
     }
   }
 
@@ -746,6 +784,79 @@ export default function TeamSettingsPage({ params }: TeamSettingsPageProps) {
                     ))}
                   </>
                 )}
+              </div>
+            </CardContent>
+          </Card>
+        )}
+
+        {/* Danger Zone - Only for team admins */}
+        {teamSettings.user_is_admin && (
+          <Card className="border-red-200 bg-red-50">
+            <CardHeader>
+              <CardTitle className="text-red-800 flex items-center gap-2">
+                <AlertCircle className="h-5 w-5" />
+                Danger Zone
+              </CardTitle>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              <div className="p-4 border border-red-200 rounded-lg bg-white">
+                <h4 className="font-semibold text-red-800 mb-2">Team Verwijderen</h4>
+                <p className="text-sm text-red-600 mb-4">
+                  Dit verwijdert permanent het volledige team inclusief alle leden, beschikbaarheid data, 
+                  en andere gerelateerde informatie. Deze actie kan niet ongedaan worden gemaakt.
+                </p>
+                
+                <Dialog open={showDeleteDialog} onOpenChange={setShowDeleteDialog}>
+                  <DialogTrigger asChild>
+                    <Button variant="destructive" size="sm" className="bg-red-600 hover:bg-red-700">
+                      <Trash2 className="h-4 w-4 mr-2" />
+                      Verwijder Team
+                    </Button>
+                  </DialogTrigger>
+                  <DialogContent className="sm:max-w-[425px]">
+                    <DialogHeader>
+                      <DialogTitle className="text-red-800">Team Verwijderen</DialogTitle>
+                      <DialogDescription className="text-gray-600">
+                        Deze actie kan niet ongedaan worden gemaakt. Dit zal permanent het team "{teamSettings.team_name}" 
+                        verwijderen inclusief alle leden, beschikbaarheid data, en andere gerelateerde informatie.
+                      </DialogDescription>
+                    </DialogHeader>
+                    <div className="space-y-4">
+                      <div>
+                        <Label htmlFor="confirm-text" className="text-sm font-medium">
+                          Type de team naam om te bevestigen:
+                        </Label>
+                        <Input
+                          id="confirm-text"
+                          value={deleteConfirmText}
+                          onChange={(e) => setDeleteConfirmText(e.target.value)}
+                          placeholder={teamSettings.team_name}
+                          className="mt-1"
+                        />
+                      </div>
+                    </div>
+                    <DialogFooter>
+                      <Button 
+                        variant="outline" 
+                        onClick={() => {
+                          setShowDeleteDialog(false)
+                          setDeleteConfirmText('')
+                        }}
+                        disabled={isDeleting}
+                      >
+                        Annuleren
+                      </Button>
+                      <Button 
+                        variant="destructive" 
+                        onClick={deleteTeam}
+                        disabled={deleteConfirmText !== teamSettings.team_name || isDeleting}
+                        className="bg-red-600 hover:bg-red-700"
+                      >
+                        {isDeleting ? 'Verwijderen...' : 'Definitief Verwijderen'}
+                      </Button>
+                    </DialogFooter>
+                  </DialogContent>
+                </Dialog>
               </div>
             </CardContent>
           </Card>

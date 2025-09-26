@@ -10,8 +10,7 @@ import { DropdownMenu, DropdownMenuContent, DropdownMenuTrigger, DropdownMenuIte
 import { LogOut, UserIcon, ChevronDown, Shield, Home } from "lucide-react"
 import { User } from '@supabase/supabase-js'
 import { useRouter } from 'next/navigation'
-import { HamburgerMenu, HamburgerMenuItem } from "@/components/ui/hamburger-menu"
-import { useIsMobile } from "@/hooks/use-mobile"
+
 
 export default function MyTeamsPage() {
   const [user, setUser] = useState<User | null>(null)
@@ -19,7 +18,6 @@ export default function MyTeamsPage() {
   const [isAdmin, setIsAdmin] = useState(false)
   const [userProfileImage, setUserProfileImage] = useState<string | null>(null)
   const router = useRouter()
-  const isMobile = useIsMobile()
 
   useEffect(() => {
     // Check current session
@@ -212,29 +210,7 @@ export default function MyTeamsPage() {
                 </DropdownMenu>
               </div>
               
-              {/* Mobile Navigation */}
-              <HamburgerMenu title="Menu">
-                <HamburgerMenuItem onClick={handleGoHome}>
-                  <div className="flex items-center gap-3">
-                    <Home className="h-5 w-5" />
-                    <span>Back to Home</span>
-                  </div>
-                </HamburgerMenuItem>
-                {isAdmin && (
-                  <HamburgerMenuItem onClick={handleAdminNavigation}>
-                    <div className="flex items-center gap-3">
-                      <Shield className="h-5 w-5" />
-                      <span>Admin Panel</span>
-                    </div>
-                  </HamburgerMenuItem>
-                )}
-                <HamburgerMenuItem onClick={handleLogout}>
-                  <div className="flex items-center gap-3 text-red-600">
-                    <LogOut className="h-5 w-5" />
-                    <span>Logout</span>
-                  </div>
-                </HamburgerMenuItem>
-              </HamburgerMenu>
+
             </div>
           </div>
         </div>

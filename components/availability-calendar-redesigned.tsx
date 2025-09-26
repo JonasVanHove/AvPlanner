@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from "react"
 import { Button } from "@/components/ui/button"
+import { useRouter } from "next/navigation"
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip"
 import {
   ChevronLeft,
@@ -107,6 +108,7 @@ const AvailabilityCalendarRedesigned = ({
   const [showKeyboardHelp, setShowKeyboardHelp] = useState(false)
   const [openSettings, setOpenSettings] = useState(false)
   const [swipeDirection, setSwipeDirection] = useState<"left" | "right" | null>(null)
+  const router = useRouter()
   const { t } = useTranslation(locale)
 
   // Hook to get today's availability for all members (always shows today regardless of visible week)
@@ -146,6 +148,14 @@ const AvailabilityCalendarRedesigned = ({
     const day = d.getDay()
     const diff = d.getDate() - day + (day === 0 ? -6 : 1)
     return new Date(d.setDate(diff))
+  }
+
+  // Helper function to format date to string without timezone issues
+  const getDateString = (date: Date): string => {
+    const year = date.getFullYear()
+    const month = String(date.getMonth() + 1).padStart(2, '0')
+    const day = String(date.getDate()).padStart(2, '0')
+    return `${year}-${month}-${day}`
   }
 
   // Alias for getMondayOfWeek for consistency with usage in smart filtering
@@ -438,7 +448,7 @@ const AvailabilityCalendarRedesigned = ({
       const endDate = new Date(startDate)
       endDate.setDate(startDate.getDate() + weeksToShow * 7 - 1)
 
-      console.log(`📅 Calendar date range: ${startDate.toISOString().split("T")[0]} to ${endDate.toISOString().split("T")[0]}`)
+      console.log(`📅 Calendar date range: ${getDateString(startDate)} to ${getDateString(endDate)}`)
       console.log(`📅 Calendar readable range: ${startDate.toLocaleDateString('nl-NL')} to ${endDate.toLocaleDateString('nl-NL')}`)
       console.log(`👥 Fetching for ${members.length} members`)
       console.log(`📊 Current displayed date: ${currentDate.toLocaleDateString('nl-NL')}`)
@@ -454,8 +464,8 @@ const AvailabilityCalendarRedesigned = ({
           "member_id",
           members.map((m) => m.id), // Changed from visibleMembers to ALL members
         )
-        .gte("date", startDate.toISOString().split("T")[0])
-        .lte("date", endDate.toISOString().split("T")[0])
+        .gte("date", getDateString(startDate))
+        .lte("date", getDateString(endDate))
 
       if (error) throw error
       
@@ -642,7 +652,7 @@ const AvailabilityCalendarRedesigned = ({
   }
 
   const getAvailabilityForDate = (memberId: string, date: Date) => {
-    const dateString = date.toISOString().split("T")[0]
+    const dateString = getDateString(date)
     return availability.find((a) => a.member_id === memberId && a.date === dateString)
   }
 
@@ -650,7 +660,7 @@ const AvailabilityCalendarRedesigned = ({
     // Always return today's availability from the hook, regardless of visible week
     return todayAvailability[memberId] ? {
       member_id: memberId,
-      date: new Date().toISOString().split("T")[0],
+      date: getDateString(new Date()),
       status: todayAvailability[memberId]!
     } : undefined
   }
@@ -1116,7 +1126,7 @@ const AvailabilityCalendarRedesigned = ({
                                 <AvailabilityDropdown
                                   value={record?.status}
                                   onValueChange={(status: "available" | "unavailable" | "need_to_check" | "absent" | "holiday" | "remote") => 
-                                    updateAvailability(member.id, date.toISOString().split("T")[0], status)
+                                    updateAvailability(member.id, getDateString(date), status)
                                   }
                                   locale={locale}
                                   size="sm"
@@ -1352,7 +1362,7 @@ const AvailabilityCalendarRedesigned = ({
                                   // Ctrl+Click for quick status toggle
                                   if (e.ctrlKey || e.metaKey) {
                                     const newStatus = availability?.status === "available" ? "unavailable" : "available"
-                                    updateAvailability(member.id, date.toISOString().split("T")[0], newStatus)
+                                    updateAvailability(member.id, getDateString(date), newStatus)
                                     return
                                   }
                                   
@@ -1368,7 +1378,7 @@ const AvailabilityCalendarRedesigned = ({
                                   ]
                                   const currentIndex = current ? statuses.indexOf(current.status) : -1
                                   const nextStatus = statuses[(currentIndex + 1) % statuses.length]
-                                  updateAvailability(member.id, date.toISOString().split("T")[0], nextStatus)
+                                  updateAvailability(member.id, getDateString(date), nextStatus)
                                 }}
                               >
                                 {availability ? getStatusConfig(availability.status).icon : ""}
@@ -1397,7 +1407,7 @@ const AvailabilityCalendarRedesigned = ({
                                         if (editMode) {
                                           updateAvailability(
                                             member.id,
-                                            date.toISOString().split("T")[0],
+                                            getDateString(date),
                                             status as Availability["status"],
                                           )
                                         }
@@ -1706,6 +1716,14 @@ const AvailabilityCalendarRedesigned = ({
                       </>
                     )}
                     
+                    {/* Settings */}
+                    <HamburgerMenuItem onClick={() => router.push(`/team/${team?.slug || teamId}/settings`)}>
+                      <div className="flex items-center gap-2">
+                        <Settings className="h-4 w-4" />
+                        <span>Settings</span>
+                      </div>
+                    </HamburgerMenuItem>
+                    
                     {/* Date Navigation */}
                     <HamburgerMenuItem onClick={() => navigateDate("prev")}>
                       <div className="flex items-center gap-2">
@@ -1738,15 +1756,6 @@ const AvailabilityCalendarRedesigned = ({
                         <Keyboard className="h-4 w-4" />
                         <span>Shortcuts</span>
                       </div>
-                    </HamburgerMenuItem>
-                    <HamburgerMenuItem>
-                      <SettingsDropdown 
-                        currentLocale={locale} 
-                        members={members} 
-                        team={team} 
-                        forceOpen={false}
-                        onOpenChange={() => {}}
-                      />
                     </HamburgerMenuItem>
                   </HamburgerMenu>
                 </div>

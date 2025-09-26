@@ -26,6 +26,7 @@ import { useTheme } from "next-themes"
 import { useTranslation, type Locale } from "@/lib/i18n"
 import { useIsMobile } from "@/hooks/use-mobile"
 import { useVersion } from "@/hooks/use-version"
+import { useRouter } from "next/navigation"
 
 interface Member {
   id: string
@@ -66,6 +67,7 @@ export function SettingsDropdown({ currentLocale, members, team, forceOpen, onOp
   const { t } = useTranslation(currentLocale)
   const isMobile = useIsMobile()
   const { version, isLoading: versionLoading } = useVersion()
+  const router = useRouter()
 
   // Handle forceOpen prop
   useEffect(() => {
@@ -222,6 +224,23 @@ export function SettingsDropdown({ currentLocale, members, team, forceOpen, onOp
   // Reusable settings content component
   const SettingsContent = ({ onClose }: { onClose?: () => void }) => (
     <div className="space-y-1">
+      {/* Team Management Section */}
+      {team && (
+        <>
+          <DropdownMenuItem 
+            onClick={() => {
+              router.push(`/team/${team.slug || team.invite_code}/settings`)
+              onClose?.()
+            }}
+            className="cursor-pointer"
+          >
+            <Settings className="mr-2 h-4 w-4" />
+            {currentLocale === "en" ? "Manage Team" : currentLocale === "nl" ? "Team Beheren" : "Gérer l'équipe"}
+          </DropdownMenuItem>
+          <DropdownMenuSeparator />
+        </>
+      )}
+
       {/* Share Section - Most important for team management */}
       <div className="px-2 py-2">
         <div className="flex items-center justify-between mb-2">

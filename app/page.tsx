@@ -13,13 +13,11 @@ import { supabase } from "@/lib/supabase"
 import { useEffect, useState } from "react"
 import { User } from "@supabase/supabase-js"
 import { useRouter } from "next/navigation"
-import { HamburgerMenu, HamburgerMenuItem } from "@/components/ui/hamburger-menu"
-import { useIsMobile } from "@/hooks/use-mobile"
+
 
 export default function HomePage() {
   const { t } = useTranslation("en")
   const router = useRouter()
-  const isMobile = useIsMobile()
   const [user, setUser] = useState<User | null>(null)
   const [loading, setLoading] = useState(true)
   const [isAdmin, setIsAdmin] = useState(false)
@@ -249,46 +247,7 @@ export default function HomePage() {
                 )}
               </div>
               
-              {/* Mobile Navigation */}
-              {user ? (
-                <HamburgerMenu title="Menu">
-                  <HamburgerMenuItem onClick={handleViewDashboard}>
-                    <div className="flex items-center gap-3">
-                      <UserIcon className="h-5 w-5" />
-                      <span>My Teams</span>
-                    </div>
-                  </HamburgerMenuItem>
-                  {isAdmin && (
-                    <HamburgerMenuItem onClick={handleAdminNavigation}>
-                      <div className="flex items-center gap-3">
-                        <Shield className="h-5 w-5" />
-                        <span>Admin Panel</span>
-                      </div>
-                    </HamburgerMenuItem>
-                  )}
-                  <HamburgerMenuItem>
-                    <LanguageSelector currentLocale="en" />
-                  </HamburgerMenuItem>
-                  <HamburgerMenuItem onClick={handleLogout}>
-                    <div className="flex items-center gap-3 text-red-600">
-                      <LogOut className="h-5 w-5" />
-                      <span>Logout</span>
-                    </div>
-                  </HamburgerMenuItem>
-                </HamburgerMenu>
-              ) : (
-                <HamburgerMenu title="Menu">
-                  <HamburgerMenuItem>
-                    <LoginButton />
-                  </HamburgerMenuItem>
-                  <HamburgerMenuItem>
-                    <RegisterButton />
-                  </HamburgerMenuItem>
-                  <HamburgerMenuItem>
-                    <LanguageSelector currentLocale="en" />
-                  </HamburgerMenuItem>
-                </HamburgerMenu>
-              )}
+
             </div>
           </div>
         </div>
