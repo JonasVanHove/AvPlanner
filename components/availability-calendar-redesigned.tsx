@@ -1,6 +1,6 @@
 "use client"
 
-import { useState, useEffect, useCallback } from "react"
+import { useState, useEffect, useCallback, useRef } from "react"
 import { Button } from "@/components/ui/button"
 import { useRouter } from "next/navigation"
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip"
@@ -81,6 +81,8 @@ interface AvailabilityCalendarProps {
   isPasswordProtected?: boolean
   passwordHash?: string
   userEmail?: string
+  initialDate?: Date
+  onDateNavigation?: (newDate: Date) => void
 }
 
 const AvailabilityCalendarRedesigned = ({
@@ -93,8 +95,10 @@ const AvailabilityCalendarRedesigned = ({
   isPasswordProtected,
   passwordHash,
   userEmail,
+  initialDate,
+  onDateNavigation,
 }: AvailabilityCalendarProps) => {
-  const [currentDate, setCurrentDate] = useState(new Date())
+  const [currentDate, setCurrentDate] = useState(initialDate || new Date())
   const [availability, setAvailability] = useState<Availability[]>([])
   const [viewMode, setViewMode] = useState<"week">("week")
   const [weeksToShow, setWeeksToShow] = useState<1 | 2 | 4 | 8>(1)
@@ -313,6 +317,21 @@ const AvailabilityCalendarRedesigned = ({
       document.removeEventListener('keydown', handleKeyPress)
     }
   }, [weeksToShow]) // Include weeksToShow as dependency since navigateDate uses it
+
+  // Track if this is the initial render to avoid calling onDateNavigation on mount
+  const isInitialRender = useRef(true)
+
+  // Update currentDate when initialDate prop changes (from URL navigation)
+  useEffect(() => {
+    if (initialDate && initialDate.getTime() !== currentDate.getTime()) {
+      setCurrentDate(initialDate)
+    }
+  }, [initialDate, currentDate])
+
+  // Set initial render flag after mount
+  useEffect(() => {
+    isInitialRender.current = false
+  }, [])
 
   // Get localized day names
   const getDayNames = () => [
@@ -732,12 +751,24 @@ const AvailabilityCalendarRedesigned = ({
     setCurrentDate((prev) => {
       const newDate = new Date(prev)
       newDate.setDate(prev.getDate() + (direction === "next" ? weeksToShow * 7 : -weeksToShow * 7))
+      
+      // Trigger URL update after state change
+      if (onDateNavigation) {
+        setTimeout(() => onDateNavigation(newDate), 0)
+      }
+      
       return newDate
     })
   }
 
   const goToToday = () => {
-    setCurrentDate(new Date())
+    const today = new Date()
+    setCurrentDate(today)
+    
+    // Trigger URL update
+    if (onDateNavigation) {
+      setTimeout(() => onDateNavigation(today), 0)
+    }
   }
 
   const goToSpecificDate = (dateString: string) => {
@@ -745,6 +776,11 @@ const AvailabilityCalendarRedesigned = ({
     if (!isNaN(date.getTime())) {
       setCurrentDate(date)
       setShowDatePicker(false)
+      
+      // Trigger URL update
+      if (onDateNavigation) {
+        setTimeout(() => onDateNavigation(date), 0)
+      }
     }
   }
 

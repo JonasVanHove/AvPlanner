@@ -1,6 +1,6 @@
 "use client"
 
-import { useState, useEffect, use, useCallback } from "react"
+import { useState, useEffect, useCallback } from "react"
 import { Button } from "@/components/ui/button"
 import { AvailabilityCalendarRedesigned } from "@/components/availability-calendar-redesigned"
 import { TeamPasswordForm } from "@/components/team-password-form"
@@ -8,12 +8,11 @@ import { supabase } from "@/lib/supabase"
 import { useTranslation, type Locale } from "@/lib/i18n"
 import { useAuth } from "@/hooks/useAuth"
 import Link from "next/link"
-import { useRouter } from "next/navigation"
+import { notFound, useRouter } from "next/navigation"
 
 interface Team {
   id: string
   name: string
-  slug?: string
   invite_code: string
   is_password_protected: boolean
   password_hash?: string
@@ -34,17 +33,21 @@ interface Member {
   order_index?: number
 }
 
-interface TeamPageProps {
-  params: Promise<{
+interface LocaleTeamPageProps {
+  params: {
+    locale: string
     slug: string // This is actually the invite_code now
-  }>
+  }
 }
 
-export default function TeamPage({ params }: TeamPageProps) {
-  const resolvedParams = use(params)
-  const locale: Locale = "en" // Default to English for non-locale routes
+export default function LocaleTeamPage({ params }: LocaleTeamPageProps) {
+  const locale = params.locale as Locale
   const { user } = useAuth()
   const router = useRouter()
+
+  if (!["en", "nl", "fr"].includes(locale)) {
+    notFound()
+  }
 
   const [team, setTeam] = useState<Team | null>(null)
   const [members, setMembers] = useState<Member[]>([])
@@ -54,53 +57,21 @@ export default function TeamPage({ params }: TeamPageProps) {
   const [isVerifyingPassword, setIsVerifyingPassword] = useState(false)
   const { t } = useTranslation(locale)
 
-  // Extract current date from URL or use today as default
-  const getCurrentDateFromURL = useCallback(() => {
-    if (typeof window !== 'undefined') {
-      const path = window.location.pathname
-      const weekMatch = path.match(/\/week\/(\d{4})\/(\d{1,2})\/(\d{1,2})$/)
-      if (weekMatch) {
-        const [, year, month, day] = weekMatch
-        return new Date(parseInt(year), parseInt(month) - 1, parseInt(day))
-      }
-    }
-    return new Date() // Default to today
-  }, [])
-
-  // Handle date navigation by updating URL without page reload
+  // Handle date navigation by updating URL to date-based format (must be before any returns)
   const handleDateNavigation = useCallback((newDate: Date) => {
     const year = newDate.getFullYear()
     const month = newDate.getMonth() + 1 // Convert to 1-indexed
     const day = newDate.getDate()
     
-    const newUrl = `/team/${resolvedParams.slug}/week/${year}/${month}/${day}`
+    const newUrl = `/${locale}/team/${params.slug}/week/${year}/${month}/${day}`
     
-    // Update URL without page reload using History API
-    const currentPath = window.location.pathname
-    if (currentPath !== newUrl) {
-      window.history.pushState(null, '', newUrl)
-      // Update local URL date state to keep everything in sync
-      setUrlDate(newDate)
-    }
-  }, [resolvedParams.slug])
+    // Direct synchronous navigation for optimal UX
+    router.push(newUrl, { scroll: false })
+  }, [locale, params.slug, router])
 
   useEffect(() => {
     fetchTeamData()
-  }, [resolvedParams.slug])
-
-  // State to trigger calendar re-render on URL changes
-  const [urlDate, setUrlDate] = useState(() => getCurrentDateFromURL())
-
-  // Listen for browser back/forward navigation
-  useEffect(() => {
-    const handlePopState = () => {
-      // Update URL date state to trigger calendar re-render
-      setUrlDate(getCurrentDateFromURL())
-    }
-
-    window.addEventListener('popstate', handlePopState)
-    return () => window.removeEventListener('popstate', handlePopState)
-  }, [getCurrentDateFromURL])
+  }, [params.slug])
 
   const fetchTeamData = async () => {
     try {
@@ -108,7 +79,7 @@ export default function TeamPage({ params }: TeamPageProps) {
       let { data: teamData, error: teamError } = await supabase
         .from("teams")
         .select("*")
-        .eq("invite_code", resolvedParams.slug)
+        .eq("invite_code", params.slug)
         .single()
 
       // If not found by invite_code, try by slug (friendly URL)
@@ -116,7 +87,7 @@ export default function TeamPage({ params }: TeamPageProps) {
         const { data: teamBySlug, error: slugError } = await supabase
           .from("teams")
           .select("*")
-          .eq("slug", resolvedParams.slug)
+          .eq("slug", params.slug)
           .single()
 
         teamData = teamBySlug
@@ -191,8 +162,8 @@ export default function TeamPage({ params }: TeamPageProps) {
         sessionStorage.setItem(sessionKey, "true")
         setIsAuthenticated(true)
         
-        // Fetch members now
-        const { data: membersData, error: membersError } = await supabase
+        // Fetch all members now (including inactive ones)
+        const { data: allMembersData, error: membersError } = await supabase
           .from("members")
           .select("*")
           .eq("team_id", team.id)
@@ -202,7 +173,7 @@ export default function TeamPage({ params }: TeamPageProps) {
         if (membersError) throw membersError
         
         // Transform to consistent format
-        const transformedMembers: Member[] = (membersData || []).map((member: any) => ({
+        const allMembers: Member[] = (allMembersData || []).map((member: any) => ({
           id: member.id,
           first_name: member.first_name,
           last_name: member.last_name,
@@ -217,9 +188,13 @@ export default function TeamPage({ params }: TeamPageProps) {
           order_index: member.order_index || 0
         }))
         
-        setMembers(transformedMembers)
+        setMembers(allMembers)
       } else {
-        setPasswordError("Incorrect password. Please try again.")
+        setPasswordError(
+          locale === "en" ? "Incorrect password. Please try again." :
+          locale === "nl" ? "Onjuist wachtwoord. Probeer opnieuw." :
+          "Mot de passe incorrect. Veuillez réessayer."
+        )
       }
     } catch (error) {
       console.error("Error verifying password:", error)
@@ -243,9 +218,9 @@ export default function TeamPage({ params }: TeamPageProps) {
         <div className="text-center">
           <h1 className="text-2xl font-bold mb-4">Team not found</h1>
           <p className="text-gray-600 mb-4">
-            The invite code "{resolvedParams.slug}" doesn't match any existing team.
+            The invite code "{params.slug}" doesn't match any existing team.
           </p>
-          <Link href="/">
+          <Link href={locale === "en" ? "/" : `/${locale}`}>
             <Button>Go Home</Button>
           </Link>
         </div>
@@ -253,6 +228,7 @@ export default function TeamPage({ params }: TeamPageProps) {
     )
   }
 
+  // Show password form if team is password protected and not authenticated
   if (team.is_password_protected && !isAuthenticated) {
     return (
       <TeamPasswordForm
@@ -276,7 +252,6 @@ export default function TeamPage({ params }: TeamPageProps) {
       isPasswordProtected={team.is_password_protected}
       passwordHash={team.password_hash}
       userEmail={user?.email}
-      initialDate={urlDate}
       onDateNavigation={handleDateNavigation}
     />
   )
