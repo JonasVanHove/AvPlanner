@@ -15,6 +15,7 @@ import { User } from "@supabase/supabase-js"
 import { useRouter } from "next/navigation"
 import { MemberAvatar } from "@/components/member-avatar"
 import { useTodayAvailability } from "@/hooks/use-today-availability"
+import { TeamActivities } from "@/components/team-activities"
 
 interface Team {
   id: string
@@ -707,6 +708,16 @@ export function UserDashboard({ user, onLogout, onGoHome }: UserDashboardProps) 
 
                       </div>
                     </div>
+                    
+                    {/* Team Activities - Only show for admins/creators */}
+                    {(team.user_role === 'admin' || team.is_creator) && (
+                      <div className="mt-6 pt-4 border-t border-gray-200">
+                        <TeamActivities 
+                          teamId={team.id} 
+                          isVisible={true}
+                        />
+                      </div>
+                    )}
                   </CardContent>
                 </Card>
               ))}

@@ -623,6 +623,18 @@ const AvailabilityCalendarRedesigned = ({
 
     try {
       console.log('Updating availability:', { memberId, date, status })
+      
+      // Get current status first for activity logging
+      const { data: currentAvailability } = await supabase
+        .from("availability")
+        .select("status")
+        .eq("member_id", memberId)
+        .eq("date", date)
+        .single()
+
+      const oldStatus = currentAvailability?.status || null
+
+      // Update availability
       const { error } = await supabase.from("availability").upsert([{ member_id: memberId, date, status }], {
         onConflict: "member_id,date",
       })
@@ -631,6 +643,9 @@ const AvailabilityCalendarRedesigned = ({
         console.error('Supabase error details:', error)
         throw error
       }
+
+      // Activity logging is now handled automatically by database triggers
+
       console.log('Availability updated successfully')
       fetchAvailability()
     } catch (error) {

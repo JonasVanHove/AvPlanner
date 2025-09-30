@@ -1522,6 +1522,9 @@ export function BulkUpdateDialog({ members, locale, onUpdate, onRangeSelectionCh
 
       console.log('📝 Sample update data:', updateData.slice(0, 3))
 
+      // Get current user for activity logging
+      const { data: { user } } = await supabase.auth.getUser()
+
       // Use the same upsert method as individual updates
       const { error: upsertError } = await supabase
         .from('availability')
@@ -1537,6 +1540,34 @@ export function BulkUpdateDialog({ members, locale, onUpdate, onRangeSelectionCh
           variant: "destructive",
         })
         return
+      }
+
+      // Log bulk activities (in background, don't block success)
+      if (user?.email && team?.id) {
+        try {
+          // Log each activity separately to track individual member changes
+          const activityPromises = updateData.map(update => 
+            fetch('/api/teams/activities', {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({
+                teamId: team.id,
+                memberId: update.member_id,
+                activityDate: update.date,
+                oldStatus: null, // Bulk updates don't track previous status
+                newStatus: update.status,
+                changedByEmail: user.email
+              })
+            })
+          )
+
+          // Run activity logging in background
+          Promise.all(activityPromises).catch(error => 
+            console.warn('Some bulk activity logs failed:', error)
+          )
+        } catch (activityError) {
+          console.warn('Failed to log bulk activities:', activityError)
+        }
       }
 
       console.log('✅ Bulk update completed successfully')

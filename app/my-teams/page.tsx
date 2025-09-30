@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from 'react'
 import { supabase } from '@/lib/supabase'
+import { useTranslation, type Locale } from "@/lib/i18n"
 import { UserDashboard } from '@/components/auth/user-dashboard'
 import { LoginForm } from '@/components/auth/login-form'
 import { Button } from '@/components/ui/button'
@@ -13,6 +14,7 @@ import { useRouter } from 'next/navigation'
 
 
 export default function MyTeamsPage() {
+  const { t } = useTranslation("en") // TODO: Make locale dynamic
   const [user, setUser] = useState<User | null>(null)
   const [loading, setLoading] = useState(true)
   const [isAdmin, setIsAdmin] = useState(false)
@@ -123,7 +125,7 @@ export default function MyTeamsPage() {
       <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100 flex items-center justify-center">
         <div className="text-center">
           <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600 mx-auto"></div>
-          <p className="mt-2 text-gray-600">Loading...</p>
+          <p className="mt-2 text-gray-600">{t('myTeams.loading')}</p>
         </div>
       </div>
     )
@@ -134,8 +136,8 @@ export default function MyTeamsPage() {
       <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100 flex items-center justify-center">
         <div className="w-full max-w-md">
           <div className="text-center mb-8">
-            <h1 className="text-3xl font-bold text-gray-900">My Teams</h1>
-            <p className="text-gray-600 mt-2">Please log in to view your teams</p>
+            <h1 className="text-3xl font-bold text-gray-900">{t('myTeams.title')}</h1>
+            <p className="text-gray-600 mt-2">{t('myTeams.pleaseLogin')}</p>
           </div>
           <LoginForm />
         </div>
@@ -151,8 +153,8 @@ export default function MyTeamsPage() {
           <div className="flex justify-between items-center h-16">
             <div className="flex items-center gap-3">
               <img src="/favicon.svg" alt="Availability Planner Logo" className="h-8 w-8" />
-              <h1 className="text-xl font-bold text-black hidden sm:block">My Teams</h1>
-              <h1 className="text-lg font-bold text-black sm:hidden">My Teams</h1>
+              <h1 className="text-xl font-bold text-black hidden sm:block">{t('myTeams.title')}</h1>
+              <h1 className="text-lg font-bold text-black sm:hidden">{t('myTeams.title')}</h1>
             </div>
             <div className="flex items-center gap-4">
               {/* Desktop Navigation */}
@@ -187,7 +189,7 @@ export default function MyTeamsPage() {
                       className="cursor-pointer transition-all duration-200 hover:bg-blue-50 hover:text-blue-700 focus:bg-blue-50 focus:text-blue-700"
                     >
                       <Home className="h-4 w-4 mr-2 transition-colors duration-200" />
-                      Back to Home
+                      {t('myTeams.backToHome')}
                     </DropdownMenuItem>
                     {isAdmin && (
                       <DropdownMenuItem 
@@ -195,7 +197,7 @@ export default function MyTeamsPage() {
                         className="cursor-pointer transition-all duration-200 hover:bg-purple-50 hover:text-purple-700 focus:bg-purple-50 focus:text-purple-700"
                       >
                         <Shield className="h-4 w-4 mr-2 transition-colors duration-200" />
-                        Admin Panel
+                        {t('myTeams.adminPanel')}
                       </DropdownMenuItem>
                     )}
                     <DropdownMenuSeparator />
@@ -204,7 +206,7 @@ export default function MyTeamsPage() {
                       className="cursor-pointer transition-all duration-200 hover:bg-red-50 hover:text-red-700 focus:bg-red-50 focus:text-red-700"
                     >
                       <LogOut className="h-4 w-4 mr-2 transition-colors duration-200" />
-                      Logout
+                      {t('myTeams.logout')}
                     </DropdownMenuItem>
                   </DropdownMenuContent>
                 </DropdownMenu>
