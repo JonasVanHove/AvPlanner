@@ -41,6 +41,7 @@ import { HamburgerMenu, HamburgerMenuItem } from "@/components/ui/hamburger-menu
 import { useIsMobile } from "@/hooks/use-mobile"
 import { useSwipe } from "@/hooks/use-swipe"
 import { format } from "date-fns"
+import { useTheme } from "next-themes"
 
 interface Member {
   id: string
@@ -98,6 +99,7 @@ const AvailabilityCalendarRedesigned = ({
   initialDate,
   onDateNavigation,
 }: AvailabilityCalendarProps) => {
+  const { theme } = useTheme()
   const [currentDate, setCurrentDate] = useState(initialDate || new Date())
   const [availability, setAvailability] = useState<Availability[]>([])
   const [viewMode, setViewMode] = useState<"week">("week")
@@ -130,6 +132,44 @@ const AvailabilityCalendarRedesigned = ({
   
   // Mobile responsive hook
   const isMobile = useIsMobile()
+
+  // Get theme-specific colors for background and header
+  const getThemeColors = () => {
+    switch (theme) {
+      case 'autumn':
+        return {
+          background: 'bg-orange-50/50 dark:bg-orange-950/20',
+          header: 'bg-gradient-to-r from-orange-600 via-amber-700 to-orange-800 dark:from-orange-900 dark:via-orange-800 dark:to-amber-900',
+          headerBorder: 'border-orange-500/20 dark:border-orange-700'
+        }
+      case 'winter':
+        return {
+          background: 'bg-blue-50/50 dark:bg-blue-950/20',
+          header: 'bg-gradient-to-r from-blue-600 via-slate-700 to-blue-800 dark:from-blue-900 dark:via-slate-800 dark:to-blue-900',
+          headerBorder: 'border-blue-500/20 dark:border-blue-700'
+        }
+      case 'spring':
+        return {
+          background: 'bg-green-50/50 dark:bg-green-950/20',
+          header: 'bg-gradient-to-r from-green-600 via-emerald-700 to-green-800 dark:from-green-900 dark:via-emerald-800 dark:to-green-900',
+          headerBorder: 'border-green-500/20 dark:border-green-700'
+        }
+      case 'summer':
+        return {
+          background: 'bg-yellow-50/50 dark:bg-yellow-950/20',
+          header: 'bg-gradient-to-r from-yellow-600 via-amber-700 to-yellow-800 dark:from-yellow-900 dark:via-amber-800 dark:to-yellow-900',
+          headerBorder: 'border-yellow-500/20 dark:border-yellow-700'
+        }
+      default:
+        return {
+          background: 'bg-gray-50 dark:bg-gray-900',
+          header: 'bg-gradient-to-r from-blue-600 via-blue-700 to-indigo-700 dark:from-gray-800 dark:via-gray-800 dark:to-gray-900',
+          headerBorder: 'border-blue-500/20 dark:border-gray-700'
+        }
+    }
+  }
+
+  const themeColors = getThemeColors()
 
   // Memoized callback for bulk range selection changes
   const handleRangeSelectionChange = useCallback((startDate?: Date, endDate?: Date, isActive?: boolean) => {
@@ -1507,9 +1547,9 @@ const AvailabilityCalendarRedesigned = ({
 
   return (
     <TooltipProvider>
-      <div className="min-h-screen bg-gray-50 dark:bg-gray-900">
+      <div className={`min-h-screen ${themeColors.background}`}>
         {/* Header - Compact Mobile & Tablet Optimized */}
-        <div className="bg-gradient-to-r from-blue-600 via-blue-700 to-indigo-700 dark:from-gray-800 dark:via-gray-800 dark:to-gray-900 border-b border-blue-500/20 dark:border-gray-700 shadow-lg">
+        <div className={`${themeColors.header} border-b ${themeColors.headerBorder} shadow-lg`}>
           <div className="px-3 lg:px-6 py-2 lg:py-3">
             <div className="flex flex-row items-center justify-between gap-2 lg:gap-3">
               <div className="flex items-center gap-2 lg:gap-3 min-w-0 flex-1">

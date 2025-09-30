@@ -20,7 +20,7 @@ import {
 } from "@/components/ui/drawer"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { Input } from "@/components/ui/input"
-import { Settings, Download, Moon, Sun, Globe, Bell, ChevronDown, Monitor, Share2, Copy, QrCode, Eye, EyeOff } from "lucide-react"
+import { Settings, Download, Moon, Sun, Globe, Bell, ChevronDown, Monitor, Share2, Copy, QrCode, Eye, EyeOff, Leaf, Snowflake, Flower, Sun as SummerSun } from "lucide-react"
 import { ExportDialog } from "./export-dialog"
 import { useTheme } from "next-themes"
 import { useTranslation, type Locale } from "@/lib/i18n"
@@ -417,6 +417,14 @@ export function SettingsDropdown({ currentLocale, members, team, forceOpen, onOp
               <Moon className="mr-2 h-4 w-4" />
             ) : theme === "light" ? (
               <Sun className="mr-2 h-4 w-4" />
+            ) : theme === "autumn" ? (
+              <Leaf className="mr-2 h-4 w-4 text-orange-600" />
+            ) : theme === "winter" ? (
+              <Snowflake className="mr-2 h-4 w-4 text-blue-500" />
+            ) : theme === "spring" ? (
+              <Flower className="mr-2 h-4 w-4 text-green-500" />
+            ) : theme === "summer" ? (
+              <SummerSun className="mr-2 h-4 w-4 text-yellow-500" />
             ) : (
               <Monitor className="mr-2 h-4 w-4" />
             )}
@@ -446,6 +454,30 @@ export function SettingsDropdown({ currentLocale, members, team, forceOpen, onOp
               <div className="flex items-center">
                 <Moon className="mr-2 h-3 w-3" />
                 {currentLocale === "en" ? "Dark" : currentLocale === "nl" ? "Donker" : "Sombre"}
+              </div>
+            </SelectItem>
+            <SelectItem value="autumn" className="text-sm cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-700">
+              <div className="flex items-center">
+                <Leaf className="mr-2 h-3 w-3 text-orange-600" />
+                {currentLocale === "en" ? "Autumn" : currentLocale === "nl" ? "Herfst" : "Automne"}
+              </div>
+            </SelectItem>
+            <SelectItem value="winter" className="text-sm cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-700">
+              <div className="flex items-center">
+                <Snowflake className="mr-2 h-3 w-3 text-blue-500" />
+                {currentLocale === "en" ? "Winter" : currentLocale === "nl" ? "Winter" : "Hiver"}
+              </div>
+            </SelectItem>
+            <SelectItem value="spring" className="text-sm cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-700">
+              <div className="flex items-center">
+                <Flower className="mr-2 h-3 w-3 text-green-500" />
+                {currentLocale === "en" ? "Spring" : currentLocale === "nl" ? "Lente" : "Printemps"}
+              </div>
+            </SelectItem>
+            <SelectItem value="summer" className="text-sm cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-700">
+              <div className="flex items-center">
+                <SummerSun className="mr-2 h-3 w-3 text-yellow-500" />
+                {currentLocale === "en" ? "Summer" : currentLocale === "nl" ? "Zomer" : "Été"}
               </div>
             </SelectItem>
           </SelectContent>
