@@ -10,7 +10,7 @@ import { Dialog, DialogContent, DialogTrigger } from "@/components/ui/dialog"
 import { TeamAdminPanel } from "@/components/admin/team-admin-panel"
 import { TeamForm } from "@/components/team-form"
 import { JoinTeamForm } from "@/components/join-team-form"
-import { Loader2, Users, Calendar, Settings, LogOut, Crown, Shield, Home, Plus, UserPlus, RefreshCw } from "lucide-react"
+import { Loader2, Users, Calendar, Settings, LogOut, Crown, Shield, Home, Plus, UserPlus, RefreshCw, Eye, EyeOff } from "lucide-react"
 import { User } from "@supabase/supabase-js"
 import { useRouter } from "next/navigation"
 import { MemberAvatar } from "@/components/member-avatar"
@@ -41,6 +41,7 @@ interface TeamMember {
   joined_at: string
   last_active: string | null
   is_current_user: boolean
+  is_hidden?: boolean
 }
 
 // Database return type (from get_user_teams function)
@@ -179,12 +180,13 @@ export function UserDashboard({ user, onLogout, onGoHome }: UserDashboardProps) 
               return { ...team, members: [] }
             }
             
-            // Debug: Log profile image data for each member
-            console.log(`🔍 Team "${team.name}" profile images debug:`)
+            // Debug: Log profile image data and visibility for each member
+            console.log(`🔍 Team "${team.name}" member data debug:`)
             membersData.forEach((member: any, index: number) => {
               console.log(`  [${index}] ${member.member_name} (${member.member_email}):`)
               console.log(`    profile_image_url: ${member.profile_image_url ? 'YES' : 'NO'} (${typeof member.profile_image_url})`)
               console.log(`    profile_image: ${member.profile_image ? 'YES' : 'NO'} (${typeof member.profile_image})`)
+              console.log(`    is_hidden: ${member.is_hidden} (${typeof member.is_hidden})`)
               if (member.profile_image) {
                 console.log(`    profile_image length: ${member.profile_image.length}`)
                 console.log(`    profile_image preview: ${member.profile_image.substring(0, 50)}...`)
@@ -578,13 +580,27 @@ export function UserDashboard({ user, onLogout, onGoHome }: UserDashboardProps) 
                         {/* Team Members Section */}
                         {team.members && team.members.length > 0 && (
                           <div className="mt-4 sm:mt-6 pt-3 sm:pt-4 border-t border-gray-200">
-                            <h4 className="font-medium text-gray-900 mb-2 sm:mb-3 flex items-center gap-2 text-sm sm:text-base">
-                              <Users className="h-3 w-3 sm:h-4 sm:w-4" />
-                              Team Members ({team.members.length})
-                            </h4>
+                            <div className="flex items-center justify-between mb-2 sm:mb-3">
+                              <h4 className="font-medium text-gray-900 flex items-center gap-2 text-sm sm:text-base">
+                                <Users className="h-3 w-3 sm:h-4 sm:w-4" />
+                                Team Members ({team.members.length})
+                              </h4>
+                              <div className="flex items-center gap-2 text-xs">
+                                <Badge variant="outline" className="bg-green-50 text-green-700 border-green-300">
+                                  <Eye className="h-3 w-3 mr-1" />
+                                  {team.members.filter(m => !m.is_hidden).length} Visible
+                                </Badge>
+                                {team.members.some(m => m.is_hidden) && (
+                                  <Badge variant="outline" className="bg-gray-100 text-gray-600 border-gray-300">
+                                    <EyeOff className="h-3 w-3 mr-1" />
+                                    {team.members.filter(m => m.is_hidden).length} Hidden
+                                  </Badge>
+                                )}
+                              </div>
+                            </div>
                             <div className="space-y-2">
-                              {team.members.slice(0, 5).map((member) => (
-                                <div key={member.member_id} className="flex items-center justify-between p-2 sm:p-3 bg-gray-50 rounded-lg">
+                              {team.members.slice(0, 8).map((member) => (
+                                <div key={member.member_id} className={`flex items-center justify-between p-2 sm:p-3 bg-gray-50 rounded-lg ${member.is_hidden ? 'opacity-60 bg-gray-100' : ''}`}>
                                   <div className="flex items-center gap-2 sm:gap-3 min-w-0 flex-1">
                                     <MemberAvatar
                                       firstName={member.member_name.trim() ? member.member_name.split(' ')[0] : member.member_email.split('@')[0]}
@@ -614,6 +630,24 @@ export function UserDashboard({ user, onLogout, onGoHome }: UserDashboardProps) 
                                     <Badge variant="outline" className={`${getMemberStatusColor(member.member_status)} text-xs`}>
                                       {member.member_status}
                                     </Badge>
+                                    {/* Visibility indicator */}
+                                    <Badge 
+                                      variant="outline" 
+                                      className={`text-xs flex items-center gap-1 ${member.is_hidden ? 'bg-gray-100 text-gray-600 border-gray-300' : 'bg-green-50 text-green-700 border-green-300'}`}
+                                      title={member.is_hidden ? 'This member is hidden from the calendar' : 'This member is visible on the calendar'}
+                                    >
+                                      {member.is_hidden ? (
+                                        <>
+                                          <EyeOff className="h-3 w-3" />
+                                          <span className="hidden sm:inline">Hidden</span>
+                                        </>
+                                      ) : (
+                                        <>
+                                          <Eye className="h-3 w-3" />
+                                          <span className="hidden sm:inline">Visible</span>
+                                        </>
+                                      )}
+                                    </Badge>
                                     <div className="hidden sm:flex items-center gap-1">
                                       {getRoleIcon(member.member_role, false)}
                                       <Badge variant={member.member_role === 'admin' ? "default" : "secondary"} className="text-xs">
@@ -623,10 +657,10 @@ export function UserDashboard({ user, onLogout, onGoHome }: UserDashboardProps) 
                                   </div>
                                 </div>
                               ))}
-                              {team.members.length > 5 && (
+                              {team.members.length > 8 && (
                                 <div className="text-center py-2">
                                   <span className="text-xs sm:text-sm text-gray-500">
-                                    +{team.members.length - 5} more member{team.members.length - 5 !== 1 ? 's' : ''}
+                                    +{team.members.length - 8} more member{team.members.length - 8 !== 1 ? 's' : ''}
                                   </span>
                                 </div>
                               )}

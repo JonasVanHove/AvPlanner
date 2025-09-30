@@ -12,11 +12,12 @@ import { Textarea } from "@/components/ui/textarea"
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip"
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger, DropdownMenuSeparator } from "@/components/ui/dropdown-menu"
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog"
+import { Checkbox } from "@/components/ui/checkbox"
 import { supabase } from "@/lib/supabase"
 import { useAuth } from "@/hooks/useAuth"
 import { useVersion } from "@/hooks/use-version"
 import { LoadingSpinner } from "@/components/ui/loading-spinner"
-import { ArrowLeft, Users, Settings, Eye, EyeOff, Crown, Shield, Mail, Save, AlertCircle, UserCheck, UserX, Trash2 } from "lucide-react"
+import { ArrowLeft, Users, Settings, Eye, EyeOff, Crown, Shield, Mail, Save, AlertCircle, UserCheck, UserX, Trash2, CheckSquare, Square, MinusSquare, Calendar, CalendarDays } from "lucide-react"
 import Link from "next/link"
 import { useRouter } from "next/navigation"
 import { MemberAvatar } from "@/components/member-avatar"
@@ -67,6 +68,102 @@ export default function TeamSettingsPage({ params }: TeamSettingsPageProps) {
   const [isDeleting, setIsDeleting] = useState(false)
   const [deleteConfirmText, setDeleteConfirmText] = useState("")
   
+  // Bulk operations state
+  const [selectedMembers, setSelectedMembers] = useState<string[]>([])
+  const [showBulkDialog, setShowBulkDialog] = useState(false)
+  const [bulkAction, setBulkAction] = useState<'hide' | 'show' | 'activate' | 'deactivate' | 'set_availability' | null>(null)
+  const [isBulkOperating, setIsBulkOperating] = useState(false)
+  
+  // Date range state for bulk availability operations
+  const [dateRange, setDateRange] = useState({
+    from: new Date().toISOString().split('T')[0], // Today as default
+    to: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString().split('T')[0] // Next week as default
+  })
+  const [bulkAvailabilityStatus, setBulkAvailabilityStatus] = useState<'available' | 'unavailable' | 'maybe'>('available')
+
+  // Date preset helper functions
+  const getDatePresets = () => {
+    const today = new Date()
+    const tomorrow = new Date(today)
+    tomorrow.setDate(today.getDate() + 1)
+    
+    const thisWeekStart = new Date(today)
+    thisWeekStart.setDate(today.getDate() - today.getDay() + 1) // Monday
+    const thisWeekEnd = new Date(thisWeekStart)
+    thisWeekEnd.setDate(thisWeekStart.getDate() + 6) // Sunday
+    
+    const nextWeekStart = new Date(thisWeekStart)
+    nextWeekStart.setDate(thisWeekStart.getDate() + 7)
+    const nextWeekEnd = new Date(nextWeekStart)
+    nextWeekEnd.setDate(nextWeekStart.getDate() + 6)
+    
+    const thisMonthStart = new Date(today.getFullYear(), today.getMonth(), 1)
+    const thisMonthEnd = new Date(today.getFullYear(), today.getMonth() + 1, 0)
+    
+    const nextMonthStart = new Date(today.getFullYear(), today.getMonth() + 1, 1)
+    const nextMonthEnd = new Date(today.getFullYear(), today.getMonth() + 2, 0)
+
+    return [
+      {
+        label: "Vandaag",
+        from: today.toISOString().split('T')[0],
+        to: today.toISOString().split('T')[0],
+        icon: "📅"
+      },
+      {
+        label: "Morgen", 
+        from: tomorrow.toISOString().split('T')[0],
+        to: tomorrow.toISOString().split('T')[0],
+        icon: "📆"
+      },
+      {
+        label: "Deze Week",
+        from: thisWeekStart.toISOString().split('T')[0],
+        to: thisWeekEnd.toISOString().split('T')[0],
+        icon: "📋"
+      },
+      {
+        label: "Volgende Week",
+        from: nextWeekStart.toISOString().split('T')[0], 
+        to: nextWeekEnd.toISOString().split('T')[0],
+        icon: "📊"
+      },
+      {
+        label: "Deze Maand",
+        from: thisMonthStart.toISOString().split('T')[0],
+        to: thisMonthEnd.toISOString().split('T')[0],
+        icon: "🗓️"
+      },
+      {
+        label: "Volgende Maand",
+        from: nextMonthStart.toISOString().split('T')[0],
+        to: nextMonthEnd.toISOString().split('T')[0],
+        icon: "📈"
+      }
+    ]
+  }
+
+  const applyDatePreset = (preset: { from: string, to: string }) => {
+    setDateRange(preset)
+  }
+
+  const getDayCount = (from: string, to: string) => {
+    const fromDate = new Date(from)
+    const toDate = new Date(to)
+    return Math.ceil((toDate.getTime() - fromDate.getTime()) / (1000 * 60 * 60 * 24)) + 1
+  }
+
+  const formatDateRange = (from: string, to: string) => {
+    const fromDate = new Date(from)
+    const toDate = new Date(to)
+    const dayCount = getDayCount(from, to)
+    
+    if (from === to) {
+      return `${fromDate.toLocaleDateString('nl-NL')} (1 dag)`
+    }
+    return `${fromDate.toLocaleDateString('nl-NL')} - ${toDate.toLocaleDateString('nl-NL')} (${dayCount} dagen)`
+  }
+  
   // Editable settings state
   const [editableSettings, setEditableSettings] = useState({
     team_name: "",
@@ -88,6 +185,13 @@ export default function TeamSettingsPage({ params }: TeamSettingsPageProps) {
       fetchTeamSettings()
     }
   }, [resolvedParams.slug, user])
+
+  // Clear selection when members change
+  useEffect(() => {
+    setSelectedMembers(prev => 
+      prev.filter(id => members.some(m => m.member_id === id && !m.is_current_user))
+    )
+  }, [members])
 
   const fetchTeamSettings = async () => {
     if (!user?.email) return
@@ -232,6 +336,127 @@ export default function TeamSettingsPage({ params }: TeamSettingsPageProps) {
     } catch (error: any) {
       console.error("Error updating member status:", error)
       alert(`Er is een fout opgetreden: ${error.message}`)
+    }
+  }
+
+  // Bulk operations functions
+  const toggleMemberSelection = (memberId: string) => {
+    setSelectedMembers(prev => 
+      prev.includes(memberId) 
+        ? prev.filter(id => id !== memberId)
+        : [...prev, memberId]
+    )
+  }
+
+  const selectAllMembers = () => {
+    const eligibleMembers = members.filter(m => !m.is_current_user)
+    setSelectedMembers(eligibleMembers.map(m => m.member_id))
+  }
+
+  const clearSelection = () => {
+    setSelectedMembers([])
+  }
+
+  const getSelectedMembers = () => {
+    return members.filter(m => selectedMembers.includes(m.member_id))
+  }
+
+  const handleBulkAction = (action: 'hide' | 'show' | 'activate' | 'deactivate' | 'set_availability') => {
+    if (selectedMembers.length === 0) return
+    
+    setBulkAction(action)
+    setShowBulkDialog(true)
+  }
+
+  const executeBulkAction = async () => {
+    if (!bulkAction || selectedMembers.length === 0 || !teamSettings || !user?.email) return
+
+    try {
+      setIsBulkOperating(true)
+      
+      const selectedMembersList = getSelectedMembers()
+      let successCount = 0
+      let errorCount = 0
+
+      for (const member of selectedMembersList) {
+        try {
+          if (bulkAction === 'hide' || bulkAction === 'show') {
+            const { error } = await supabase.rpc('toggle_member_visibility', {
+              team_id_param: teamSettings.team_id,
+              member_id_param: member.member_id,
+              is_hidden_param: bulkAction === 'hide',
+              user_email: user.email
+            })
+            if (error) throw error
+          } else if (bulkAction === 'activate' || bulkAction === 'deactivate') {
+            const newStatus = bulkAction === 'activate' ? 'active' : 'inactive'
+            const { error } = await supabase
+              .from('members')
+              .update({ status: newStatus })
+              .eq('id', member.member_id)
+              .eq('team_id', teamSettings.team_id)
+            if (error) throw error
+          } else if (bulkAction === 'set_availability') {
+            // Set availability for date range
+            const fromDate = new Date(dateRange.from)
+            const toDate = new Date(dateRange.to)
+            
+            for (let currentDate = new Date(fromDate); currentDate <= toDate; currentDate.setDate(currentDate.getDate() + 1)) {
+              const dateStr = currentDate.toISOString().split('T')[0]
+              
+              const { error } = await supabase
+                .from('availability')
+                .upsert({
+                  member_id: member.member_id,
+                  team_id: teamSettings.team_id,
+                  date: dateStr,
+                  status: bulkAvailabilityStatus,
+                  updated_at: new Date().toISOString()
+                }, {
+                  onConflict: 'member_id,team_id,date'
+                })
+              
+              if (error) throw error
+            }
+          }
+          successCount++
+        } catch (error) {
+          console.error(`Error processing member ${member.member_email}:`, error)
+          errorCount++
+        }
+      }
+
+      // Refresh data and show results
+      await fetchTeamSettings()
+      setSelectedMembers([])
+      
+      const actionText = {
+        hide: 'verborgen',
+        show: 'getoond',
+        activate: 'geactiveerd',
+        deactivate: 'gedeactiveerd',
+        set_availability: `beschikbaarheid ingesteld op ${bulkAvailabilityStatus === 'available' ? 'beschikbaar' : bulkAvailabilityStatus === 'unavailable' ? 'niet beschikbaar' : 'misschien'}`
+      }[bulkAction]
+
+      if (errorCount === 0) {
+        setSuccessMessage(`${successCount} teamleden succesvol ${actionText}!`)
+      } else {
+        setError(`${successCount} teamleden ${actionText}, ${errorCount} fouten opgetreden.`)
+      }
+      
+      setTimeout(() => {
+        setSuccessMessage('')
+        setError('')
+      }, 5000)
+
+    } catch (error: any) {
+      console.error("Bulk operation error:", error)
+      setError(`Fout bij bulk operatie: ${error.message}`)
+      setTimeout(() => setError(''), 5000)
+    } finally {
+      setIsBulkOperating(false)
+      setShowBulkDialog(false)
+      setBulkAction(null)
     }
   }
 
@@ -549,6 +774,8 @@ export default function TeamSettingsPage({ params }: TeamSettingsPageProps) {
           </CardContent>
         </Card>
 
+
+
         {/* Members Management */}
         {teamSettings.user_is_admin && (
           <Card>
@@ -603,58 +830,306 @@ export default function TeamSettingsPage({ params }: TeamSettingsPageProps) {
                       </div>
                     </div>
 
-                    {/* Filter Options */}
-                    <div className="flex flex-wrap gap-2 mb-4">
-                      <Button
-                        variant="outline"
-                        size="sm"
-                        onClick={() => {
-                          const visibleMembers = members.filter(m => !m.is_hidden && !m.is_current_user)
-                          if (visibleMembers.length > 0 && confirm(`Weet je zeker dat je ${visibleMembers.length} teamleden wilt verbergen?`)) {
-                            visibleMembers.forEach(m => toggleMemberVisibility(m.member_id, false))
-                          }
-                        }}
-                        disabled={members.filter(m => !m.is_hidden && !m.is_current_user).length === 0}
-                      >
-                        <EyeOff className="h-4 w-4 mr-1" />
-                        Verberg Alle Anderen ({members.filter(m => !m.is_hidden && !m.is_current_user).length})
-                      </Button>
-                      <Button
-                        variant="outline"
-                        size="sm"
-                        onClick={() => {
-                          const hiddenMembers = members.filter(m => m.is_hidden)
-                          if (hiddenMembers.length > 0 && confirm(`Weet je zeker dat je ${hiddenMembers.length} teamleden wilt tonen?`)) {
-                            hiddenMembers.forEach(m => toggleMemberVisibility(m.member_id, true))
-                          }
-                        }}
-                        disabled={members.filter(m => m.is_hidden).length === 0}
-                      >
-                        <Eye className="h-4 w-4 mr-1" />
-                        Toon Alle Verborgen ({members.filter(m => m.is_hidden).length})
-                      </Button>
-                      <Button
-                        variant="outline"
-                        size="sm"
-                        onClick={() => {
-                          const inactiveMembers = members.filter(m => m.member_status === 'inactive' && !m.is_current_user)
-                          if (inactiveMembers.length > 0 && confirm(`Weet je zeker dat je ${inactiveMembers.length} inactieve teamleden wilt activeren?`)) {
-                            inactiveMembers.forEach(m => toggleMemberStatus(m.member_id, m.member_status))
-                          }
-                        }}
-                        disabled={members.filter(m => m.member_status === 'inactive' && !m.is_current_user).length === 0}
-                      >
-                        <UserCheck className="h-4 w-4 mr-1" />
-                        Activeer Alle Inactieve ({members.filter(m => m.member_status === 'inactive' && !m.is_current_user).length})
-                      </Button>
+                    {/* Selection Controls */}
+                    <div className="bg-blue-50 border border-blue-200 rounded-lg p-4 mb-4">
+                      <div className="flex items-center justify-between mb-3">
+                        <div className="flex items-center gap-3">
+                          <Checkbox
+                            checked={selectedMembers.length === members.filter(m => !m.is_current_user).length && members.filter(m => !m.is_current_user).length > 0}
+                            onCheckedChange={(checked) => {
+                              if (checked) {
+                                selectAllMembers()
+                              } else {
+                                clearSelection()
+                              }
+                            }}
+                            className="h-5 w-5 border-2 border-blue-400"
+                          />
+                          <div>
+                            <p className="font-medium text-blue-900">
+                              {selectedMembers.length > 0 
+                                ? `${selectedMembers.length} teamleden geselecteerd`
+                                : "🎯 Selecteer teamleden voor bulk acties"
+                              }
+                            </p>
+                            <p className="text-sm text-blue-700">
+                              💡 Tip: Je eigen account kan niet worden bewerkt via bulk acties
+                            </p>
+                          </div>
+                        </div>
+                        {selectedMembers.length > 0 && (
+                          <Button variant="outline" size="sm" onClick={clearSelection}>
+                            Deselecteer Alles
+                          </Button>
+                        )}
+                      </div>
+                      
+                      {/* Bulk Action Buttons */}
+                      {selectedMembers.length > 0 && (
+                        <div className="border-t border-blue-200 pt-3 space-y-4">
+                          <div className="text-sm font-medium text-blue-900">
+                            Bulk Acties ({selectedMembers.length} geselecteerd):
+                          </div>
+                          
+                          {/* Member Management Actions */}
+                          <div className="space-y-2">
+                            <p className="text-xs font-medium text-blue-800 mb-2">Teamlid Beheer:</p>
+                            <div className="flex flex-wrap gap-2">
+                              <Button
+                                variant="outline" 
+                                size="sm"
+                                onClick={() => handleBulkAction('hide')}
+                                disabled={isBulkOperating}
+                                className="bg-white hover:bg-gray-50"
+                              >
+                                {isBulkOperating && bulkAction === 'hide' ? (
+                                  <div className="animate-spin h-4 w-4 mr-1 border-2 border-gray-400 border-t-transparent rounded-full"></div>
+                                ) : (
+                                  <EyeOff className="h-4 w-4 mr-1" />
+                                )}
+                                Verberg Geselecteerd
+                              </Button>
+                              <Button
+                                variant="outline" 
+                                size="sm"
+                                onClick={() => handleBulkAction('show')}
+                                disabled={isBulkOperating}
+                                className="bg-white hover:bg-gray-50"
+                              >
+                                {isBulkOperating && bulkAction === 'show' ? (
+                                  <div className="animate-spin h-4 w-4 mr-1 border-2 border-gray-400 border-t-transparent rounded-full"></div>
+                                ) : (
+                                  <Eye className="h-4 w-4 mr-1" />
+                                )}
+                                Toon Geselecteerd
+                              </Button>
+                              <Button
+                                variant="outline" 
+                                size="sm"
+                                onClick={() => handleBulkAction('deactivate')}
+                                disabled={isBulkOperating}
+                                className="bg-white hover:bg-gray-50 text-orange-600 hover:text-orange-700"
+                              >
+                                {isBulkOperating && bulkAction === 'deactivate' ? (
+                                  <div className="animate-spin h-4 w-4 mr-1 border-2 border-orange-400 border-t-transparent rounded-full"></div>
+                                ) : (
+                                  <UserX className="h-4 w-4 mr-1" />
+                                )}
+                                Deactiveer Geselecteerd
+                              </Button>
+                              <Button
+                                variant="outline" 
+                                size="sm"
+                                onClick={() => handleBulkAction('activate')}
+                                disabled={isBulkOperating}
+                                className="bg-white hover:bg-gray-50 text-green-600 hover:text-green-700"
+                              >
+                                {isBulkOperating && bulkAction === 'activate' ? (
+                                  <div className="animate-spin h-4 w-4 mr-1 border-2 border-green-400 border-t-transparent rounded-full"></div>
+                                ) : (
+                                  <UserCheck className="h-4 w-4 mr-1" />
+                                )}
+                                Activeer Geselecteerd
+                              </Button>
+                            </div>
+                          </div>
+
+                          {/* Availability Management - Enhanced */}
+                          <div className="space-y-4 bg-gradient-to-br from-green-50 to-blue-50 p-4 rounded-lg border border-green-200">
+                            <div className="flex items-center gap-2 mb-3">
+                              <CalendarDays className="h-5 w-5 text-green-700" />
+                              <h4 className="font-semibold text-green-800">📅 Beschikbaarheid Bulk Update</h4>
+                            </div>
+                            
+                            {/* Quick Date Presets */}
+                            <div className="space-y-2">
+                              <Label className="text-sm font-medium text-green-700">⚡ Snelle Selectie:</Label>
+                              <div className="grid grid-cols-2 md:grid-cols-3 gap-2">
+                                {getDatePresets().map((preset, index) => (
+                                  <Button
+                                    key={index}
+                                    variant="outline"
+                                    size="sm"
+                                    onClick={() => applyDatePreset(preset)}
+                                    className="text-xs bg-white hover:bg-green-50 border-green-300 hover:border-green-400 justify-start"
+                                  >
+                                    <span className="mr-1">{preset.icon}</span>
+                                    {preset.label}
+                                  </Button>
+                                ))}
+                              </div>
+                            </div>
+
+                            {/* Custom Date Range Selection */}
+                            <div className="space-y-3 bg-white p-3 rounded-lg border border-green-200">
+                              <Label className="text-sm font-medium text-green-700 flex items-center gap-1">
+                                🎯 Aangepaste Datum Periode:
+                              </Label>
+                              
+                              <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                                <div className="space-y-2">
+                                  <Label htmlFor="date-from" className="text-xs text-green-600 flex items-center gap-1">
+                                    📅 Van:
+                                  </Label>
+                                  <Input
+                                    id="date-from"
+                                    type="date"
+                                    value={dateRange.from}
+                                    onChange={(e) => setDateRange(prev => ({ ...prev, from: e.target.value }))}
+                                    className="text-sm border-green-300 focus:border-green-500 focus:ring-green-500"
+                                  />
+                                </div>
+                                <div className="space-y-2">
+                                  <Label htmlFor="date-to" className="text-xs text-green-600 flex items-center gap-1">
+                                    📅 Tot:
+                                  </Label>
+                                  <Input
+                                    id="date-to"
+                                    type="date"
+                                    value={dateRange.to}
+                                    onChange={(e) => setDateRange(prev => ({ ...prev, to: e.target.value }))}
+                                    min={dateRange.from}
+                                    className="text-sm border-green-300 focus:border-green-500 focus:ring-green-500"
+                                  />
+                                </div>
+                              </div>
+
+                              {/* Date Range Preview */}
+                              <div className="bg-blue-50 border border-blue-200 rounded p-2">
+                                <div className="flex items-center justify-between text-sm">
+                                  <span className="text-blue-700 font-medium">🗓️ Geselecteerde Periode:</span>
+                                  <span className="text-blue-800 font-semibold">
+                                    {formatDateRange(dateRange.from, dateRange.to)}
+                                  </span>
+                                </div>
+                                {getDayCount(dateRange.from, dateRange.to) > 30 && (
+                                  <p className="text-xs text-amber-600 mt-1 flex items-center gap-1">
+                                    ⚠️ Let op: Dit is een lange periode ({getDayCount(dateRange.from, dateRange.to)} dagen)
+                                  </p>
+                                )}
+                                {new Date(dateRange.from) > new Date(dateRange.to) && (
+                                  <p className="text-xs text-red-600 mt-1 flex items-center gap-1">
+                                    ❌ Einddatum moet na begindatum liggen
+                                  </p>
+                                )}
+                              </div>
+                            </div>
+
+                            {/* Availability Status Selection */}
+                            <div className="space-y-3">
+                              <Label className="text-sm font-medium text-green-700">🎯 Beschikbaarheid Status:</Label>
+                              <div className="grid grid-cols-1 md:grid-cols-3 gap-2">
+                                <Button
+                                  variant={bulkAvailabilityStatus === 'available' ? 'default' : 'outline'}
+                                  size="sm"
+                                  onClick={() => setBulkAvailabilityStatus('available')}
+                                  className={`text-sm flex items-center gap-2 justify-center p-3 h-auto ${
+                                    bulkAvailabilityStatus === 'available' 
+                                      ? 'bg-green-600 hover:bg-green-700 text-white' 
+                                      : 'bg-white hover:bg-green-50 border-green-300 text-green-700'
+                                  }`}
+                                >
+                                  <span className="text-lg">✅</span>
+                                  <div className="text-center">
+                                    <div className="font-medium">Beschikbaar</div>
+                                    <div className="text-xs opacity-75">Kan deelnemen</div>
+                                  </div>
+                                </Button>
+                                <Button
+                                  variant={bulkAvailabilityStatus === 'unavailable' ? 'default' : 'outline'}
+                                  size="sm"
+                                  onClick={() => setBulkAvailabilityStatus('unavailable')}
+                                  className={`text-sm flex items-center gap-2 justify-center p-3 h-auto ${
+                                    bulkAvailabilityStatus === 'unavailable' 
+                                      ? 'bg-red-600 hover:bg-red-700 text-white' 
+                                      : 'bg-white hover:bg-red-50 border-red-300 text-red-700'
+                                  }`}
+                                >
+                                  <span className="text-lg">❌</span>
+                                  <div className="text-center">
+                                    <div className="font-medium">Niet Beschikbaar</div>
+                                    <div className="text-xs opacity-75">Kan niet deelnemen</div>
+                                  </div>
+                                </Button>
+                                <Button
+                                  variant={bulkAvailabilityStatus === 'maybe' ? 'default' : 'outline'}
+                                  size="sm"
+                                  onClick={() => setBulkAvailabilityStatus('maybe')}
+                                  className={`text-sm flex items-center gap-2 justify-center p-3 h-auto ${
+                                    bulkAvailabilityStatus === 'maybe' 
+                                      ? 'bg-yellow-600 hover:bg-yellow-700 text-white' 
+                                      : 'bg-white hover:bg-yellow-50 border-yellow-300 text-yellow-700'
+                                  }`}
+                                >
+                                  <span className="text-lg">❓</span>
+                                  <div className="text-center">
+                                    <div className="font-medium">Misschien</div>
+                                    <div className="text-xs opacity-75">Onzeker</div>
+                                  </div>
+                                </Button>
+                              </div>
+                            </div>
+
+                            {/* Apply Availability Button */}
+                            <Button
+                              onClick={() => handleBulkAction('set_availability')}
+                              disabled={isBulkOperating || new Date(dateRange.from) > new Date(dateRange.to)}
+                              className={`w-full text-sm font-medium py-3 h-auto transition-all ${
+                                bulkAvailabilityStatus === 'available' ? 'bg-green-600 hover:bg-green-700' :
+                                bulkAvailabilityStatus === 'unavailable' ? 'bg-red-600 hover:bg-red-700' :
+                                'bg-yellow-600 hover:bg-yellow-700'
+                              }`}
+                            >
+                              {isBulkOperating && bulkAction === 'set_availability' ? (
+                                <>
+                                  <div className="animate-spin h-4 w-4 mr-2 border-2 border-white border-t-transparent rounded-full"></div>
+                                  Beschikbaarheid Instellen...
+                                </>
+                              ) : (
+                                <>
+                                  <Calendar className="h-4 w-4 mr-2" />
+                                  Zet {selectedMembers.length} Teamleden op "
+                                  {bulkAvailabilityStatus === 'available' ? '✅ Beschikbaar' : 
+                                   bulkAvailabilityStatus === 'unavailable' ? '❌ Niet Beschikbaar' : 
+                                   '❓ Misschien'}" 
+                                  <span className="ml-1">
+                                    ({getDayCount(dateRange.from, dateRange.to)} dagen)
+                                  </span>
+                                </>
+                              )}
+                            </Button>
+                            
+                            {/* Helpful Tips */}
+                            <div className="bg-blue-50 border border-blue-200 rounded p-3 text-xs">
+                              <div className="font-medium text-blue-800 mb-1">💡 Tips:</div>
+                              <ul className="text-blue-700 space-y-1">
+                                <li>• Gebruik snelle selectie voor veelgebruikte periodes</li>
+                                <li>• Bestaande beschikbaarheid wordt overschreven voor geselecteerde dagen</li>
+                                <li>• Je kunt individuele dagen later nog aanpassen indien nodig</li>
+                              </ul>
+                            </div>
+                          </div>
+                        </div>
+                      )}
                     </div>
 
                     {/* Members List */}
                     {members.map((member) => (
                       <div key={member.member_id} className={`flex items-center justify-between p-4 border rounded-lg transition-all ${
                         member.is_hidden ? 'bg-gray-50 border-gray-200' : 'bg-white border-gray-300'
-                      }`}>
+                      } ${selectedMembers.includes(member.member_id) ? 'ring-2 ring-blue-500 ring-opacity-50' : ''}`}>
                         <div className="flex items-center gap-3">
+                          {/* Selection Checkbox - only for non-current users */}
+                          {!member.is_current_user && (
+                            <Checkbox
+                              checked={selectedMembers.includes(member.member_id)}
+                              onCheckedChange={() => toggleMemberSelection(member.member_id)}
+                              className="h-5 w-5 border-2 border-gray-400 data-[state=checked]:bg-blue-600 data-[state=checked]:border-blue-600"
+                            />
+                          )}
+                          {member.is_current_user && (
+                            <div className="w-5 h-5" /> // Spacer for alignment
+                          )}
                           <MemberAvatar
                             firstName={member.member_name.trim() ? member.member_name.split(' ')[0] : member.member_email.split('@')[0]}
                             lastName={member.member_name.trim() ? member.member_name.split(' ').slice(1).join(' ') : ''}
@@ -861,6 +1336,107 @@ export default function TeamSettingsPage({ params }: TeamSettingsPageProps) {
             </CardContent>
           </Card>
         )}
+
+        {/* Bulk Action Confirmation Dialog */}
+        <Dialog open={showBulkDialog} onOpenChange={setShowBulkDialog}>
+          <DialogContent className="sm:max-w-[500px]">
+            <DialogHeader>
+              <DialogTitle className="text-gray-900">
+                Bulk Actie Bevestigen
+              </DialogTitle>
+              <DialogDescription className="text-gray-600">
+                {bulkAction && selectedMembers.length > 0 && (
+                  <div className="space-y-3">
+                    <p>
+                      Je staat op het punt om <strong>{selectedMembers.length} teamleden</strong> te{' '}
+                      <strong>
+                        {bulkAction === 'hide' && 'verbergen'}
+                        {bulkAction === 'show' && 'tonen'}
+                        {bulkAction === 'activate' && 'activeren'}
+                        {bulkAction === 'deactivate' && 'deactiveren'}
+                        {bulkAction === 'set_availability' && `beschikbaarheid instellen op "${bulkAvailabilityStatus === 'available' ? 'beschikbaar' : bulkAvailabilityStatus === 'unavailable' ? 'niet beschikbaar' : 'misschien'}"`}
+                      </strong>
+                      {bulkAction === 'set_availability' && (
+                        <span> voor de periode van <strong>{new Date(dateRange.from).toLocaleDateString('nl-NL')} tot {new Date(dateRange.to).toLocaleDateString('nl-NL')}</strong></span>
+                      )}.
+                    </p>
+                    
+                    <div className="bg-gray-50 p-3 rounded-lg max-h-32 overflow-y-auto">
+                      <p className="text-sm font-medium text-gray-700 mb-2">Betrokken teamleden:</p>
+                      <ul className="text-sm space-y-1">
+                        {getSelectedMembers().map((member) => (
+                          <li key={member.member_id} className="flex items-center gap-2">
+                            <span className="h-1.5 w-1.5 bg-gray-400 rounded-full"></span>
+                            {member.member_name.trim() !== '' && member.member_name.trim() !== ' '
+                              ? `${member.member_name} (${member.member_email})`
+                              : member.member_email
+                            }
+                          </li>
+                        ))}
+                      </ul>
+                    </div>
+
+                    <div className="bg-blue-50 p-3 rounded-lg">
+                      <p className="text-sm text-blue-800">
+                        <strong>Resultaat:</strong>{' '}
+                        {bulkAction === 'hide' && 'Deze teamleden worden verborgen uit overzichten en analytics, maar blijven lid van het team.'}
+                        {bulkAction === 'show' && 'Deze teamleden worden weer zichtbaar in overzichten en analytics.'}
+                        {bulkAction === 'activate' && 'Deze teamleden krijgen weer toegang tot het systeem.'}
+                        {bulkAction === 'deactivate' && 'Deze teamleden kunnen niet meer inloggen, maar hun data blijft bewaard.'}
+                        {bulkAction === 'set_availability' && (
+                          <span>
+                            Voor elke dag van {new Date(dateRange.from).toLocaleDateString('nl-NL')} tot{' '}
+                            {new Date(dateRange.to).toLocaleDateString('nl-NL')} ({Math.ceil((new Date(dateRange.to).getTime() - new Date(dateRange.from).getTime()) / (1000 * 60 * 60 * 24)) + 1} dagen totaal){' '}
+                            wordt de beschikbaarheid van de geselecteerde teamleden ingesteld op{' '}
+                            <strong className={`${bulkAvailabilityStatus === 'available' ? 'text-green-700' : bulkAvailabilityStatus === 'unavailable' ? 'text-red-700' : 'text-yellow-700'}`}>
+                              {bulkAvailabilityStatus === 'available' ? 'beschikbaar' : bulkAvailabilityStatus === 'unavailable' ? 'niet beschikbaar' : 'misschien'}
+                            </strong>. Bestaande beschikbaarheid voor deze dagen wordt overschreven.
+                          </span>
+                        )}
+                      </p>
+                    </div>
+                  </div>
+                )}
+              </DialogDescription>
+            </DialogHeader>
+            <DialogFooter>
+              <Button 
+                variant="outline" 
+                onClick={() => {
+                  setShowBulkDialog(false)
+                  setBulkAction(null)
+                }}
+                disabled={isBulkOperating}
+              >
+                Annuleren
+              </Button>
+              <Button 
+                onClick={executeBulkAction}
+                disabled={isBulkOperating}
+                className={`${
+                  bulkAction === 'deactivate' ? 'bg-orange-600 hover:bg-orange-700' :
+                  bulkAction === 'hide' ? 'bg-gray-600 hover:bg-gray-700' :
+                  'bg-blue-600 hover:bg-blue-700'
+                }`}
+              >
+                {isBulkOperating ? (
+                  <>
+                    <div className="animate-spin h-4 w-4 mr-2 border-2 border-white border-t-transparent rounded-full"></div>
+                    Verwerken...
+                  </>
+                ) : (
+                  <>
+                    Ja, {bulkAction === 'hide' && 'Verberg'}
+                    {bulkAction === 'show' && 'Toon'}
+                    {bulkAction === 'activate' && 'Activeer'}
+                    {bulkAction === 'deactivate' && 'Deactiveer'}
+                    {bulkAction === 'set_availability' && 'Stel Beschikbaarheid In voor'} {selectedMembers.length} Teamleden
+                  </>
+                )}
+              </Button>
+            </DialogFooter>
+          </DialogContent>
+        </Dialog>
 
         {/* Non-admin view */}
         {!teamSettings.user_is_admin && (

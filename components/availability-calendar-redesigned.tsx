@@ -1,6 +1,6 @@
 "use client"
 
-import { useState, useEffect } from "react"
+import { useState, useEffect, useCallback } from "react"
 import { Button } from "@/components/ui/button"
 import { useRouter } from "next/navigation"
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip"
@@ -40,6 +40,7 @@ import { useVersion } from "@/hooks/use-version"
 import { HamburgerMenu, HamburgerMenuItem } from "@/components/ui/hamburger-menu"
 import { useIsMobile } from "@/hooks/use-mobile"
 import { useSwipe } from "@/hooks/use-swipe"
+import { format } from "date-fns"
 
 interface Member {
   id: string
@@ -108,6 +109,11 @@ const AvailabilityCalendarRedesigned = ({
   const [showKeyboardHelp, setShowKeyboardHelp] = useState(false)
   const [openSettings, setOpenSettings] = useState(false)
   const [swipeDirection, setSwipeDirection] = useState<"left" | "right" | null>(null)
+  const [bulkSelectionRange, setBulkSelectionRange] = useState<{
+    startDate?: Date
+    endDate?: Date
+    isActive: boolean
+  }>({ isActive: false })
   const router = useRouter()
   const { t } = useTranslation(locale)
 
@@ -120,6 +126,11 @@ const AvailabilityCalendarRedesigned = ({
   
   // Mobile responsive hook
   const isMobile = useIsMobile()
+
+  // Memoized callback for bulk range selection changes
+  const handleRangeSelectionChange = useCallback((startDate?: Date, endDate?: Date, isActive?: boolean) => {
+    setBulkSelectionRange({ startDate, endDate, isActive: !!isActive })
+  }, [])
 
   // Swipe controls for mobile week navigation
   const swipeRef = useSwipe({
@@ -221,6 +232,19 @@ const AvailabilityCalendarRedesigned = ({
   }
 
   const activeMembersForAnalytics = getActiveMembersForAnalytics()
+
+  // Check if a date is within the bulk selection range for visual highlighting
+  const isDateInBulkRange = (date: Date) => {
+    if (!bulkSelectionRange.isActive || !bulkSelectionRange.startDate || !bulkSelectionRange.endDate) {
+      return false
+    }
+    
+    const dateTime = date.getTime()
+    const startTime = bulkSelectionRange.startDate.getTime()
+    const endTime = bulkSelectionRange.endDate.getTime()
+    
+    return dateTime >= startTime && dateTime <= endTime
+  }
 
   // Check for simplified mode preference
   useEffect(() => {
@@ -997,10 +1021,11 @@ const AvailabilityCalendarRedesigned = ({
                         <div
                           key={dayIndex}
                           className={cn(
-                            "text-center p-2 rounded-md",
+                            "text-center p-2 rounded-md relative",
                             isToday(date) && "bg-blue-500 text-white",
                             isWeekendDay && !isToday(date) && "bg-gray-100 dark:bg-gray-600",
-                            !isToday(date) && !isWeekendDay && "bg-white dark:bg-gray-800"
+                            !isToday(date) && !isWeekendDay && "bg-white dark:bg-gray-800",
+                            isDateInBulkRange(date) && !isToday(date) && "ring-2 ring-orange-400/60 bg-orange-50/80 dark:bg-orange-900/20"
                           )}
                         >
                           <div className={cn(
@@ -1114,10 +1139,11 @@ const AvailabilityCalendarRedesigned = ({
                             <div
                               key={dayIndex}
                               className={cn(
-                                "flex flex-col items-center justify-center p-2 rounded-md border min-h-[60px]",
+                                "flex flex-col items-center justify-center p-2 rounded-md border min-h-[60px] relative",
                                 isToday(date) && "bg-blue-50 dark:bg-blue-900/20 border-blue-200 dark:border-blue-700",
                                 isWeekendDay && !isToday(date) && "bg-gray-50 dark:bg-gray-700/50 border-gray-200 dark:border-gray-600",
-                                !isToday(date) && !isWeekendDay && "bg-white dark:bg-gray-800 border-gray-200 dark:border-gray-600"
+                                !isToday(date) && !isWeekendDay && "bg-white dark:bg-gray-800 border-gray-200 dark:border-gray-600",
+                                isDateInBulkRange(date) && !isToday(date) && "ring-2 ring-orange-400/60 bg-orange-50/80 dark:bg-orange-900/20 border-orange-300 dark:border-orange-600"
                               )}
                             >
                               {isWeekendDay ? (
@@ -1333,9 +1359,10 @@ const AvailabilityCalendarRedesigned = ({
                         <div
                           key={dayIndex}
                           className={cn(
-                            "p-3 border-r border-gray-200 dark:border-gray-600 last:border-r-0",
+                            "p-3 border-r border-gray-200 dark:border-gray-600 last:border-r-0 relative",
                             isTodayCell && "bg-blue-50/50 dark:bg-blue-900/10",
                             (isWeekendDay || isHolidayCell) && !isTodayCell && "bg-gray-50/80 dark:bg-gray-700/50",
+                            isDateInBulkRange(date) && !isTodayCell && "bg-orange-50/80 dark:bg-orange-900/20 ring-1 ring-inset ring-orange-300/60 dark:ring-orange-600/60",
                           )}
                         >
                           {isWeekendDay ? (
@@ -1456,7 +1483,17 @@ const AvailabilityCalendarRedesigned = ({
                 <div className="min-w-0 flex-1">
                   <div className="flex flex-col">
                     <h1 className="text-sm lg:text-lg xl:text-xl font-bold text-white truncate">Availability Planner</h1>
-                    <p className="text-xs sm:text-sm lg:text-sm font-medium sm:font-semibold text-white lg:text-blue-100 dark:text-gray-300 truncate">{teamName}</p>
+                    <div className="flex items-center gap-2">
+                      <p className="text-xs sm:text-sm lg:text-sm font-medium sm:font-semibold text-white lg:text-blue-100 dark:text-gray-300 truncate">{teamName}</p>
+                      {bulkSelectionRange.isActive && bulkSelectionRange.startDate && bulkSelectionRange.endDate && (
+                        <div className="px-2 py-1 bg-orange-500/20 backdrop-blur-sm rounded-lg border border-orange-400/30 flex items-center gap-1">
+                          <Calendar className="h-3 w-3 text-orange-200" />
+                          <span className="text-xs font-medium text-orange-200 whitespace-nowrap">
+                            {format(bulkSelectionRange.startDate, "MMM d")} - {format(bulkSelectionRange.endDate, "MMM d")}
+                          </span>
+                        </div>
+                      )}
+                    </div>
                   </div>
                 </div>
               </div>
@@ -1519,7 +1556,12 @@ const AvailabilityCalendarRedesigned = ({
                           <span className="text-sm font-medium text-orange-100">Edit Mode</span>
                         </div>
                         <div className="w-px h-6 bg-orange-300/30"></div>
-                        <BulkUpdateDialog members={members} locale={locale} onUpdate={fetchAvailability} />
+                        <BulkUpdateDialog 
+                          members={members} 
+                          locale={locale} 
+                          onUpdate={fetchAvailability} 
+                          onRangeSelectionChange={handleRangeSelectionChange}
+                        />
                         <MemberForm teamId={teamId} locale={locale} onMemberAdded={onMembersUpdate} />
                         <div className="w-px h-6 bg-orange-300/30"></div>
                         <div className="flex items-center gap-1 px-2">
@@ -1708,7 +1750,12 @@ const AvailabilityCalendarRedesigned = ({
                     {editMode && (
                       <>
                         <HamburgerMenuItem>
-                          <BulkUpdateDialog members={members} locale={locale} onUpdate={fetchAvailability} />
+                          <BulkUpdateDialog 
+                            members={members} 
+                            locale={locale} 
+                            onUpdate={fetchAvailability} 
+                            onRangeSelectionChange={handleRangeSelectionChange}
+                          />
                         </HamburgerMenuItem>
                         <HamburgerMenuItem>
                           <MemberForm teamId={teamId} locale={locale} onMemberAdded={onMembersUpdate} />

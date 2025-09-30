@@ -1,6 +1,6 @@
 "use client"
 
-import { useState, useEffect } from "react"
+import { useState, useEffect, useRef } from "react"
 import { Button } from "@/components/ui/button"
 import {
   Dialog,
@@ -19,7 +19,7 @@ import { Badge } from "@/components/ui/badge"
 import { Separator } from "@/components/ui/separator"
 import { CalendarIcon, Users, Clock, CheckCircle, Calendar as CalendarDays, Zap, Bolt, Target, Filter, Play, BarChart3, TrendingUp, Calendar as CalendarIcon2 } from "lucide-react"
 import { format, addDays, startOfWeek, endOfWeek, addWeeks, isWeekend, startOfMonth, endOfMonth } from "date-fns"
-import { nl } from "date-fns/locale"
+import { nl, enUS, fr } from "date-fns/locale"
 import { supabase } from "@/lib/supabase"
 import { useTranslation, type Locale } from "@/lib/i18n"
 import { MemberAvatar } from "./member-avatar"
@@ -39,6 +39,7 @@ interface BulkUpdateDialogProps {
   members: Member[]
   locale: Locale
   onUpdate: () => void
+  onRangeSelectionChange?: (startDate?: Date, endDate?: Date, isActive?: boolean) => void
 }
 
 // Export individual button components
@@ -62,6 +63,15 @@ export function AnalyticsButton({ members, locale, weeksToShow, currentDate, tea
     return date
   })
   const { t } = useTranslation(locale)
+
+  // Get date-fns locale based on current locale
+  const getDateFnsLocale = () => {
+    switch (locale) {
+      case 'nl': return nl
+      case 'fr': return fr
+      default: return enUS
+    }
+  }
 
   // Check for simplified mode preference
   useEffect(() => {
@@ -509,7 +519,7 @@ export function AnalyticsButton({ members, locale, weeksToShow, currentDate, tea
                       onChange={() => setSelectedPeriod('current')}
                       className="text-blue-600"
                     />
-                    <span className="text-sm font-medium">Current view ({getCurrentViewPeriodDescription()})</span>
+                    <span className="text-sm font-medium">{t("bulk.currentView")} ({getCurrentViewPeriodDescription()})</span>
                   </label>
                   <label className="flex items-center gap-2 cursor-pointer">
                     <input 
@@ -519,7 +529,7 @@ export function AnalyticsButton({ members, locale, weeksToShow, currentDate, tea
                       onChange={() => setSelectedPeriod('custom')}
                       className="text-blue-600"
                     />
-                    <span className="text-sm font-medium">Custom period</span>
+                    <span className="text-sm font-medium">{t("bulk.customPeriod")}</span>
                   </label>
                 </div>
                 
@@ -571,12 +581,12 @@ export function AnalyticsButton({ members, locale, weeksToShow, currentDate, tea
                       </Button>
                     </div>
                     <div className="flex items-center gap-2">
-                      <label className="text-xs text-gray-600 dark:text-gray-400">From:</label>
+                      <label className="text-xs text-gray-600 dark:text-gray-400">{t("bulk.fromDate")}</label>
                       <Popover>
                         <PopoverTrigger asChild>
                           <Button variant="outline" size="sm" className="h-8 px-2 text-xs">
                             <CalendarIcon className="h-3 w-3 mr-1" />
-                            {format(customStartDate, 'dd MMM yyyy', { locale: nl })}
+                            {format(customStartDate, 'dd MMM yyyy', { locale: getDateFnsLocale() })}
                           </Button>
                         </PopoverTrigger>
                         <PopoverContent className="w-auto p-0" align="start">
@@ -589,14 +599,14 @@ export function AnalyticsButton({ members, locale, weeksToShow, currentDate, tea
                         </PopoverContent>
                       </Popover>
                     </div>
-                    <span className="text-xs text-gray-400">to</span>
+                    <span className="text-xs text-gray-400">{t("bulk.to")}</span>
                     <div className="flex items-center gap-2">
-                      <label className="text-xs text-gray-600 dark:text-gray-400">To:</label>
+                      <label className="text-xs text-gray-600 dark:text-gray-400">{t("bulk.toDate")}</label>
                       <Popover>
                         <PopoverTrigger asChild>
                           <Button variant="outline" size="sm" className="h-8 px-2 text-xs">
                             <CalendarIcon className="h-3 w-3 mr-1" />
-                            {format(customEndDate, 'dd MMM yyyy', { locale: nl })}
+                            {format(customEndDate, 'dd MMM yyyy', { locale: getDateFnsLocale() })}
                           </Button>
                         </PopoverTrigger>
                         <PopoverContent className="w-auto p-0" align="start">
@@ -1025,7 +1035,7 @@ export function AnalyticsButton({ members, locale, weeksToShow, currentDate, tea
   )
 }
 
-export function BulkUpdateDialog({ members, locale, onUpdate }: BulkUpdateDialogProps) {
+export function BulkUpdateDialog({ members, locale, onUpdate, onRangeSelectionChange }: BulkUpdateDialogProps) {
   const [open, setOpen] = useState(false)
   const [selectedMembers, setSelectedMembers] = useState<string[]>([])
   const [selectedDates, setSelectedDates] = useState<Date[]>([])
@@ -1039,8 +1049,177 @@ export function BulkUpdateDialog({ members, locale, onUpdate }: BulkUpdateDialog
   const [simplifiedMode, setSimplifiedMode] = useState(false)
   const [todayAvailability, setTodayAvailability] = useState<Record<string, string>>({})
   const [existingAvailability, setExistingAvailability] = useState<Record<string, Record<string, string>>>({})
+  
+  // Enhanced date range state
+  const [dateRange, setDateRange] = useState({
+    from: new Date().toISOString().split('T')[0],
+    to: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString().split('T')[0]
+  })
+  const [useRangeMode, setUseRangeMode] = useState(false)
+  
   const { t } = useTranslation(locale)
   const { toast } = useToast()
+
+  // Ref to track previous range state to prevent unnecessary callbacks
+  const prevRangeState = useRef<{
+    useRangeMode: boolean
+    from: string
+    to: string
+    open: boolean
+  }>({
+    useRangeMode: false,
+    from: '',
+    to: '',
+    open: false
+  })
+
+  // Notify parent component of range selection changes for calendar visualization
+  useEffect(() => {
+    const currentState = {
+      useRangeMode,
+      from: dateRange.from,
+      to: dateRange.to,
+      open
+    }
+    
+    // Only call callback if state actually changed
+    if (onRangeSelectionChange && (
+      currentState.useRangeMode !== prevRangeState.current.useRangeMode ||
+      currentState.from !== prevRangeState.current.from ||
+      currentState.to !== prevRangeState.current.to ||
+      currentState.open !== prevRangeState.current.open
+    )) {
+      if (useRangeMode && dateRange.from && dateRange.to && open) {
+        const startDate = new Date(dateRange.from)
+        const endDate = new Date(dateRange.to)
+        onRangeSelectionChange(startDate, endDate, true)
+      } else {
+        onRangeSelectionChange(undefined, undefined, false)
+      }
+      
+      prevRangeState.current = currentState
+    }
+  }, [useRangeMode, dateRange.from, dateRange.to, open])
+
+  // Reset form function
+  const resetForm = () => {
+    setSelectedMembers([])
+    setSelectedDates([])
+    setUseRangeMode(false)
+    setDateRange({
+      from: new Date().toISOString().split('T')[0],
+      to: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString().split('T')[0]
+    })
+  }
+
+  // Date preset helper functions
+  const getDatePresets = () => {
+    const today = new Date()
+    const tomorrow = new Date(today)
+    tomorrow.setDate(today.getDate() + 1)
+    
+    const thisWeekStart = new Date(today)
+    thisWeekStart.setDate(today.getDate() - today.getDay() + 1) // Monday
+    const thisWeekEnd = new Date(thisWeekStart)
+    thisWeekEnd.setDate(thisWeekStart.getDate() + 6) // Sunday
+    
+    const nextWeekStart = new Date(thisWeekStart)
+    nextWeekStart.setDate(thisWeekStart.getDate() + 7)
+    const nextWeekEnd = new Date(nextWeekStart)
+    nextWeekEnd.setDate(nextWeekStart.getDate() + 6)
+    
+    const thisMonthStart = new Date(today.getFullYear(), today.getMonth(), 1)
+    const thisMonthEnd = new Date(today.getFullYear(), today.getMonth() + 1, 0)
+
+    return [
+      {
+        label: t("bulk.today"),
+        from: today.toISOString().split('T')[0],
+        to: today.toISOString().split('T')[0],
+        icon: "📅"
+      },
+      {
+        label: t("bulk.tomorrow"), 
+        from: tomorrow.toISOString().split('T')[0],
+        to: tomorrow.toISOString().split('T')[0],
+        icon: "📆"
+      },
+      {
+        label: t("bulk.thisWeek"),
+        from: thisWeekStart.toISOString().split('T')[0],
+        to: thisWeekEnd.toISOString().split('T')[0],
+        icon: "📋"
+      },
+      {
+        label: t("bulk.nextWeek"),
+        from: nextWeekStart.toISOString().split('T')[0], 
+        to: nextWeekEnd.toISOString().split('T')[0],
+        icon: "📊"
+      },
+      {
+        label: t("bulk.thisMonth"),
+        from: thisMonthStart.toISOString().split('T')[0],
+        to: thisMonthEnd.toISOString().split('T')[0],
+        icon: "🗓️"
+      }
+    ]
+  }
+
+  const applyDatePreset = (preset: { from: string, to: string }) => {
+    setDateRange(preset)
+    setUseRangeMode(true)
+    // Convert to Date objects for selectedDates
+    const dates = []
+    let currentDate = new Date(preset.from)
+    const endDate = new Date(preset.to)
+    
+    while (currentDate <= endDate) {
+      dates.push(new Date(currentDate))
+      currentDate.setDate(currentDate.getDate() + 1)
+    }
+    setSelectedDates(dates)
+  }
+
+  const getDayCount = (from: string, to: string) => {
+    const fromDate = new Date(from)
+    const toDate = new Date(to)
+    return Math.ceil((toDate.getTime() - fromDate.getTime()) / (1000 * 60 * 60 * 24)) + 1
+  }
+
+  const formatDateRange = (from: string, to: string) => {
+    const fromDate = new Date(from)
+    const toDate = new Date(to)
+    const dayCount = getDayCount(from, to)
+    
+    const dateLocale = locale === 'en' ? 'en-US' : locale === 'fr' ? 'fr-FR' : 'nl-NL'
+    
+    if (from === to) {
+      return `${fromDate.toLocaleDateString(dateLocale)} (1 ${t("bulk.day")})`
+    }
+    return `${fromDate.toLocaleDateString(dateLocale)} - ${toDate.toLocaleDateString(dateLocale)} (${dayCount} ${t("bulk.days")})`
+  }
+
+  // Convert date range to Date array for Change Overview
+  const getDateRangeArray = () => {
+    if (!useRangeMode || new Date(dateRange.from) > new Date(dateRange.to)) {
+      return []
+    }
+    
+    const dates = []
+    let currentDate = new Date(dateRange.from)
+    const endDate = new Date(dateRange.to)
+    
+    while (currentDate <= endDate) {
+      dates.push(new Date(currentDate))
+      currentDate.setDate(currentDate.getDate() + 1)
+    }
+    return dates
+  }
+
+  // Helper function to get the correct dates based on current mode
+  const getEffectiveDates = () => {
+    return useRangeMode ? getDateRangeArray() : selectedDates
+  }
 
   // Check for simplified mode preference
   useEffect(() => {
@@ -1085,13 +1264,13 @@ export function BulkUpdateDialog({ members, locale, onUpdate }: BulkUpdateDialog
 
   // Fetch existing availability for selected members and dates
   const fetchExistingAvailability = async () => {
-    if (selectedMembers.length === 0 || selectedDates.length === 0) {
+    if (selectedMembers.length === 0 || getEffectiveDates().length === 0) {
       setExistingAvailability({})
       return
     }
 
     try {
-      const dateStrings = selectedDates.map(date => date.toISOString().split('T')[0])
+      const dateStrings = getEffectiveDates().map(date => date.toISOString().split('T')[0])
       
       const { data, error } = await supabase
         .from('availability')
@@ -1131,12 +1310,59 @@ export function BulkUpdateDialog({ members, locale, onUpdate }: BulkUpdateDialog
     }
   }, [open])
 
+  // Fetch date range availability when using range mode
+  const fetchDateRangeAvailability = async () => {
+    if (!useRangeMode || selectedMembers.length === 0 || !dateRange.from || !dateRange.to) {
+      return
+    }
+
+    try {
+      const dateStrings = getDateRangeArray().map(date => date.toISOString().split('T')[0])
+      
+      const { data, error } = await supabase
+        .from('availability')
+        .select('member_id, date, status')
+        .in('member_id', selectedMembers)
+        .in('date', dateStrings)
+
+      if (error) {
+        console.error('Error fetching date range availability:', error)
+        return
+      }
+
+      const existingData: Record<string, Record<string, string>> = {}
+      selectedMembers.forEach(memberId => {
+        existingData[memberId] = {}
+        dateStrings.forEach(date => {
+          existingData[memberId][date] = 'not_set' // Default value
+        })
+      })
+
+      data?.forEach(item => {
+        if (existingData[item.member_id]) {
+          existingData[item.member_id][item.date] = item.status
+        }
+      })
+
+      setExistingAvailability(existingData)
+    } catch (error) {
+      console.error('Error fetching date range availability:', error)
+    }
+  }
+
   // Fetch existing availability when members or dates change
   useEffect(() => {
-    if (open && (selectedMembers.length > 0 || selectedDates.length > 0)) {
+    if (open && (selectedMembers.length > 0 || getEffectiveDates().length > 0)) {
       fetchExistingAvailability()
     }
-  }, [selectedMembers, selectedDates, open])
+  }, [selectedMembers, selectedDates, useRangeMode, dateRange.from, dateRange.to, open])
+
+  // Fetch date range availability when using range mode
+  useEffect(() => {
+    if (open && useRangeMode && selectedMembers.length > 0 && dateRange.from && dateRange.to) {
+      fetchDateRangeAvailability()
+    }
+  }, [selectedMembers, dateRange.from, dateRange.to, useRangeMode, open])
 
   const statusOptions = [
     { value: "not_set", label: t("status.not_set"), icon: "⚪" },
@@ -1248,9 +1474,12 @@ export function BulkUpdateDialog({ members, locale, onUpdate }: BulkUpdateDialog
   }
 
   const handleBulkUpdate = async () => {
-    if (selectedMembers.length === 0 || selectedDates.length === 0) {
+    // Get the correct dates based on mode
+    const datesToUpdate = useRangeMode ? getDateRangeArray() : selectedDates
+    
+    if (selectedMembers.length === 0 || datesToUpdate.length === 0) {
       toast({
-        title: "Selection Required",
+        title: t("bulk.selectionRequired"),
         description: t("bulk.selectMembersAndDates"),
         variant: "destructive",
       })
@@ -1261,7 +1490,7 @@ export function BulkUpdateDialog({ members, locale, onUpdate }: BulkUpdateDialog
     
     try {
       // Use the exact same date formatting as individual updates
-      const dateStrings = selectedDates.map(date => {
+      const dateStrings = datesToUpdate.map(date => {
         // Use local date formatting to avoid timezone offset issues
         const year = date.getFullYear()
         const month = String(date.getMonth() + 1).padStart(2, '0')
@@ -1271,10 +1500,13 @@ export function BulkUpdateDialog({ members, locale, onUpdate }: BulkUpdateDialog
       
       console.log('🗓️ Bulk update starting:', {
         memberCount: selectedMembers.length,
-        dateCount: selectedDates.length,
+        dateCount: datesToUpdate.length,
+        mode: useRangeMode ? 'range' : 'individual',
+        rangeFrom: useRangeMode ? dateRange.from : null,
+        rangeTo: useRangeMode ? dateRange.to : null,
         status: selectedStatus,
         totalOperations: selectedMembers.length * dateStrings.length,
-        selectedDatesRaw: selectedDates.map(d => d.toString()),
+        datesRaw: datesToUpdate.map(d => d.toString()),
         dateStringsFormatted: dateStrings,
         dateRange: `${dateStrings[0]} to ${dateStrings[dateStrings.length - 1]}`
       })
@@ -1300,7 +1532,7 @@ export function BulkUpdateDialog({ members, locale, onUpdate }: BulkUpdateDialog
       if (upsertError) {
         console.error('Bulk update error:', upsertError)
         toast({
-          title: "Update Failed",
+          title: t("bulk.updateFailed"),
           description: `${t("common.error")}: ${upsertError.message}`,
           variant: "destructive",
         })
@@ -1407,8 +1639,8 @@ export function BulkUpdateDialog({ members, locale, onUpdate }: BulkUpdateDialog
         : ' Navigate to the correct date range if needed.'
       
       toast({
-        title: "Bulk Update Successful",
-        description: `Successfully updated ${updateData.length} availability records for ${selectedMembers.length} ${selectedMembers.length === 1 ? t("bulk.member") : t("bulk.members")} across ${selectedDates.length} ${selectedDates.length === 1 ? t("bulk.date") : t("bulk.dates")}. Calendar will refresh automatically.${warningMessage}`,
+        title: t("bulk.bulkUpdateSuccessful"),
+        description: `Successfully updated ${updateData.length} availability records for ${selectedMembers.length} ${selectedMembers.length === 1 ? t("bulk.member") : t("bulk.members")} across ${datesToUpdate.length} ${datesToUpdate.length === 1 ? t("bulk.date") : t("bulk.dates")}. Calendar will refresh automatically.${warningMessage}`,
         variant: "default",
         duration: 10000,
       })
@@ -1433,15 +1665,15 @@ export function BulkUpdateDialog({ members, locale, onUpdate }: BulkUpdateDialog
         
         if (hasOctoberDates) {
           toast({
-            title: "Navigate to October 2025",
-            description: "Your bulk updates were made for October 2025. Use the calendar navigation arrows to go to October 2025 to see your updates, or extend the calendar view to show more weeks.",
+            title: t("bulk.navigateToOctober"),
+            description: t("bulk.navigateToOctoberDescription"),
             variant: "default",
             duration: 8000,
           })
         } else {
           toast({
-            title: "Updates Not Visible?",
-            description: "If your bulk updates aren't visible, try: 1) Navigate to the correct date range in the calendar, 2) Refresh the page (F5), or 3) Check if you're viewing the right week/month period.",
+            title: t("bulk.updatesNotVisible"),
+            description: t("bulk.updatesNotVisibleDescription"),
             variant: "default",
             duration: 6000,
           })
@@ -1450,13 +1682,12 @@ export function BulkUpdateDialog({ members, locale, onUpdate }: BulkUpdateDialog
       
       // Reset form
       setOpen(false)
-      setSelectedMembers([])
-      setSelectedDates([])
+      resetForm()
       
     } catch (error) {
       console.error("Bulk update error:", error)
       toast({
-        title: "Unexpected Error",
+        title: t("bulk.unexpectedError"),
         description: `${t("common.error")}: ${error instanceof Error ? error.message : 'Unknown error'}`,
         variant: "destructive",
       })
@@ -1578,62 +1809,140 @@ export function BulkUpdateDialog({ members, locale, onUpdate }: BulkUpdateDialog
 
             {/* Date Selection */}
             <div>
-              <Label className="text-sm font-medium mb-3 block">{t("bulk.selectDates")}</Label>
+              <Label className="text-sm font-medium mb-3 block flex items-center gap-2">
+                📅 {t("bulk.selectDates")}
+                {useRangeMode && (
+                  <span className="text-xs bg-green-100 text-green-800 px-2 py-1 rounded-full">
+                    {t("bulk.rangeMode")} ✓
+                  </span>
+                )}
+              </Label>
               
-              {/* Quick Date Selection */}
-              <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-5 gap-2 mb-4">
-                <Button
-                  variant="outline"
-                  size="sm"
-                  onClick={() => handleDateRangeSelect(7)}
-                  className="h-8 text-xs"
-                >
-                  <CalendarDays className="h-3 w-3 mr-1" />
-                  <span className="truncate">{t("bulk.next7Days")}</span>
-                </Button>
-                <Button
-                  variant="outline"
-                  size="sm"
-                  onClick={() => handleWeekdaysSelect(1)}
-                  className="h-8 text-xs"
-                >
-                  <Clock className="h-3 w-3 mr-1" />
-                  <span className="truncate">{t("bulk.thisWeek")}</span>
-                </Button>
-                <Button
-                  variant="outline"
-                  size="sm"
-                  onClick={() => handleWeekdaysSelect(2)}
-                  className="h-8 text-xs"
-                >
-                  <Zap className="h-3 w-3 mr-1" />
-                  <span className="truncate">{t("bulk.next2Weeks")}</span>
-                </Button>
-                <Button
-                  variant="outline"
-                  size="sm"
-                  onClick={handleSmartDateSelection}
-                  className="h-8 text-xs bg-blue-50 hover:bg-blue-100 border-blue-200"
-                >
-                  <Bolt className="h-3 w-3 mr-1" />
-                  <span className="truncate">Smart Select</span>
-                </Button>
-                <Button
-                  variant="outline"
-                  size="sm"
-                  onClick={() => setSelectedDates([])}
-                  className="h-8 text-xs"
-                >
-                  <Target className="h-3 w-3 mr-1" />
-                  <span className="truncate">{t("bulk.clearDates")}</span>
-                </Button>
+              {/* Enhanced Quick Date Selection */}
+              <div className="bg-gradient-to-r from-blue-50 to-green-50 border border-blue-200 rounded-lg p-3 mb-4">
+                <div className="flex items-center gap-2 mb-3">
+                  <Zap className="h-4 w-4 text-blue-600" />
+                  <Label className="text-sm font-medium text-blue-800">⚡ Snelle Datum Selectie</Label>
+                </div>
+                <div className="grid grid-cols-2 md:grid-cols-3 gap-2 mb-3">
+                  {getDatePresets().map((preset, index) => (
+                    <Button
+                      key={index}
+                      variant="outline"
+                      size="sm"
+                      onClick={() => applyDatePreset(preset)}
+                      className="h-9 text-xs bg-white hover:bg-blue-50 border-blue-300 hover:border-blue-400 justify-start"
+                    >
+                      <span className="mr-1">{preset.icon}</span>
+                      {preset.label}
+                    </Button>
+                  ))}
+                </div>
+                
+                {/* Range Mode Toggle */}
+                <div className="flex items-center justify-between mb-2 p-2 bg-white/50 rounded border" title={t("bulk.rangeModeTooltip")}>
+                  <div className="flex flex-col">
+                    <Label className="text-xs font-medium text-gray-700">🎯 {t("bulk.rangeMode")}</Label>
+                    <span className="text-xs text-gray-500">{t("bulk.rangeModeTooltip")}</span>
+                  </div>
+                  <Checkbox
+                    checked={useRangeMode}
+                    onCheckedChange={(checked) => setUseRangeMode(!!checked)}
+                    className="h-4 w-4"
+                  />
+                </div>
+
+                {/* Date Range Inputs (when range mode is enabled) */}
+                {useRangeMode && (
+                  <div className="bg-white p-3 rounded border border-green-200 mb-3">
+                    <div className="grid grid-cols-2 gap-3 mb-2">
+                      <div>
+                        <Label className="text-xs text-green-600 mb-1 block">📅 {t("bulk.fromDate")}</Label>
+                        <input
+                          type="date"
+                          value={dateRange.from}
+                          onChange={(e) => setDateRange(prev => ({ ...prev, from: e.target.value }))}
+                          className="w-full text-xs border border-green-300 rounded px-2 py-1 focus:border-green-500 focus:ring-1 focus:ring-green-500"
+                        />
+                      </div>
+                      <div>
+                        <Label className="text-xs text-green-600 mb-1 block">📅 {t("bulk.toDate")}</Label>
+                        <input
+                          type="date"
+                          value={dateRange.to}
+                          onChange={(e) => setDateRange(prev => ({ ...prev, to: e.target.value }))}
+                          min={dateRange.from}
+                          className="w-full text-xs border border-green-300 rounded px-2 py-1 focus:border-green-500 focus:ring-1 focus:ring-green-500"
+                        />
+                      </div>
+                    </div>
+                    <div className="bg-blue-50 border border-blue-200 rounded p-2 text-xs">
+                      <div className="flex items-center justify-between">
+                        <div>
+                          <span className="text-blue-700 font-medium">🗓️ {t("bulk.period")} </span>
+                          <span className="text-blue-800">{formatDateRange(dateRange.from, dateRange.to)}</span>
+                        </div>
+                        {dateRange.from && dateRange.to && (
+                          <div className="bg-blue-200 text-blue-800 px-2 py-1 rounded text-xs font-medium">
+                            {getDateRangeArray().length} {t("bulk.dates")}
+                          </div>
+                        )}
+                      </div>
+                    </div>
+
+
+                  </div>
+                )}
+
+                {/* Legacy Quick Actions */}
+                <div className="grid grid-cols-2 md:grid-cols-4 gap-2">
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={handleSmartDateSelection}
+                    className="h-8 text-xs bg-blue-50 hover:bg-blue-100 border-blue-200"
+                  >
+                    <Bolt className="h-3 w-3 mr-1" />
+                    Smart Select
+                  </Button>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => handleWeekdaysSelect(1)}
+                    className="h-8 text-xs"
+                  >
+                    <Clock className="h-3 w-3 mr-1" />
+                    {t("bulk.thisWeek")}
+                  </Button>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => handleWeekdaysSelect(2)}
+                    className="h-8 text-xs"
+                  >
+                    <Zap className="h-3 w-3 mr-1" />
+                    {t("bulk.next2Weeks")}
+                  </Button>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => {
+                      setSelectedDates([])
+                      setUseRangeMode(false)
+                    }}
+                    className="h-8 text-xs text-red-600 hover:text-red-700 border-red-300 hover:border-red-400"
+                  >
+                    <Target className="h-3 w-3 mr-1" />
+                    {t("bulk.clearAll")}
+                  </Button>
+                </div>
               </div>
 
               {/* Calendar */}
               <div className="border rounded-lg p-3">
                 <div className="mb-3">
                   <Label className="text-xs text-gray-600 dark:text-gray-400 mb-2 block">
-                    💡 Tips: Use "Smart Select" for next 5 workdays. Click individual dates or use quick selection buttons above. Weekends are highlighted in red.
+                    {t("bulk.calendarTip")}
                   </Label>
                 </div>
                 <Calendar
@@ -1721,25 +2030,24 @@ export function BulkUpdateDialog({ members, locale, onUpdate }: BulkUpdateDialog
               {/* Status Selection */}
             <div>
               <Label className="text-sm font-medium mb-3 block">{t("bulk.selectStatus")}</Label>
-              <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-2">
+              <div className="grid grid-cols-2 md:grid-cols-3 gap-3">
                 {statusOptions.filter(option => option.value !== 'not_set').map(option => (
-                  <div
+                  <Button
                     key={option.value}
-                    className={cn(
-                      "flex items-center space-x-2 p-3 rounded-lg border transition-all cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-800",
-                      selectedStatus === option.value
-                        ? "bg-blue-50 dark:bg-blue-900/20 border-blue-200 dark:border-blue-700"
-                        : "bg-white dark:bg-gray-900 border-gray-200 dark:border-gray-700"
-                    )}
+                    variant={selectedStatus === option.value ? 'default' : 'outline'}
                     onClick={() => setSelectedStatus(option.value as any)}
+                    className={cn(
+                      "h-auto p-3 flex items-center gap-3 justify-start transition-all",
+                      selectedStatus === option.value 
+                        ? "bg-blue-600 hover:bg-blue-700 text-white border-blue-600" 
+                        : "bg-white hover:bg-gray-50 border-gray-300 text-gray-700"
+                    )}
                   >
-                    <div className="text-lg flex-shrink-0">{option.icon}</div>
-                    <div className="flex-1 min-w-0">
-                      <p className="text-sm font-medium text-gray-900 dark:text-white truncate">
-                        {option.label}
-                      </p>
+                    <span className="text-lg flex-shrink-0">{option.icon}</span>
+                    <div className="text-left">
+                      <div className="font-medium text-sm">{option.label}</div>
                     </div>
-                  </div>
+                  </Button>
                 ))}
               </div>
             </div>
@@ -1747,64 +2055,110 @@ export function BulkUpdateDialog({ members, locale, onUpdate }: BulkUpdateDialog
             {/* Quick Preview when selections are made */}
             {selectedMembers.length > 0 && selectedDates.length > 0 && (
               <div className="bg-green-50 dark:bg-green-900/20 border border-green-200 dark:border-green-700 rounded-lg p-3">
-                <div className="flex items-center gap-2 text-sm text-green-800 dark:text-green-200">
+                <div className="flex items-center gap-2 text-sm text-green-800 dark:text-green-200 flex-wrap">
                   <CheckCircle className="h-4 w-4" />
-                  <span className="font-medium">Ready to update:</span>
+                  <span className="font-medium">{t("bulk.readyToUpdate")}</span>
                   <span>{selectedMembers.length} {selectedMembers.length === 1 ? t("bulk.member") : t("bulk.members")}</span>
                   <span>×</span>
-                  <span>{selectedDates.length} {selectedDates.length === 1 ? t("bulk.date") : t("bulk.dates")}</span>
+                  <span>{getEffectiveDates().length} {getEffectiveDates().length === 1 ? t("bulk.date") : t("bulk.dates")}</span>
+                  <span className="text-gray-600">to</span>
+                  <div className="flex items-center gap-1 bg-white rounded px-2 py-1">
+                    <span>{statusOptions.find(s => s.value === selectedStatus)?.icon}</span>
+                    <span className="font-medium text-gray-900">{statusOptions.find(s => s.value === selectedStatus)?.label}</span>
+                  </div>
                   <span>=</span>
-                  <span className="font-bold">{selectedMembers.length * selectedDates.length} updates</span>
+                  <span className="font-bold">{selectedMembers.length * getEffectiveDates().length} updates</span>
                 </div>
               </div>
             )}
 
             {/* Changes Preview */}
-            {selectedMembers.length > 0 && selectedDates.length > 0 && (
+            {selectedMembers.length > 0 && getEffectiveDates().length > 0 && (
               <div className="bg-yellow-50 dark:bg-yellow-900/20 border border-yellow-200 dark:border-yellow-700 rounded-lg p-4">
                 <h4 className="text-sm font-medium text-yellow-900 dark:text-yellow-100 mb-3 flex items-center gap-2">
                   <span className="text-lg">📋</span>
-                  Changes Overview
+                  {t("bulk.comprehensiveOverview")}
+                  {useRangeMode && (
+                    <span className="text-xs bg-green-200 text-green-800 px-2 py-1 rounded-full ml-2">
+                      📅 Range Mode
+                    </span>
+                  )}
                 </h4>
-                <div className="max-h-64 overflow-y-auto space-y-2">
+                <div className="max-h-64 overflow-y-auto space-y-3">
                   {selectedMembers.map(memberId => {
                     const member = members.find(m => m.id === memberId)
                     if (!member) return null
                     
+                    // Calculate statistics for this member
+                    const dates = getEffectiveDates()
+                    const totalDates = dates.length
+                    const notSetCount = dates.filter(date => {
+                      const dateStr = date.toISOString().split('T')[0]
+                      const oldStatus = existingAvailability[memberId]?.[dateStr] || 'not_set'
+                      return oldStatus === 'not_set'
+                    }).length
+                    const noChangeCount = dates.filter(date => {
+                      const dateStr = date.toISOString().split('T')[0]
+                      const oldStatus = existingAvailability[memberId]?.[dateStr] || 'not_set'
+                      return oldStatus === selectedStatus
+                    }).length
+                    const willChangeCount = totalDates - noChangeCount
+                    
                     return (
-                      <div key={memberId} className="border-b border-yellow-200 dark:border-yellow-700 pb-2 last:border-b-0">
-                        <div className="text-sm font-medium text-yellow-900 dark:text-yellow-100 mb-1">
-                          {member.first_name} {member.last_name}
+                      <div key={memberId} className="border-b border-yellow-200 dark:border-yellow-700 pb-3 last:border-b-0">
+                        <div className="text-sm font-medium text-yellow-900 dark:text-yellow-100 mb-2 flex items-center justify-between">
+                          <span>{member.first_name} {member.last_name}</span>
+                          <div className="flex items-center gap-3 text-xs">
+                            <span className="bg-blue-100 dark:bg-blue-900/20 text-blue-800 dark:text-blue-300 px-2 py-1 rounded">
+                              {notSetCount} {t("bulk.notSetBefore")}
+                            </span>
+                            <span className="bg-gray-100 dark:bg-gray-800 text-gray-700 dark:text-gray-300 px-2 py-1 rounded">
+                              {noChangeCount} {t("bulk.noChanges")}
+                            </span>
+                            <span className="bg-orange-100 dark:bg-orange-900/20 text-orange-800 dark:text-orange-300 px-2 py-1 rounded">
+                              {willChangeCount} {t("bulk.willChange")}
+                            </span>
+                          </div>
                         </div>
-                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-1 text-xs">
-                          {selectedDates.filter(date => !isWeekendDay(date)).map(date => {
+                        <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-6 gap-1 text-xs">
+                          {dates.map(date => {
                             const dateStr = date.toISOString().split('T')[0]
                             const oldStatus = existingAvailability[memberId]?.[dateStr] || 'not_set'
                             const newStatus = selectedStatus
                             const oldStatusData = statusOptions.find(s => s.value === oldStatus) || 
                               { value: 'not_set', label: t("status.not_set"), icon: '⚪' }
                             const newStatusData = statusOptions.find(s => s.value === newStatus)!
+                            const isWeekend = isWeekendDay(date)
+                            const willChange = oldStatus !== selectedStatus
+                            const wasNotSet = oldStatus === 'not_set'
                             
                             return (
-                              <div key={dateStr} className="flex items-center justify-between bg-white dark:bg-gray-800 rounded px-2 py-1 border">
-                                <span className="text-gray-700 dark:text-gray-300">
-                                  {date.toLocaleDateString('nl-NL', { day: '2-digit', month: '2-digit' })}
+                              <div key={dateStr} className={cn(
+                                "flex flex-col items-center gap-1 rounded p-1 border text-center",
+                                isWeekend 
+                                  ? "bg-red-50 dark:bg-red-900/20 border-red-200 dark:border-red-700"
+                                  : wasNotSet
+                                  ? "bg-blue-50 dark:bg-blue-900/20 border-blue-200 dark:border-blue-700"
+                                  : willChange
+                                  ? "bg-orange-50 dark:bg-orange-900/20 border-orange-200 dark:border-orange-700"
+                                  : "bg-gray-50 dark:bg-gray-800 border-gray-200 dark:border-gray-600"
+                              )}>
+                                <span className={cn(
+                                  "text-xs font-medium",
+                                  isWeekend ? "text-red-700 dark:text-red-300" 
+                                  : wasNotSet ? "text-blue-700 dark:text-blue-300"
+                                  : willChange ? "text-orange-700 dark:text-orange-300" 
+                                  : "text-gray-700 dark:text-gray-300"
+                                )}>
+                                  {date.toLocaleDateString(locale === 'en' ? 'en-US' : locale === 'fr' ? 'fr-FR' : 'nl-NL', { day: '2-digit', month: '2-digit' })}
+                                  {isWeekend && <span className="text-red-500"> 🏖️</span>}
                                 </span>
-                                <div className="flex items-center gap-2">
-                                  <div className="flex items-center gap-1">
-                                    <span className="text-xs">{oldStatusData.icon}</span>
-                                    <span className="text-xs text-gray-600 dark:text-gray-400">
-                                      {oldStatusData.label}
-                                    </span>
-                                  </div>
-                                  <span className="text-gray-400">→</span>
-                                  <div className="flex items-center gap-1">
-                                    <span className="text-xs">{newStatusData.icon}</span>
-                                    <span className="text-xs font-medium text-gray-900 dark:text-gray-100">
-                                      {newStatusData.label}
-                                    </span>
-                                  </div>
+                                <div className="flex items-center gap-1">
+                                  <span className="text-xs">{oldStatusData.icon}</span>
+                                  <span className="text-gray-400 text-xs">→</span>
+                                  <span className="text-xs">{newStatusData.icon}</span>
                                 </div>
+                                {wasNotSet && <div className="w-2 h-1 bg-blue-400 rounded-full"></div>}
                               </div>
                             )
                           })}
@@ -1815,6 +2169,8 @@ export function BulkUpdateDialog({ members, locale, onUpdate }: BulkUpdateDialog
                 </div>
               </div>
             )}
+
+            {/* Comprehensive overview now replaces both previous sections */}
 
             {/* Debug Information */}
             {selectedMembers.length > 0 && selectedDates.length > 0 && (
@@ -1907,7 +2263,10 @@ export function BulkUpdateDialog({ members, locale, onUpdate }: BulkUpdateDialog
             <div className="flex flex-col sm:flex-row gap-2 w-full">
               <Button
                 variant="outline"
-                onClick={() => setOpen(false)}
+                onClick={() => {
+                  setOpen(false)
+                  resetForm()
+                }}
                 disabled={isUpdating}
                 className="w-full sm:w-auto"
               >
@@ -1915,7 +2274,7 @@ export function BulkUpdateDialog({ members, locale, onUpdate }: BulkUpdateDialog
               </Button>
               <Button
                 onClick={handleBulkUpdate}
-                disabled={selectedMembers.length === 0 || selectedDates.length === 0 || isUpdating}
+                disabled={selectedMembers.length === 0 || getEffectiveDates().length === 0 || isUpdating}
                 className="w-full sm:w-auto"
               >
                 {isUpdating ? (
@@ -1945,6 +2304,15 @@ export function PlannerButton({ members, locale, teamId }: { members: Member[], 
   const [plannerPeriod, setPlannerPeriod] = useState<7 | 14 | 30>(7)
   const [isLoading, setIsLoading] = useState(false)
   const { t } = useTranslation(locale)
+
+  // Get date-fns locale based on current locale
+  const getDateFnsLocale = () => {
+    switch (locale) {
+      case 'nl': return nl
+      case 'fr': return fr
+      default: return enUS
+    }
+  }
 
   const fetchPlannerData = async () => {
     setIsLoading(true)
@@ -2170,7 +2538,7 @@ export function PlannerButton({ members, locale, teamId }: { members: Member[], 
                           </div>
                           <div className="min-w-0 flex-1">
                             <p className="font-semibold text-gray-900 dark:text-white text-sm sm:text-base">
-                              {format(new Date(day.date), 'EEEE, dd MMMM yyyy', { locale: nl })}
+                              {format(new Date(day.date), 'EEEE, dd MMMM yyyy', { locale: getDateFnsLocale() })}
                             </p>
                             <p className="text-xs sm:text-sm text-gray-600 dark:text-gray-400">
                               {t("planner.score")}: {Math.round(day.score)}%
