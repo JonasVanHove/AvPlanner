@@ -186,6 +186,14 @@ export default function HomePage() {
             <div className="flex items-center gap-4">
               {/* Desktop Navigation */}
               <div className="hidden md:flex items-center gap-4">
+                <Button 
+                  variant="ghost" 
+                  size="sm"
+                  onClick={() => router.push('/documentation')}
+                  className="text-gray-600 hover:text-blue-600 hover:bg-blue-50 transition-all duration-200"
+                >
+                  📚 Documentatie
+                </Button>
                 <LanguageSelector currentLocale="en" />
                 {user ? (
                   <DropdownMenu>
@@ -515,7 +523,13 @@ export default function HomePage() {
               {t("landing.madeWith")} ❤️ {t("landing.forTeams")}
             </p>
             <p className="text-gray-500 text-sm mt-2">
-              by <span className="font-semibold text-gray-300">Jonas Van Hove</span>
+              by <span className="font-semibold text-gray-300">Jonas Van Hove</span> | 
+              <button
+                onClick={() => router.push('/documentation')}
+                className="text-blue-400 hover:text-blue-300 transition-colors duration-200 ml-1 underline"
+              >
+                📚 Documentatie
+              </button>
             </p>
           </div>
         </div>
