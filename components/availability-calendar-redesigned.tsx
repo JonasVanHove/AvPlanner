@@ -62,6 +62,7 @@ interface Availability {
   member_id: string
   date: string
   status: "available" | "unavailable" | "need_to_check" | "absent" | "holiday" | "remote"
+  auto_holiday?: boolean
 }
 
 interface Team {
@@ -100,7 +101,15 @@ const AvailabilityCalendarRedesigned = ({
   onDateNavigation,
 }: AvailabilityCalendarProps) => {
   const { theme } = useTheme()
-  const [currentDate, setCurrentDate] = useState(initialDate || new Date())
+  // Initialize currentDate to Monday of the week containing initialDate or current date
+  const [currentDate, setCurrentDate] = useState(() => {
+    const targetDate = initialDate || new Date()
+    // Inline getMondayOfWeek logic for initialization
+    const d = new Date(targetDate)
+    const day = d.getDay()
+    const diff = d.getDate() - day + (day === 0 ? -6 : 1)
+    return new Date(d.setDate(diff))
+  })
   const [availability, setAvailability] = useState<Availability[]>([])
   const [viewMode, setViewMode] = useState<"week">("week")
   const [weeksToShow, setWeeksToShow] = useState<1 | 2 | 4 | 8>(1)
@@ -231,7 +240,7 @@ const AvailabilityCalendarRedesigned = ({
 
   // Smart member filtering based on visibility and activity status for the current visible period
   // Rules:
-  // 1. Hidden members (is_hidden=true): Only show if they have availability records for this visible period
+  // 1. Hidden members (is_hidden=true): Only show if they have NON-HOLIDAY availability records for this visible period
   // 2. Visible members (is_hidden=false): Always show
   // 3. Active members (status=active): Always show
   // 4. Inactive members (status=inactive): Only show if they have availability records for this visible period
@@ -243,14 +252,22 @@ const AvailabilityCalendarRedesigned = ({
         isDateInCurrentPeriod(new Date(record.date))
       )
       
+      // Check if member has NON-HOLIDAY records for current visible period
+      const hasNonHolidayRecordsThisPeriod = availability.some(record => 
+        record.member_id === member.id && 
+        isDateInCurrentPeriod(new Date(record.date)) &&
+        record.status !== 'holiday'
+      )
+      
       // Get member visibility and status (handle both old and new data structures)
       const isHidden = member.is_hidden || false
       const isActive = !member.member_status || member.member_status === 'active' || !member.status || member.status === 'active'
       
       // Logic based on your requirements:
       if (isHidden) {
-        // Hidden members: only show if they have records for this visible period
-        return hasRecordsThisPeriod
+        // Hidden members: only show if they have NON-HOLIDAY records for this visible period
+        console.log(`🔍 Hidden member ${member.first_name} ${member.last_name}: hasNonHolidayRecords=${hasNonHolidayRecordsThisPeriod}`)
+        return hasNonHolidayRecordsThisPeriod
       }
       
       if (isActive) {
@@ -363,10 +380,22 @@ const AvailabilityCalendarRedesigned = ({
 
   // Update currentDate when initialDate prop changes (from URL navigation)
   useEffect(() => {
-    if (initialDate && initialDate.getTime() !== currentDate.getTime()) {
-      setCurrentDate(initialDate)
+    if (initialDate) {
+      // Navigate to the Monday of the week containing the initialDate
+      const mondayOfWeek = getMondayOfWeek(initialDate)
+      
+      // Only update if we're not already showing the correct week
+      if (mondayOfWeek.getTime() !== currentDate.getTime()) {
+        setCurrentDate(mondayOfWeek)
+        console.log(`🗓️ Navigated to week of ${initialDate.toDateString()}, starting on Monday ${mondayOfWeek.toDateString()}`)
+        
+        // Notify parent of date navigation (but only if not initial render)
+        if (!isInitialRender.current && onDateNavigation) {
+          onDateNavigation(mondayOfWeek)
+        }
+      }
     }
-  }, [initialDate, currentDate])
+  }, [initialDate, currentDate, onDateNavigation])
 
   // Set initial render flag after mount
   useEffect(() => {
@@ -634,8 +663,18 @@ const AvailabilityCalendarRedesigned = ({
 
       const oldStatus = currentAvailability?.status || null
 
-      // Update availability
-      const { error } = await supabase.from("availability").upsert([{ member_id: memberId, date, status }], {
+      // Find current user's member ID to track who made the change
+      const currentUserMember = members.find(m => m.email === userEmail)
+      const changedById = currentUserMember?.id || null
+
+      // Update availability with changed_by_id and mark as not auto-holiday (manual change)
+      const { error } = await supabase.from("availability").upsert([{ 
+        member_id: memberId, 
+        date, 
+        status,
+        changed_by_id: changedById,
+        auto_holiday: false  // Mark as manual change, not auto-holiday
+      }], {
         onConflict: "member_id,date",
       })
 
@@ -1499,7 +1538,13 @@ const AvailabilityCalendarRedesigned = ({
                                   updateAvailability(member.id, getDateString(date), nextStatus)
                                 }}
                               >
-                                {availability ? getStatusConfig(availability.status).icon : ""}
+                                <div className="flex items-center justify-center relative w-full">
+                                  {availability ? getStatusConfig(availability.status).icon : ""}
+                                  {availability?.auto_holiday && availability?.status === 'holiday' && (
+                                    <div className="absolute -top-1 -right-1 w-2 h-2 bg-blue-400 rounded-full border border-white" 
+                                         title="Auto-applied holiday" />
+                                  )}
+                                </div>
                               </button>
                               {editMode && (
                                 <DropdownMenu>

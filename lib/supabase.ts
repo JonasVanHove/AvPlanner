@@ -46,6 +46,11 @@ export type Database = {
           email?: string
           profile_image?: string
           created_at: string
+          country_code?: string
+          status?: string
+          role?: string
+          is_hidden?: boolean
+          order_index?: number
         }
         Insert: {
           id?: string
@@ -55,6 +60,11 @@ export type Database = {
           email?: string
           profile_image?: string
           created_at?: string
+          country_code?: string
+          status?: string
+          role?: string
+          is_hidden?: boolean
+          order_index?: number
         }
         Update: {
           id?: string
@@ -64,6 +74,11 @@ export type Database = {
           email?: string
           profile_image?: string
           created_at?: string
+          country_code?: string
+          status?: string
+          role?: string
+          is_hidden?: boolean
+          order_index?: number
         }
       }
       availability: {
@@ -73,6 +88,9 @@ export type Database = {
           date: string
           status: "available" | "remote" | "unavailable" | "need_to_check" | "absent" | "holiday" | "maybe"
           created_at: string
+          updated_at?: string
+          changed_by_id?: string
+          auto_holiday?: boolean
         }
         Insert: {
           id?: string
@@ -80,12 +98,76 @@ export type Database = {
           date: string
           status: "available" | "remote" | "unavailable" | "need_to_check" | "absent" | "holiday" | "maybe"
           created_at?: string
+          updated_at?: string
+          changed_by_id?: string
+          auto_holiday?: boolean
         }
         Update: {
           id?: string
           member_id?: string
           date?: string
           status?: "available" | "remote" | "unavailable" | "need_to_check" | "absent" | "holiday" | "maybe"
+          created_at?: string
+          updated_at?: string
+          changed_by_id?: string
+          auto_holiday?: boolean
+        }
+      }
+      countries: {
+        Row: {
+          code: string
+          name: string
+          name_nl?: string
+          name_fr?: string
+          created_at: string
+        }
+        Insert: {
+          code: string
+          name: string
+          name_nl?: string
+          name_fr?: string
+          created_at?: string
+        }
+        Update: {
+          code?: string
+          name?: string
+          name_nl?: string
+          name_fr?: string
+          created_at?: string
+        }
+      }
+      holidays: {
+        Row: {
+          id: string
+          country_code: string
+          date: string
+          name: string
+          name_nl?: string
+          name_fr?: string
+          is_official: boolean
+          custom: boolean
+          created_at: string
+        }
+        Insert: {
+          id?: string
+          country_code: string
+          date: string
+          name: string
+          name_nl?: string
+          name_fr?: string
+          is_official?: boolean
+          custom?: boolean
+          created_at?: string
+        }
+        Update: {
+          id?: string
+          country_code?: string
+          date?: string
+          name?: string
+          name_nl?: string
+          name_fr?: string
+          is_official?: boolean
+          custom?: boolean
           created_at?: string
         }
       }

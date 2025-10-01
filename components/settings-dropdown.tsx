@@ -22,6 +22,8 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Input } from "@/components/ui/input"
 import { Settings, Download, Moon, Sun, Globe, Bell, ChevronDown, Monitor, Share2, Copy, QrCode, Eye, EyeOff, Leaf, Snowflake, Flower, Sun as SummerSun } from "lucide-react"
 import { ExportDialog } from "./export-dialog"
+
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog"
 import { useTheme } from "next-themes"
 import { useTranslation, type Locale } from "@/lib/i18n"
 import { useIsMobile } from "@/hooks/use-mobile"
@@ -54,6 +56,7 @@ interface SettingsDropdownProps {
 
 export function SettingsDropdown({ currentLocale, members, team, forceOpen, onOpenChange }: SettingsDropdownProps) {
   const [exportDialogOpen, setExportDialogOpen] = useState(false)
+
   const [drawerOpen, setDrawerOpen] = useState(false)
   const [dropdownOpen, setDropdownOpen] = useState(false)
   const [isGeneratingQR, setIsGeneratingQR] = useState(false)
@@ -240,6 +243,8 @@ export function SettingsDropdown({ currentLocale, members, team, forceOpen, onOp
           <DropdownMenuSeparator />
         </>
       )}
+
+
 
       {/* Share Section - Most important for team management */}
       <div className="px-2 py-2">
@@ -620,6 +625,8 @@ export function SettingsDropdown({ currentLocale, members, team, forceOpen, onOp
       )}
 
       <ExportDialog open={exportDialogOpen} onOpenChange={setExportDialogOpen} members={members} locale={currentLocale} />
+      
+
     </>
   )
 }

@@ -22,6 +22,7 @@ import Link from "next/link"
 import { useRouter } from "next/navigation"
 import { MemberAvatar } from "@/components/member-avatar"
 import { useTodayAvailability } from "@/hooks/use-today-availability"
+import { HolidayManagement } from "@/components/holiday-management"
 
 interface TeamSettings {
   team_id: string
@@ -1262,6 +1263,11 @@ export default function TeamSettingsPage({ params }: TeamSettingsPageProps) {
               </div>
             </CardContent>
           </Card>
+        )}
+
+        {/* Holiday Management - Only for team admins */}
+        {teamSettings?.user_is_admin && (
+          <HolidayManagement teamId={teamSettings.team_id} locale="en" />
         )}
 
         {/* Danger Zone - Only for team admins */}

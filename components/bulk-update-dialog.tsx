@@ -1511,19 +1511,25 @@ export function BulkUpdateDialog({ members, locale, onUpdate, onRangeSelectionCh
         dateRange: `${dateStrings[0]} to ${dateStrings[dateStrings.length - 1]}`
       })
 
+      // Get current user for activity logging
+      const { data: { user } } = await supabase.auth.getUser()
+      
+      // Find current user's member ID to track who made the change
+      const currentUserMember = members.find(m => m.email === user?.email)
+      const changedById = currentUserMember?.id || null
+
       // Create update data using same structure as individual updates
       const updateData = selectedMembers.flatMap(memberId =>
         dateStrings.map(date => ({
           member_id: memberId,
           date: date,
-          status: selectedStatus
+          status: selectedStatus,
+          changed_by_id: changedById,
+          auto_holiday: false  // Mark as manual bulk update, not auto-holiday
         }))
       )
 
       console.log('📝 Sample update data:', updateData.slice(0, 3))
-
-      // Get current user for activity logging
-      const { data: { user } } = await supabase.auth.getUser()
 
       // Use the same upsert method as individual updates
       const { error: upsertError } = await supabase

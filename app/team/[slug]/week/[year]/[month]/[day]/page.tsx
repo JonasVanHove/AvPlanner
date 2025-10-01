@@ -101,14 +101,36 @@ export default function DateTeamPage({ params }: DateTeamPageProps) {
   useEffect(() => {
     const fetchTeam = async () => {
       try {
-        const { data: teamData, error: teamError } = await supabase
+        // Try to find team by invite_code first, then by slug
+        let teamData = null
+        let teamError = null
+
+        // First try invite_code
+        const { data: inviteTeamData, error: inviteError } = await supabase
           .from('teams')
           .select('*')
           .eq('invite_code', resolvedParams.slug)
           .single()
 
-        if (teamError) {
-          if (teamError.code === 'PGRST116') {
+        if (!inviteError && inviteTeamData) {
+          teamData = inviteTeamData
+        } else {
+          // If not found by invite_code, try by slug
+          const { data: slugTeamData, error: slugError } = await supabase
+            .from('teams')
+            .select('*')
+            .eq('slug', resolvedParams.slug)
+            .single()
+
+          if (!slugError && slugTeamData) {
+            teamData = slugTeamData
+          } else {
+            teamError = slugError
+          }
+        }
+
+        if (!teamData || teamError) {
+          if (teamError?.code === 'PGRST116' || !teamData) {
             setError('Team not found')
           } else {
             setError('Error loading team')

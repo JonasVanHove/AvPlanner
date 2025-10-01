@@ -6,16 +6,17 @@ import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
-import { Dialog, DialogContent, DialogTrigger } from "@/components/ui/dialog"
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog"
 import { TeamAdminPanel } from "@/components/admin/team-admin-panel"
 import { TeamForm } from "@/components/team-form"
 import { JoinTeamForm } from "@/components/join-team-form"
-import { Loader2, Users, Calendar, Settings, LogOut, Crown, Shield, Home, Plus, UserPlus, RefreshCw, Eye, EyeOff } from "lucide-react"
+import { Loader2, Users, Calendar, Settings, LogOut, Crown, Shield, Home, Plus, UserPlus, RefreshCw, Eye, EyeOff, MapPin } from "lucide-react"
 import { User } from "@supabase/supabase-js"
 import { useRouter } from "next/navigation"
 import { MemberAvatar } from "@/components/member-avatar"
 import { useTodayAvailability } from "@/hooks/use-today-availability"
 import { TeamActivities } from "@/components/team-activities"
+import { HolidayManagement } from "@/components/holiday-management-simple"
 
 interface Team {
   id: string
@@ -29,6 +30,11 @@ interface Team {
   is_creator: boolean
   profile_image_url: string | null
   members?: TeamMember[]
+  auto_holidays_enabled?: boolean
+  auto_holidays?: {
+    count: number
+    next_holiday?: string
+  }
 }
 
 interface TeamMember {
@@ -57,6 +63,7 @@ interface DbTeam {
   member_count: number
   is_creator?: boolean // Optional until database function is updated
   profile_image_url: string | null
+  auto_holidays_enabled?: boolean
 }
 
 interface UserDashboardProps {
@@ -156,7 +163,8 @@ export function UserDashboard({ user, onLogout, onGoHome }: UserDashboardProps) 
         member_count: dbTeam.member_count,
         user_role: dbTeam.user_role,
         is_creator: dbTeam.is_creator || false, // Fallback to false if undefined
-        profile_image_url: dbTeam.profile_image_url
+        profile_image_url: dbTeam.profile_image_url,
+        auto_holidays_enabled: dbTeam.auto_holidays_enabled || false
       }))
       
       // Debug: Log the mapped teams
@@ -194,7 +202,25 @@ export function UserDashboard({ user, onLogout, onGoHome }: UserDashboardProps) 
               }
             })
             
-            return { ...team, members: membersData || [] }
+            // Also fetch auto-holidays data for this team
+            let autoHolidays = undefined
+            try {
+              const { data: holidaysData } = await supabase.rpc('get_team_upcoming_holidays', {
+                target_team_id: team.id,
+                days_ahead: 365 // Check for holidays in the next year
+              })
+              
+              if (holidaysData && holidaysData.length > 0) {
+                autoHolidays = {
+                  count: holidaysData.length,
+                  next_holiday: holidaysData[0]?.holiday_name || undefined
+                }
+              }
+            } catch (holidaysErr) {
+              console.warn(`Error loading holidays for team ${team.name}:`, holidaysErr)
+            }
+            
+            return { ...team, members: membersData || [], auto_holidays: autoHolidays }
           } catch (err) {
             console.warn(`Error loading members for team ${team.name}:`, err)
             return { ...team, members: [] }
@@ -554,6 +580,20 @@ export function UserDashboard({ user, onLogout, onGoHome }: UserDashboardProps) 
                                 {team.is_creator ? 'Creator' : team.user_role}
                               </Badge>
                             </div>
+
+                            {team.auto_holidays && (
+                              <div className="flex items-center gap-2">
+                                <span className="font-medium text-gray-700 text-xs sm:text-sm">Auto-Holidays:</span>
+                                <Badge variant="outline" className="text-xs bg-green-50 border-green-200 text-green-700">
+                                  {team.auto_holidays.count} active
+                                </Badge>
+                                {team.auto_holidays.next_holiday && (
+                                  <span className="text-xs text-gray-600">
+                                    Next: {team.auto_holidays.next_holiday}
+                                  </span>
+                                )}
+                              </div>
+                            )}
                             <div className="flex items-start gap-2">
                               <span className="font-medium text-gray-700 text-xs sm:text-sm flex-shrink-0">Slug:</span>
                               <div className="flex items-center gap-1 sm:gap-2 min-w-0">
@@ -688,6 +728,32 @@ export function UserDashboard({ user, onLogout, onGoHome }: UserDashboardProps) 
                           <span className="hidden sm:inline">View Calendar</span>
                           <span className="sm:hidden">Calendar</span>
                         </Button>
+                        {canManageTeam(team.user_role, team.is_creator) && (
+                          <Dialog>
+                            <DialogTrigger asChild>
+                              <Button
+                                size="sm"
+                                variant="outline"
+                                className="flex items-center justify-center gap-1 sm:gap-2 flex-1 lg:flex-none lg:min-w-[140px] lg:justify-start text-xs sm:text-sm"
+                              >
+                                <MapPin className="h-3 w-3 sm:h-4 sm:w-4" />
+                                <span className="hidden sm:inline">Holiday Mgmt</span>
+                                <span className="sm:hidden">Holidays</span>
+                              </Button>
+                            </DialogTrigger>
+                            <DialogContent className="max-w-4xl max-h-[80vh] overflow-y-auto">
+                              <DialogHeader>
+                                <DialogTitle>Holiday Management - {team.name}</DialogTitle>
+                              </DialogHeader>
+                              <HolidayManagement 
+                                teamId={team.id} 
+                                locale={"en"}
+                                initialAutoHolidaysEnabled={team.auto_holidays_enabled || false}
+                                onAutoHolidaysChange={() => setRefreshKey(prev => prev + 1)}
+                              />
+                            </DialogContent>
+                          </Dialog>
+                        )}
                         <Button
                           size="sm"
                           variant="outline"
@@ -709,15 +775,13 @@ export function UserDashboard({ user, onLogout, onGoHome }: UserDashboardProps) 
                       </div>
                     </div>
                     
-                    {/* Team Activities - Only show for admins/creators */}
-                    {(team.user_role === 'admin' || team.is_creator) && (
-                      <div className="mt-6 pt-4 border-t border-gray-200">
-                        <TeamActivities 
-                          teamId={team.id} 
-                          isVisible={true}
-                        />
-                      </div>
-                    )}
+                    {/* Team Activities - Show for all team members */}
+                    <div className="mt-6 pt-4 border-t border-gray-200">
+                      <TeamActivities 
+                        teamId={team.id} 
+                        isVisible={true}
+                      />
+                    </div>
                   </CardContent>
                 </Card>
               ))}

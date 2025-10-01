@@ -273,9 +273,6 @@ export default function LocaleTeamPage({ params }: LocaleTeamPageProps) {
     }
   }
 
-  // Handle date navigation by updating URL to date-based format
-  }
-
   if (isLoading) {
     return (
       <div className="min-h-screen bg-gray-50 flex items-center justify-center">
@@ -300,69 +297,8 @@ export default function LocaleTeamPage({ params }: LocaleTeamPageProps) {
     )
   }
 
-      }
-  }
-
-  const handlePasswordSubmit = async (password: string) => {
-    if (!team) return
-
-    setIsVerifyingPassword(true)
-    setPasswordError("")
-
-    try {
-      // Simple verification - compare with base64 encoded password
-      const hashedPassword = btoa(password)
-      
-      if (hashedPassword === team.password_hash) {
-        // Password correct
-        const sessionKey = `team_auth_${team.id}`
-        sessionStorage.setItem(sessionKey, "true")
-        setIsAuthenticated(true)
-        
-        // Fetch all members now (including inactive ones)
-        const { data: allMembersData, error: membersError } = await supabase
-          .from("members")
-          .select("*")
-          .eq("team_id", team.id)
-          .order("order_index", { ascending: true })
-          .order("created_at", { ascending: true })
-
-        if (membersError) throw membersError
-        
-        // Transform to consistent format
-        const allMembers: Member[] = (allMembersData || []).map((member: any) => ({
-          id: member.id,
-          first_name: member.first_name,
-          last_name: member.last_name,
-          email: member.email,
-          role: member.role || 'member',
-          status: member.status || 'active',
-          member_status: member.status || 'active',
-          is_hidden: member.is_hidden || false,
-          profile_image: member.profile_image || member.profile_image_url,
-          created_at: member.created_at,
-          last_active: member.last_active,
-          order_index: member.order_index || 0
-        }))
-        
-        setMembers(allMembers)
-      } else {
-        setPasswordError(
-          locale === "en" ? "Incorrect password. Please try again." :
-          locale === "nl" ? "Onjuist wachtwoord. Probeer opnieuw." :
-          "Mot de passe incorrect. Veuillez réessayer."
-        )
-      }
-    } catch (error) {
-      console.error("Error verifying password:", error)
-      setPasswordError(t("common.error"))
-    } finally {
-      setIsVerifyingPassword(false)
-    }
-  }
-
   // Show password form if team is password protected and not authenticated
-  if (team.is_password_protected && !isAuthenticated) {
+  if (team && team.is_password_protected && !isAuthenticated) {
     return (
       <TeamPasswordForm
         teamName={team.name}
