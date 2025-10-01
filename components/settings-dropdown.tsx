@@ -415,103 +415,106 @@ export function SettingsDropdown({ currentLocale, members, team, forceOpen, onOp
         </div>
       </div>
 
-      <div className="px-2 py-2">
-        <div className="flex items-center justify-between mb-2">
-          <div className="flex items-center">
-            {theme === "dark" ? (
-              <Moon className="mr-2 h-4 w-4" />
-            ) : theme === "light" ? (
-              <Sun className="mr-2 h-4 w-4" />
-            ) : theme === "autumn" ? (
-              <Leaf className="mr-2 h-4 w-4 text-orange-600" />
-            ) : theme === "winter" ? (
-              <Snowflake className="mr-2 h-4 w-4 text-blue-500" />
-            ) : theme === "spring" ? (
-              <Flower className="mr-2 h-4 w-4 text-green-500" />
-            ) : theme === "summer" ? (
-              <SummerSun className="mr-2 h-4 w-4 text-yellow-500" />
-            ) : theme === "cozy" ? (
-              <Home className="mr-2 h-4 w-4 text-amber-600" />
-            ) : theme === "blackwhite" ? (
-              <Square className="mr-2 h-4 w-4 text-gray-600" />
-            ) : theme === "bythestove" ? (
-              <Flame className="mr-2 h-4 w-4 text-red-600" />
-            ) : (
-              <Monitor className="mr-2 h-4 w-4" />
-            )}
-            <Label className="text-sm font-medium">
-              {currentLocale === "en" ? "Theme" : currentLocale === "nl" ? "Thema" : "Thème"}
-            </Label>
+      {/* Theme selector - only available for efficiency-team */}
+      {(team?.slug === 'efficiency-team' || team?.invite_code === 'efficiency-team') && (
+        <div className="px-2 py-2">
+          <div className="flex items-center justify-between mb-2">
+            <div className="flex items-center">
+              {theme === "dark" ? (
+                <Moon className="mr-2 h-4 w-4" />
+              ) : theme === "light" ? (
+                <Sun className="mr-2 h-4 w-4" />
+              ) : theme === "autumn" ? (
+                <Leaf className="mr-2 h-4 w-4 text-orange-600" />
+              ) : theme === "winter" ? (
+                <Snowflake className="mr-2 h-4 w-4 text-blue-500" />
+              ) : theme === "spring" ? (
+                <Flower className="mr-2 h-4 w-4 text-green-500" />
+              ) : theme === "summer" ? (
+                <SummerSun className="mr-2 h-4 w-4 text-yellow-500" />
+              ) : theme === "cozy" ? (
+                <Home className="mr-2 h-4 w-4 text-amber-600" />
+              ) : theme === "blackwhite" ? (
+                <Square className="mr-2 h-4 w-4 text-gray-600" />
+              ) : theme === "bythestove" ? (
+                <Flame className="mr-2 h-4 w-4 text-red-600" />
+              ) : (
+                <Monitor className="mr-2 h-4 w-4" />
+              )}
+              <Label className="text-sm font-medium">
+                {currentLocale === "en" ? "Theme" : currentLocale === "nl" ? "Thema" : "Thème"}
+              </Label>
+            </div>
           </div>
+          <Select value={theme || "system"} onValueChange={setTheme}>
+            <SelectTrigger className="w-full h-8 text-sm bg-gray-50 dark:bg-gray-700 border-gray-200 dark:border-gray-600">
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent className="bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700">
+              <SelectItem value="system" className="text-sm cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-700">
+                <div className="flex items-center">
+                  <Monitor className="mr-2 h-3 w-3" />
+                  {currentLocale === "en" ? "System" : currentLocale === "nl" ? "Systeem" : "Système"}
+                </div>
+              </SelectItem>
+              <SelectItem value="light" className="text-sm cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-700">
+                <div className="flex items-center">
+                  <Sun className="mr-2 h-3 w-3" />
+                  {currentLocale === "en" ? "Light" : currentLocale === "nl" ? "Licht" : "Clair"}
+                </div>
+              </SelectItem>
+              <SelectItem value="dark" className="text-sm cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-700">
+                <div className="flex items-center">
+                  <Moon className="mr-2 h-3 w-3" />
+                  {currentLocale === "en" ? "Dark" : currentLocale === "nl" ? "Donker" : "Sombre"}
+                </div>
+              </SelectItem>
+              <SelectItem value="autumn" className="text-sm cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-700">
+                <div className="flex items-center">
+                  <Leaf className="mr-2 h-3 w-3 text-orange-600" />
+                  {currentLocale === "en" ? "Autumn" : currentLocale === "nl" ? "Herfst" : "Automne"}
+                </div>
+              </SelectItem>
+              <SelectItem value="winter" className="text-sm cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-700">
+                <div className="flex items-center">
+                  <Snowflake className="mr-2 h-3 w-3 text-blue-500" />
+                  {currentLocale === "en" ? "Winter" : currentLocale === "nl" ? "Winter" : "Hiver"}
+                </div>
+              </SelectItem>
+              <SelectItem value="spring" className="text-sm cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-700">
+                <div className="flex items-center">
+                  <Flower className="mr-2 h-3 w-3 text-green-500" />
+                  {currentLocale === "en" ? "Spring" : currentLocale === "nl" ? "Lente" : "Printemps"}
+                </div>
+              </SelectItem>
+              <SelectItem value="summer" className="text-sm cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-700">
+                <div className="flex items-center">
+                  <SummerSun className="mr-2 h-3 w-3 text-yellow-500" />
+                  {currentLocale === "en" ? "Summer" : currentLocale === "nl" ? "Zomer" : "Été"}
+                </div>
+              </SelectItem>
+              <SelectItem value="cozy" className="text-sm cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-700">
+                <div className="flex items-center">
+                  <Home className="mr-2 h-3 w-3 text-amber-600" />
+                  {currentLocale === "en" ? "Cozy" : currentLocale === "nl" ? "Gezellig" : "Confortable"}
+                </div>
+              </SelectItem>
+              <SelectItem value="blackwhite" className="text-sm cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-700">
+                <div className="flex items-center">
+                  <Square className="mr-2 h-3 w-3 text-gray-600" />
+                  {currentLocale === "en" ? "Black & White" : currentLocale === "nl" ? "Zwart & Wit" : "Noir & Blanc"}
+                </div>
+              </SelectItem>
+              <SelectItem value="bythestove" className="text-sm cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-700">
+                <div className="flex items-center">
+                  <Flame className="mr-2 h-3 w-3 text-red-600" />
+                  {currentLocale === "en" ? "By the Stove" : currentLocale === "nl" ? "Bij de Kachel" : "Près du Poêle"}
+                </div>
+              </SelectItem>
+            </SelectContent>
+          </Select>
         </div>
-        <Select value={theme || "system"} onValueChange={setTheme}>
-          <SelectTrigger className="w-full h-8 text-sm bg-gray-50 dark:bg-gray-700 border-gray-200 dark:border-gray-600">
-            <SelectValue />
-          </SelectTrigger>
-          <SelectContent className="bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700">
-            <SelectItem value="system" className="text-sm cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-700">
-              <div className="flex items-center">
-                <Monitor className="mr-2 h-3 w-3" />
-                {currentLocale === "en" ? "System" : currentLocale === "nl" ? "Systeem" : "Système"}
-              </div>
-            </SelectItem>
-            <SelectItem value="light" className="text-sm cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-700">
-              <div className="flex items-center">
-                <Sun className="mr-2 h-3 w-3" />
-                {currentLocale === "en" ? "Light" : currentLocale === "nl" ? "Licht" : "Clair"}
-              </div>
-            </SelectItem>
-            <SelectItem value="dark" className="text-sm cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-700">
-              <div className="flex items-center">
-                <Moon className="mr-2 h-3 w-3" />
-                {currentLocale === "en" ? "Dark" : currentLocale === "nl" ? "Donker" : "Sombre"}
-              </div>
-            </SelectItem>
-            <SelectItem value="autumn" className="text-sm cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-700">
-              <div className="flex items-center">
-                <Leaf className="mr-2 h-3 w-3 text-orange-600" />
-                {currentLocale === "en" ? "Autumn" : currentLocale === "nl" ? "Herfst" : "Automne"}
-              </div>
-            </SelectItem>
-            <SelectItem value="winter" className="text-sm cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-700">
-              <div className="flex items-center">
-                <Snowflake className="mr-2 h-3 w-3 text-blue-500" />
-                {currentLocale === "en" ? "Winter" : currentLocale === "nl" ? "Winter" : "Hiver"}
-              </div>
-            </SelectItem>
-            <SelectItem value="spring" className="text-sm cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-700">
-              <div className="flex items-center">
-                <Flower className="mr-2 h-3 w-3 text-green-500" />
-                {currentLocale === "en" ? "Spring" : currentLocale === "nl" ? "Lente" : "Printemps"}
-              </div>
-            </SelectItem>
-            <SelectItem value="summer" className="text-sm cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-700">
-              <div className="flex items-center">
-                <SummerSun className="mr-2 h-3 w-3 text-yellow-500" />
-                {currentLocale === "en" ? "Summer" : currentLocale === "nl" ? "Zomer" : "Été"}
-              </div>
-            </SelectItem>
-            <SelectItem value="cozy" className="text-sm cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-700">
-              <div className="flex items-center">
-                <Home className="mr-2 h-3 w-3 text-amber-600" />
-                {currentLocale === "en" ? "Cozy" : currentLocale === "nl" ? "Gezellig" : "Confortable"}
-              </div>
-            </SelectItem>
-            <SelectItem value="blackwhite" className="text-sm cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-700">
-              <div className="flex items-center">
-                <Square className="mr-2 h-3 w-3 text-gray-600" />
-                {currentLocale === "en" ? "Black & White" : currentLocale === "nl" ? "Zwart & Wit" : "Noir & Blanc"}
-              </div>
-            </SelectItem>
-            <SelectItem value="bythestove" className="text-sm cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-700">
-              <div className="flex items-center">
-                <Flame className="mr-2 h-3 w-3 text-red-600" />
-                {currentLocale === "en" ? "By the Stove" : currentLocale === "nl" ? "Bij de Kachel" : "Près du Poêle"}
-              </div>
-            </SelectItem>
-          </SelectContent>
-        </Select>
-      </div>
+      )}
 
       <div className="h-px bg-gray-200 dark:bg-gray-600 my-1" />
 

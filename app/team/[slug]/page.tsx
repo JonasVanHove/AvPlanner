@@ -4,6 +4,7 @@ import { useState, useEffect, use, useCallback } from "react"
 import { Button } from "@/components/ui/button"
 import { AvailabilityCalendarRedesigned } from "@/components/availability-calendar-redesigned"
 import { TeamPasswordForm } from "@/components/team-password-form"
+import { ConditionalThemeProvider } from "@/components/conditional-theme-provider"
 import { supabase } from "@/lib/supabase"
 import { useTranslation, type Locale } from "@/lib/i18n"
 import { useAuth } from "@/hooks/useAuth"
@@ -255,29 +256,33 @@ export default function TeamPage({ params }: TeamPageProps) {
 
   if (team.is_password_protected && !isAuthenticated) {
     return (
-      <TeamPasswordForm
-        teamName={team.name}
-        onPasswordSubmit={handlePasswordSubmit}
-        isLoading={isVerifyingPassword}
-        error={passwordError}
-        locale={locale}
-      />
+      <ConditionalThemeProvider teamSlug={team.slug || team.invite_code}>
+        <TeamPasswordForm
+          teamName={team.name}
+          onPasswordSubmit={handlePasswordSubmit}
+          isLoading={isVerifyingPassword}
+          error={passwordError}
+          locale={locale}
+        />
+      </ConditionalThemeProvider>
     )
   }
 
   return (
-    <AvailabilityCalendarRedesigned
-      teamId={team.id}
-      teamName={team.name}
-      team={team}
-      members={members}
-      locale={locale}
-      onMembersUpdate={fetchTeamData}
-      isPasswordProtected={team.is_password_protected}
-      passwordHash={team.password_hash}
-      userEmail={user?.email}
-      initialDate={urlDate}
-      onDateNavigation={handleDateNavigation}
-    />
+    <ConditionalThemeProvider teamSlug={team.slug || team.invite_code}>
+      <AvailabilityCalendarRedesigned
+        teamId={team.id}
+        teamName={team.name}
+        team={team}
+        members={members}
+        locale={locale}
+        onMembersUpdate={fetchTeamData}
+        isPasswordProtected={team.is_password_protected}
+        passwordHash={team.password_hash}
+        userEmail={user?.email}
+        initialDate={urlDate}
+        onDateNavigation={handleDateNavigation}
+      />
+    </ConditionalThemeProvider>
   )
 }
