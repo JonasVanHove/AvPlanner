@@ -20,7 +20,7 @@ import {
 } from "@/components/ui/drawer"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { Input } from "@/components/ui/input"
-import { Settings, Download, Moon, Sun, Globe, Bell, ChevronDown, Monitor, Share2, Copy, QrCode, Eye, EyeOff, Leaf, Snowflake, Flower, Sun as SummerSun } from "lucide-react"
+import { Settings, Download, Moon, Sun, Globe, Bell, ChevronDown, Monitor, Share2, Copy, QrCode, Eye, EyeOff, Leaf, Snowflake, Flower, Sun as SummerSun, Home, Square, Flame } from "lucide-react"
 import { ExportDialog } from "./export-dialog"
 
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog"
@@ -430,6 +430,12 @@ export function SettingsDropdown({ currentLocale, members, team, forceOpen, onOp
               <Flower className="mr-2 h-4 w-4 text-green-500" />
             ) : theme === "summer" ? (
               <SummerSun className="mr-2 h-4 w-4 text-yellow-500" />
+            ) : theme === "cozy" ? (
+              <Home className="mr-2 h-4 w-4 text-amber-600" />
+            ) : theme === "blackwhite" ? (
+              <Square className="mr-2 h-4 w-4 text-gray-600" />
+            ) : theme === "bythestove" ? (
+              <Flame className="mr-2 h-4 w-4 text-red-600" />
             ) : (
               <Monitor className="mr-2 h-4 w-4" />
             )}
@@ -483,6 +489,24 @@ export function SettingsDropdown({ currentLocale, members, team, forceOpen, onOp
               <div className="flex items-center">
                 <SummerSun className="mr-2 h-3 w-3 text-yellow-500" />
                 {currentLocale === "en" ? "Summer" : currentLocale === "nl" ? "Zomer" : "Été"}
+              </div>
+            </SelectItem>
+            <SelectItem value="cozy" className="text-sm cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-700">
+              <div className="flex items-center">
+                <Home className="mr-2 h-3 w-3 text-amber-600" />
+                {currentLocale === "en" ? "Cozy" : currentLocale === "nl" ? "Gezellig" : "Confortable"}
+              </div>
+            </SelectItem>
+            <SelectItem value="blackwhite" className="text-sm cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-700">
+              <div className="flex items-center">
+                <Square className="mr-2 h-3 w-3 text-gray-600" />
+                {currentLocale === "en" ? "Black & White" : currentLocale === "nl" ? "Zwart & Wit" : "Noir & Blanc"}
+              </div>
+            </SelectItem>
+            <SelectItem value="bythestove" className="text-sm cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-700">
+              <div className="flex items-center">
+                <Flame className="mr-2 h-3 w-3 text-red-600" />
+                {currentLocale === "en" ? "By the Stove" : currentLocale === "nl" ? "Bij de Kachel" : "Près du Poêle"}
               </div>
             </SelectItem>
           </SelectContent>

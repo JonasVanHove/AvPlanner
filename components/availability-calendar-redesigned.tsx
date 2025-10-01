@@ -169,6 +169,24 @@ const AvailabilityCalendarRedesigned = ({
           header: 'bg-gradient-to-r from-yellow-600 via-amber-700 to-yellow-800 dark:from-yellow-900 dark:via-amber-800 dark:to-yellow-900',
           headerBorder: 'border-yellow-500/20 dark:border-yellow-700'
         }
+      case 'cozy':
+        return {
+          background: 'bg-amber-50/30 dark:bg-amber-950/20',
+          header: 'bg-gradient-to-r from-amber-700 via-orange-800 to-amber-900 dark:from-amber-900 dark:via-orange-900 dark:to-amber-950',
+          headerBorder: 'border-amber-500/20 dark:border-amber-700'
+        }
+      case 'blackwhite':
+        return {
+          background: 'bg-gray-50 dark:bg-gray-900',
+          header: 'bg-gradient-to-r from-gray-800 via-gray-900 to-black dark:from-gray-900 dark:via-black dark:to-gray-950',
+          headerBorder: 'border-gray-500/20 dark:border-gray-800'
+        }
+      case 'bythestove':
+        return {
+          background: 'bg-red-50/30 dark:bg-red-950/20',
+          header: 'bg-gradient-to-r from-red-700 via-orange-800 to-red-900 dark:from-red-900 dark:via-orange-900 dark:to-red-950',
+          headerBorder: 'border-red-500/20 dark:border-red-700'
+        }
       default:
         return {
           background: 'bg-gray-50 dark:bg-gray-900',
@@ -179,6 +197,54 @@ const AvailabilityCalendarRedesigned = ({
   }
 
   const themeColors = getThemeColors()
+
+  // Get comprehensive theme-specific styling
+  const getThemeClasses = () => {
+    switch (theme) {
+      case 'cozy':
+        return {
+          container: 'cozy',
+          card: 'bg-gradient-to-br from-amber-50/80 to-orange-50/60 border-amber-200/50 shadow-lg shadow-amber-900/10',
+          button: 'hover:shadow-lg hover:shadow-amber-900/20 hover:-translate-y-0.5 transition-all duration-300',
+          input: 'bg-amber-50/50 border-amber-200 focus:border-amber-400 focus:ring-amber-200/50',
+          avatar: 'ring-2 ring-amber-300/50 shadow-lg shadow-amber-900/20',
+          text: 'text-amber-900/90',
+          accent: 'bg-amber-100/80 text-amber-800',
+        }
+      case 'blackwhite':
+        return {
+          container: 'blackwhite',
+          card: 'bg-white border-2 border-gray-900 shadow-[4px_4px_0_rgb(0,0,0)] hover:shadow-[6px_6px_0_rgb(0,0,0)] transition-all',
+          button: 'border-2 border-gray-900 hover:bg-gray-900 hover:text-white font-bold uppercase tracking-wide transition-all duration-200',
+          input: 'border-2 border-gray-900 bg-white font-medium focus:ring-4 focus:ring-gray-300',
+          avatar: 'ring-2 ring-gray-900 shadow-lg',
+          text: 'text-gray-900 font-medium',
+          accent: 'bg-gray-100 text-gray-900 border border-gray-400',
+        }
+      case 'bythestove':
+        return {
+          container: 'bythestove',
+          card: 'bg-gradient-to-br from-red-50/80 to-orange-50/60 border-red-200/30 shadow-xl shadow-red-900/15 relative overflow-hidden',
+          button: 'bg-gradient-to-r from-red-600 to-orange-600 hover:from-orange-600 hover:to-red-600 text-white shadow-lg hover:shadow-xl hover:-translate-y-1 transition-all duration-400',
+          input: 'bg-gradient-to-br from-red-50 to-orange-50 border-red-300 focus:border-orange-500 focus:ring-red-200/50',
+          avatar: 'ring-2 ring-red-400/60 shadow-xl shadow-red-900/30',
+          text: 'text-red-900/90',
+          accent: 'bg-gradient-to-r from-red-100 to-orange-100 text-red-800',
+        }
+      default:
+        return {
+          container: '',
+          card: 'bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700',
+          button: 'hover:bg-gray-50 dark:hover:bg-gray-700',
+          input: 'bg-white dark:bg-gray-800 border-gray-300 dark:border-gray-600',
+          avatar: 'ring-2 ring-gray-200 dark:ring-gray-700',
+          text: 'text-gray-900 dark:text-gray-100',
+          accent: 'bg-gray-100 dark:bg-gray-700 text-gray-800 dark:text-gray-200',
+        }
+    }
+  }
+
+  const themeClasses = getThemeClasses()
 
   // Memoized callback for bulk range selection changes
   const handleRangeSelectionChange = useCallback((startDate?: Date, endDate?: Date, isActive?: boolean) => {
@@ -998,7 +1064,7 @@ const AvailabilityCalendarRedesigned = ({
         {weeks.map((week, weekIndex) => (
           <div
             key={weekIndex}
-            className="bg-white dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700 overflow-hidden shadow-sm"
+            className={`${themeClasses.card} rounded-lg overflow-hidden shadow-sm`}
           >
             {/* Week Header - More subtle */}
             <div className="bg-gray-50 dark:bg-gray-700/50 p-3 sm:p-4 border-b border-gray-200 dark:border-gray-600">
@@ -1012,7 +1078,7 @@ const AvailabilityCalendarRedesigned = ({
                       <Button
                         variant="outline"
                         size="sm"
-                        className="flex items-center gap-2 bg-blue-50 dark:bg-blue-900/20 border-blue-200 dark:border-blue-700 text-blue-700 dark:text-blue-300 hover:bg-blue-100 dark:hover:bg-blue-800/30"
+                        className={`flex items-center gap-2 ${themeClasses.button}`}
                       >
                         <BarChart3 className="h-4 w-4" />
                         <span className="font-medium">{calculateTeamWeeklyScore(week.days)}%</span>
@@ -1235,7 +1301,7 @@ const AvailabilityCalendarRedesigned = ({
                               <Button
                                 variant="ghost"
                                 size="sm"
-                                className="h-8 w-8 p-0 rounded-full hover:bg-gray-100 dark:hover:bg-gray-600 flex-shrink-0"
+                                className={`h-8 w-8 p-0 rounded-full flex-shrink-0 ${themeClasses.button}`}
                               >
                                 <MoreHorizontal className="h-4 w-4" />
                               </Button>
@@ -1607,7 +1673,7 @@ const AvailabilityCalendarRedesigned = ({
 
   return (
     <TooltipProvider>
-      <div className={`min-h-screen ${themeColors.background}`}>
+      <div className={`min-h-screen ${themeColors.background} ${themeClasses.container}`}>
         {/* Header - Compact Mobile & Tablet Optimized */}
         <div className={`${themeColors.header} border-b ${themeColors.headerBorder} shadow-lg`}>
           <div className="px-3 lg:px-6 py-2 lg:py-3">
@@ -1640,7 +1706,7 @@ const AvailabilityCalendarRedesigned = ({
                   {/* Week selector */}
                   <DropdownMenu>
                     <DropdownMenuTrigger asChild>
-                      <Button variant="outline" size="sm" className="flex items-center gap-2 bg-white/10 backdrop-blur-sm border-white/20 text-white hover:bg-white/20">
+                      <Button variant="outline" size="sm" className={`flex items-center gap-2 ${themeClasses.button}`}>
                         <Calendar className="h-4 w-4" />
                         <span className="text-sm font-medium">
                           {weeksToShow === 1 ? t("calendar.1week") : 
@@ -1722,7 +1788,7 @@ const AvailabilityCalendarRedesigned = ({
                         <Button
                           variant="outline"
                           size="sm"
-                          className="h-9 w-9 p-0 bg-white/10 backdrop-blur-sm border-white/20 text-white hover:bg-white/20"
+                          className={`h-9 w-9 p-0 ${themeClasses.button}`}
                         >
                           <Keyboard className="h-4 w-4" />
                         </Button>
@@ -1795,7 +1861,7 @@ const AvailabilityCalendarRedesigned = ({
                         <Button
                           variant="outline"
                           size="sm"
-                          className="h-9 w-9 p-0 bg-white/10 backdrop-blur-sm border-white/20 text-white hover:bg-white/20"
+                          className={`h-9 w-9 p-0 ${themeClasses.button}`}
                         >
                           <Calendar className="h-4 w-4" />
                         </Button>
@@ -1960,7 +2026,7 @@ const AvailabilityCalendarRedesigned = ({
                     variant="outline"
                     size="sm"
                     onClick={goToToday}
-                    className="text-xs bg-white/15 xl:bg-white/10 backdrop-blur-sm text-white xl:text-white border-white/25 xl:border-white/20 hover:bg-white/25 xl:hover:bg-white/20 font-semibold rounded-full px-2 xl:px-2 py-0.5 xl:py-1 h-5 xl:h-6 shadow-sm"
+                    className={`text-xs font-semibold rounded-full px-2 xl:px-2 py-0.5 xl:py-1 h-5 xl:h-6 shadow-sm ${themeClasses.button}`}
                   >
                     Today
                   </Button>
@@ -1971,7 +2037,7 @@ const AvailabilityCalendarRedesigned = ({
                     variant="outline" 
                     size="sm" 
                     onClick={() => navigateDate("prev")} 
-                    className="rounded-md bg-white/10 backdrop-blur-sm border-white/20 text-white hover:bg-white/20 h-7 w-7 p-0"
+                    className={`rounded-md h-7 w-7 p-0 ${themeClasses.button}`}
                   >
                     <ChevronLeft className="h-3 w-3" />
                   </Button>
@@ -1979,7 +2045,7 @@ const AvailabilityCalendarRedesigned = ({
                     variant="outline" 
                     size="sm" 
                     onClick={() => navigateDate("next")} 
-                    className="rounded-md bg-white/10 backdrop-blur-sm border-white/20 text-white hover:bg-white/20 h-7 w-7 p-0"
+                    className={`rounded-md h-7 w-7 p-0 ${themeClasses.button}`}
                   >
                     <ChevronRight className="h-3 w-3" />
                   </Button>
@@ -2020,7 +2086,7 @@ const AvailabilityCalendarRedesigned = ({
           
           {isLoading ? (
             <div className="text-center py-12">
-              <div className="inline-flex items-center gap-3 bg-white dark:bg-gray-800 rounded-lg px-6 py-4 shadow-sm border border-gray-200 dark:border-gray-700">
+              <div className={`inline-flex items-center gap-3 ${themeClasses.card} rounded-lg px-6 py-4 shadow-sm`}>
                 <div className="w-6 h-6 bg-blue-600 rounded-full animate-pulse"></div>
                 <span className="font-medium text-gray-900 dark:text-white">Loading...</span>
               </div>

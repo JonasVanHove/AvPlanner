@@ -169,6 +169,115 @@
     --chart-4: 65 75% 70%;
     --chart-5: 15 95% 65%;
   }
+
+  /* Cozy Theme - Warme winterhuiskamer met sneeuw */
+  .cozy {
+    --background: 25 15% 96%;
+    --foreground: 15 20% 28%;
+    --card: 28 12% 92%;
+    --card-foreground: 15 20% 28%;
+    --popover: 25 15% 97%;
+    --popover-foreground: 15 20% 28%;
+    --primary: 15 28% 52%;
+    --primary-foreground: 25 15% 96%;
+    --secondary: 20 12% 88%;
+    --secondary-foreground: 15 20% 28%;
+    --muted: 22 8% 85%;
+    --muted-foreground: 15 12% 48%;
+    --accent: 30 18% 90%;
+    --accent-foreground: 15 20% 28%;
+    --destructive: 5 35% 55%;
+    --destructive-foreground: 25 15% 96%;
+    --border: 20 10% 85%;
+    --input: 22 8% 90%;
+    --ring: 15 28% 52%;
+    --radius: 0.75rem;
+    --chart-1: 15 45% 48%;
+    --chart-2: 30 40% 55%;
+    --chart-3: 35 50% 60%;
+    --chart-4: 25 45% 50%;
+    --chart-5: 40 55% 65%;
+    
+    /* Custom cozy winter properties */
+    --cozy-firelight: 15 25% 65%;
+    --cozy-wool: 20 8% 82%;
+    --cozy-snow: 0 0% 98%;
+    --cozy-frost: 210 15% 92%;
+    --cozy-ember: 10 35% 45%;
+    --cozy-blanket: 25 12% 88%;
+  }
+
+  /* Black & White Theme - Classy monochrome elegance */
+  .blackwhite {
+    --background: 0 0% 98%;
+    --foreground: 0 0% 8%;
+    --card: 0 0% 95%;
+    --card-foreground: 0 0% 12%;
+    --popover: 0 0% 99%;
+    --popover-foreground: 0 0% 12%;
+    --primary: 0 0% 15%;
+    --primary-foreground: 0 0% 96%;
+    --secondary: 0 0% 90%;
+    --secondary-foreground: 0 0% 20%;
+    --muted: 0 0% 85%;
+    --muted-foreground: 0 0% 45%;
+    --accent: 0 0% 88%;
+    --accent-foreground: 0 0% 15%;
+    --destructive: 0 0% 25%;
+    --destructive-foreground: 0 0% 96%;
+    --border: 0 0% 80%;
+    --input: 0 0% 92%;
+    --ring: 0 0% 15%;
+    --radius: 0.25rem;
+    --chart-1: 0 0% 15%;
+    --chart-2: 0 0% 30%;
+    --chart-3: 0 0% 45%;
+    --chart-4: 0 0% 60%;
+    --chart-5: 0 0% 75%;
+    
+    /* Custom B&W properties (classy) */
+    --bw-charcoal: 0 0% 15%;
+    --bw-pearl: 0 0% 97%;
+    --bw-silver: 0 0% 65%;
+    --bw-platinum: 0 0% 88%;
+    --bw-graphite: 0 0% 30%;
+  }
+
+  /* By the Stove Theme - Warme keuken/kachel kleuren (subtle) */
+  .bythestove {
+    --background: 18 20% 95%;
+    --foreground: 8 25% 20%;
+    --card: 22 18% 88%;
+    --card-foreground: 8 25% 20%;
+    --popover: 20 25% 96%;
+    --popover-foreground: 8 25% 20%;
+    --primary: 12 45% 42%;
+    --primary-foreground: 20 25% 96%;
+    --secondary: 28 20% 82%;
+    --secondary-foreground: 8 25% 20%;
+    --muted: 25 15% 85%;
+    --muted-foreground: 8 20% 40%;
+    --accent: 35 25% 82%;
+    --accent-foreground: 8 25% 20%;
+    --destructive: 2 55% 48%;
+    --destructive-foreground: 20 25% 96%;
+    --border: 25 15% 78%;
+    --input: 28 12% 88%;
+    --ring: 12 45% 42%;
+    --radius: 1rem;
+    --chart-1: 12 75% 38%;
+    --chart-2: 25 65% 45%;
+    --chart-3: 35 60% 50%;
+    --chart-4: 45 55% 55%;
+    --chart-5: 8 80% 32%;
+    
+    /* Custom stove properties (subtle) */
+    --stove-ember: 8 45% 42%;
+    --stove-flame: 15 55% 52%;
+    --stove-ash: 25 10% 75%;
+    --stove-iron: 0 3% 35%;
+    --stove-warmth: 20 35% 90%;
+  }
 }
 
 @layer base {
@@ -335,4 +444,252 @@
 .loading-overlay {
   backdrop-filter: blur(4px);
   -webkit-backdrop-filter: blur(4px);
+}
+
+/* ========================================
+   COMPREHENSIVE THEME STYLING
+   ======================================== */
+
+/* COZY THEME - Winter Living Room Styling */
+.cozy {
+  /* Soft, readable typography for cozy reading */
+  font-family: 'Inter', 'Georgia', 'Times New Roman', serif;
+  font-weight: 380;
+  letter-spacing: 0.005em;
+  line-height: 1.6;
+}
+
+.cozy .btn, .cozy button {
+  border-radius: 1rem;
+  font-weight: 450;
+  transition: all 0.4s ease;
+  background: linear-gradient(135deg, hsl(var(--cozy-blanket)), hsl(var(--cozy-wool)));
+  border: 1px solid hsl(var(--cozy-firelight));
+  color: hsl(var(--cozy-ember));
+  box-shadow: 0 3px 10px hsla(var(--cozy-ember), 0.08),
+              inset 0 1px 0 hsla(var(--cozy-snow), 0.6);
+}
+
+.cozy .btn:hover, .cozy button:hover {
+  transform: translateY(-1px);
+  background: linear-gradient(135deg, hsl(var(--cozy-firelight)), hsl(var(--cozy-blanket)));
+  color: hsl(var(--cozy-snow));
+  box-shadow: 0 5px 15px hsla(var(--cozy-ember), 0.15),
+              inset 0 1px 0 hsla(var(--cozy-frost), 0.4);
+}
+
+.cozy .card, .cozy [class*="card"] {
+  background: linear-gradient(145deg, hsl(var(--cozy-snow)), hsl(var(--cozy-frost)));
+  border-radius: 1.25rem;
+  border: 1px solid hsl(var(--cozy-wool));
+  box-shadow: 0 6px 20px hsla(var(--cozy-ember), 0.06),
+              0 2px 8px hsla(var(--cozy-ember), 0.08),
+              inset 0 1px 0 hsla(var(--cozy-snow), 0.9);
+  backdrop-filter: blur(0.5px);
+}
+
+/* Winter snow effect for cozy theme */
+.cozy::before {
+  content: '';
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  pointer-events: none;
+  z-index: 1;
+  opacity: 0.03;
+  background-image: 
+    radial-gradient(2px 2px at 20% 30%, hsl(var(--cozy-snow)), transparent),
+    radial-gradient(2px 2px at 40% 70%, hsl(var(--cozy-frost)), transparent),
+    radial-gradient(1px 1px at 90% 40%, hsl(var(--cozy-snow)), transparent),
+    radial-gradient(1px 1px at 60% 80%, hsl(var(--cozy-frost)), transparent),
+    radial-gradient(2px 2px at 80% 10%, hsl(var(--cozy-snow)), transparent);
+  background-size: 200px 200px, 300px 300px, 150px 150px, 250px 250px, 180px 180px;
+  animation: gentleSnowfall 120s linear infinite;
+}
+
+@keyframes gentleSnowfall {
+  0% {
+    transform: translateY(-100vh) translateX(0);
+  }
+  100% {
+    transform: translateY(100vh) translateX(50px);
+  }
+}
+
+.cozy .avatar, .cozy [class*="avatar"] {
+  border-radius: 50%;
+  border: 2px solid hsl(var(--cozy-firelight));
+  background: linear-gradient(145deg, hsl(var(--cozy-snow)), hsl(var(--cozy-frost)));
+  box-shadow: 0 4px 12px hsla(var(--cozy-ember), 0.12),
+              inset 0 2px 4px hsla(var(--cozy-snow), 0.8);
+}
+
+.cozy input, .cozy select, .cozy textarea {
+  background: linear-gradient(145deg, hsl(var(--cozy-snow)), hsl(var(--cozy-frost)));
+  border: 1px solid hsl(var(--cozy-wool));
+  border-radius: 1rem;
+  padding: 0.75rem;
+  transition: all 0.4s ease;
+  box-shadow: inset 0 2px 4px hsla(var(--cozy-ember), 0.04);
+}
+
+.cozy input:focus, .cozy select:focus, .cozy textarea:focus {
+  border-color: hsl(var(--cozy-firelight));
+  box-shadow: 0 0 0 3px hsla(var(--cozy-firelight), 0.15),
+              inset 0 2px 4px hsla(var(--cozy-ember), 0.06);
+  background: linear-gradient(145deg, hsl(var(--cozy-snow)), hsl(var(--cozy-blanket)));
+}
+
+/* BLACK & WHITE THEME - Comprehensive Styling */
+.blackwhite {
+  font-family: 'Inter', 'SF Pro Display', 'Helvetica Neue', sans-serif;
+  font-weight: 350;
+  letter-spacing: -0.02em;
+  line-height: 1.5;
+}
+
+.blackwhite .btn, .blackwhite button {
+  border-radius: 0.375rem;
+  font-weight: 500;
+  letter-spacing: 0.02em;
+  transition: all 0.3s cubic-bezier(0.25, 0.46, 0.45, 0.94);
+  border: 1px solid hsl(var(--bw-graphite));
+  background: linear-gradient(145deg, hsl(var(--bw-pearl)), hsl(var(--bw-platinum)));
+  color: hsl(var(--bw-charcoal));
+  box-shadow: 0 2px 4px hsla(var(--bw-charcoal), 0.1),
+              inset 0 1px 0 hsla(var(--bw-pearl), 0.8);
+}
+
+.blackwhite .btn:hover, .blackwhite button:hover {
+  background: linear-gradient(145deg, hsl(var(--bw-charcoal)), hsl(var(--bw-graphite)));
+  color: hsl(var(--bw-pearl));
+  transform: translateY(-1px);
+  box-shadow: 0 4px 8px hsla(var(--bw-charcoal), 0.2),
+              inset 0 1px 0 hsla(var(--bw-silver), 0.3);
+}
+
+.blackwhite .card, .blackwhite [class*="card"] {
+  background: linear-gradient(145deg, hsl(var(--bw-pearl)), hsl(var(--bw-platinum)));
+  border: 1px solid hsl(var(--bw-silver));
+  border-radius: 0.5rem;
+  box-shadow: 0 4px 12px hsla(var(--bw-charcoal), 0.08),
+              0 1px 3px hsla(var(--bw-charcoal), 0.12),
+              inset 0 1px 0 hsla(var(--bw-pearl), 0.9);
+  position: relative;
+}
+
+.blackwhite .card::before, .blackwhite [class*="card"]::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: linear-gradient(145deg, hsla(var(--bw-platinum), 0.5), hsla(var(--bw-silver), 0.3));
+  z-index: -1;
+  border-radius: 0.5rem;
+  opacity: 0.6;
+}
+
+.blackwhite .avatar, .blackwhite [class*="avatar"] {
+  border-radius: 0.375rem;
+  border: 2px solid hsl(var(--bw-graphite));
+  background: linear-gradient(145deg, hsl(var(--bw-pearl)), hsl(var(--bw-platinum)));
+  box-shadow: 0 2px 6px hsla(var(--bw-charcoal), 0.12),
+              inset 0 1px 0 hsla(var(--bw-pearl), 0.8);
+}
+
+.blackwhite input, .blackwhite select, .blackwhite textarea {
+  background: linear-gradient(145deg, hsl(var(--bw-pearl)), hsl(var(--bw-platinum)));
+  border: 1px solid hsl(var(--bw-silver));
+  border-radius: 0.375rem;
+  padding: 0.75rem;
+  font-weight: 400;
+  box-shadow: inset 0 2px 4px hsla(var(--bw-charcoal), 0.06);
+}
+
+.blackwhite input:focus, .blackwhite select:focus, .blackwhite textarea:focus {
+  outline: none;
+  border-color: hsl(var(--bw-charcoal));
+  box-shadow: 0 0 0 3px hsla(var(--bw-silver), 0.4),
+              inset 0 2px 4px hsla(var(--bw-charcoal), 0.08);
+}
+
+/* BY THE STOVE THEME - Comprehensive Styling */
+.bythestove {
+  font-family: 'Inter', 'Georgia', serif;
+  font-weight: 400;
+  letter-spacing: 0.02em;
+}
+
+.bythestove .btn, .bythestove button {
+  border-radius: 0.75rem;
+  font-weight: 450;
+  transition: all 0.3s ease;
+  background: linear-gradient(135deg, hsl(var(--stove-ember)), hsl(var(--stove-flame)));
+  border: 1px solid hsla(var(--stove-iron), 0.2);
+  color: hsl(var(--bw-pure-white));
+  box-shadow: 0 2px 8px hsla(var(--stove-ember), 0.15),
+              inset 0 1px 0 hsla(var(--stove-flame), 0.3);
+}
+
+.bythestove .btn:hover, .bythestove button:hover {
+  background: linear-gradient(135deg, hsl(var(--stove-flame)), hsl(var(--stove-ember)));
+  transform: translateY(-1px);
+  box-shadow: 0 4px 12px hsla(var(--stove-ember), 0.25),
+              inset 0 1px 0 hsla(var(--stove-flame), 0.5);
+}
+
+.bythestove .card, .bythestove [class*="card"] {
+  background: linear-gradient(145deg, hsl(var(--stove-warmth)), hsl(var(--stove-ash)));
+  border-radius: 1rem;
+  border: 1px solid hsl(var(--stove-iron));
+  box-shadow: 0 4px 16px hsla(var(--stove-ember), 0.08),
+              inset 0 1px 0 hsla(var(--bw-pure-white), 0.15);
+  position: relative;
+  overflow: hidden;
+}
+
+.bythestove .card::before, .bythestove [class*="card"]::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: -100%;
+  width: 100%;
+  height: 100%;
+  background: linear-gradient(90deg, 
+    transparent, 
+    hsla(var(--stove-flame), 0.1), 
+    transparent
+  );
+  animation: stove-shimmer 3s infinite;
+}
+
+@keyframes stove-shimmer {
+  0% { left: -100%; }
+  50% { left: 100%; }
+  100% { left: 100%; }
+}
+
+.bythestove .avatar, .bythestove [class*="avatar"] {
+  border-radius: 50%;
+  border: 3px solid hsl(var(--stove-iron));
+  box-shadow: 0 0 12px hsla(var(--stove-ember), 0.4),
+              inset 0 2px 4px hsla(var(--stove-flame), 0.1);
+}
+
+.bythestove input, .bythestove select, .bythestove textarea {
+  background: linear-gradient(145deg, hsl(var(--stove-warmth)), hsl(var(--stove-ash)));
+  border: 2px solid hsl(var(--stove-iron));
+  border-radius: 1rem;
+  padding: 1rem;
+  transition: all 0.3s ease;
+}
+
+.bythestove input:focus, .bythestove select:focus, .bythestove textarea:focus {
+  border-color: hsl(var(--stove-flame));
+  box-shadow: 0 0 0 4px hsla(var(--stove-ember), 0.2),
+              0 0 12px hsla(var(--stove-flame), 0.3);
 }

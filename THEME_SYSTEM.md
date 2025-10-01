@@ -61,6 +61,23 @@ Each theme uses the same CSS variable structure for consistency:
 - Bright, energetic feeling with sun tones
 - Evokes summer warmth and energy
 
+### Creative Themes 🎨
+
+#### Cozy Theme 🏠
+- Base colors: Warm Brown (#8B5A2B), Cream (#F5F5DC), Soft Amber (#D2B48C)
+- Comfortable, homey feeling with earth tones
+- Perfect for creating a welcoming, lived-in atmosphere
+
+#### Black & White Theme ⚫⚪
+- Base colors: Pure Black (#000000), Pure White (#FFFFFF), Various Grays
+- Clean, minimalist feeling with monochrome design
+- Classic elegance with high contrast and clarity
+
+#### By the Stove Theme 🔥
+- Base colors: Deep Red (#B91C1C), Burnt Orange (#EA580C), Warm Copper (#CD853F)
+- Intimate, warm feeling with fireplace tones
+- Evokes cozy evenings by a crackling fire
+
 ## Files Modified
 
 - `app/globals.css` - Added CSS variables for new themes
