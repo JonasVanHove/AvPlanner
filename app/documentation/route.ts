@@ -1,5 +1,7 @@
 import { NextResponse } from 'next/server'
 
-export async function GET() {
-  return NextResponse.redirect(new URL('/en/documentation', process.env.NEXT_PUBLIC_BASE_URL || 'http://localhost:3000'))
+export async function GET(request: Request) {
+  // Preserve host from incoming request for proper redirects on Netlify
+  const url = new URL('/en/documentation', request.url)
+  return NextResponse.redirect(url)
 }
