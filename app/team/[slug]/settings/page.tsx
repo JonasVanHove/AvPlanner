@@ -220,37 +220,77 @@ export default function TeamSettingsPage({ params }: TeamSettingsPageProps) {
 
       if (teamError || !teamData) throw teamError || new Error("Team niet gevonden")
 
-      // Get team settings
-      const { data: settingsData, error: settingsError } = await supabase.rpc('get_team_settings', {
-        team_id_param: teamData.id,
-        user_email: user.email
-      })
+      // Build team settings without RPC (compute from tables)
+      const { data: teamRow, error: teamRowError } = await supabase
+        .from('teams')
+        .select('id, name, slug, invite_code, is_password_protected, created_at, created_by')
+        .eq('id', teamData.id)
+        .single()
 
-      if (settingsError) throw settingsError
-      setTeamSettings(settingsData[0] || null)
+      if (teamRowError || !teamRow) throw teamRowError || new Error('Team not found')
+
+      // Count active members
+      const { count: memberCount, error: memberCountError } = await supabase
+        .from('members')
+        .select('id', { count: 'exact', head: true })
+        .eq('team_id', teamRow.id)
+        .eq('status', 'active')
+
+      // Count hidden active members
+      const { count: hiddenCount, error: hiddenCountError } = await supabase
+        .from('members')
+        .select('id', { count: 'exact', head: true })
+        .eq('team_id', teamRow.id)
+        .eq('status', 'active')
+        .eq('is_hidden', true)
+
+      if (memberCountError) console.warn('Member count error:', memberCountError)
+      if (hiddenCountError) console.warn('Hidden count error:', hiddenCountError)
+
+      // Current user's membership to determine role/admin/creator
+      const { data: currentMember, error: currentMemberError } = await supabase
+        .from('members')
+        .select('id, role, auth_user_id, status, email')
+        .eq('team_id', teamRow.id)
+        .eq('email', user.email)
+        .single()
+
+      if (currentMemberError) console.warn('Current member lookup error:', currentMemberError)
+
+      const computedSettings: TeamSettings = {
+        team_id: teamRow.id,
+        team_name: teamRow.name,
+        team_slug: teamRow.slug,
+        team_invite_code: teamRow.invite_code,
+        team_is_password_protected: !!teamRow.is_password_protected,
+        team_created_at: teamRow.created_at,
+        member_count: memberCount || 0,
+        hidden_member_count: hiddenCount || 0,
+        user_is_admin: (currentMember?.role === 'admin') || false,
+        user_is_creator: !!(currentMember?.auth_user_id && teamRow?.created_by && currentMember.auth_user_id === teamRow.created_by)
+      }
+
+      setTeamSettings(computedSettings)
       
       // Initialize editable settings
-      if (settingsData[0]) {
-        setEditableSettings({
-          team_name: settingsData[0].team_name || "",
-          team_description: "", // Add this field to database if needed
-          team_is_password_protected: settingsData[0].team_is_password_protected || false,
-          team_password: ""
-        })
-      }
+      setEditableSettings({
+        team_name: computedSettings.team_name || "",
+        team_description: "", // Add this field to database if needed
+        team_is_password_protected: computedSettings.team_is_password_protected || false,
+        team_password: ""
+      })
 
       // Get team members
       const { data: membersData, error: membersError } = await supabase.rpc('get_team_members', {
-        team_id_param: teamData.id,
-        user_email: user.email
+        team_id_param: teamData.id
       })
 
-      if (membersError) throw membersError
+      if (membersError?.message) throw membersError
       setMembers(membersData || [])
 
     } catch (error: any) {
-      console.error("Error fetching team settings:", error)
-      setError(error.message || "Er is een fout opgetreden")
+      console.error("Error fetching team settings:", error?.message || error)
+      setError(error?.message || "Er is een fout opgetreden")
     } finally {
       setIsLoading(false)
     }

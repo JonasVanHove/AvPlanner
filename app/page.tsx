@@ -2,11 +2,12 @@
 
 import { TeamForm } from "@/components/team-form"
 import { JoinTeamForm } from "@/components/join-team-form"
-import { LanguageSelector } from "@/components/language-selector"
-import { LoginButton, RegisterButton } from "@/components/auth/auth-dialog"
+// Navigation on home should be minimal
+// Removed Language selector and extra theme/auth items from header menu
 import { Button } from "@/components/ui/button"
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
 import { DropdownMenu, DropdownMenuContent, DropdownMenuTrigger, DropdownMenuItem, DropdownMenuSeparator } from "@/components/ui/dropdown-menu"
+import { HamburgerMenu } from "@/components/ui/hamburger-menu"
 import { LogOut, UserIcon, ChevronDown, Shield } from "lucide-react"
 import { useTranslation } from "@/lib/i18n"
 import { supabase } from "@/lib/supabase"
@@ -186,15 +187,6 @@ export default function HomePage() {
             <div className="flex items-center gap-4">
               {/* Desktop Navigation */}
               <div className="hidden md:flex items-center gap-4">
-                <Button 
-                  variant="ghost" 
-                  size="sm"
-                  onClick={() => router.push('/documentation')}
-                  className="text-gray-600 hover:text-blue-600 hover:bg-blue-50 transition-all duration-200"
-                >
-                  📚 Documentatie
-                </Button>
-                <LanguageSelector currentLocale="en" />
                 {user ? (
                   <DropdownMenu>
                     <DropdownMenuTrigger asChild>
@@ -237,6 +229,7 @@ export default function HomePage() {
                           Admin Panel
                         </DropdownMenuItem>
                       )}
+                      
                       <DropdownMenuSeparator />
                       <DropdownMenuItem 
                         onClick={handleLogout}
@@ -248,13 +241,56 @@ export default function HomePage() {
                     </DropdownMenuContent>
                   </DropdownMenu>
                 ) : (
-                  <div className="flex items-center gap-2">
-                    <LoginButton />
-                    <RegisterButton />
-                  </div>
+                  // If not logged in, only show My Teams link in header menu
+                  <Button 
+                    variant="outline"
+                    onClick={handleViewDashboard}
+                    className="flex items-center gap-2 px-3"
+                  >
+                    <UserIcon className="h-4 w-4" />
+                    My Teams
+                  </Button>
                 )}
               </div>
               
+              {/* Mobile Navigation */}
+              <HamburgerMenu 
+                title="Availability Planner" 
+                appName="AvPlanner"
+              >
+                <div className="p-4 space-y-2">
+                  <Button
+                    variant="ghost"
+                    onClick={handleViewDashboard}
+                    className="w-full justify-start text-left h-auto py-3 px-3"
+                  >
+                    <UserIcon className="h-4 w-4 mr-3" />
+                    <span>My Teams</span>
+                  </Button>
+                  {isAdmin && (
+                    <Button
+                      variant="ghost"
+                      onClick={handleAdminNavigation}
+                      className="w-full justify-start text-left h-auto py-3 px-3 text-purple-700 hover:bg-purple-50"
+                    >
+                      <Shield className="h-4 w-4 mr-3" />
+                      <span>Admin Panel</span>
+                    </Button>
+                  )}
+                  {user && (
+                    <div className="border-t border-gray-200 pt-2">
+                      <Button
+                        variant="ghost"
+                        onClick={handleLogout}
+                        className="w-full justify-start text-left h-auto py-3 px-3 text-red-700 hover:bg-red-50"
+                      >
+                        <LogOut className="h-4 w-4 mr-3" />
+                        <span>Logout</span>
+                      </Button>
+                    </div>
+                  )}
+                </div>
+              </HamburgerMenu>
 
             </div>
           </div>
@@ -523,13 +559,7 @@ export default function HomePage() {
               {t("landing.madeWith")} ❤️ {t("landing.forTeams")}
             </p>
             <p className="text-gray-500 text-sm mt-2">
-              by <span className="font-semibold text-gray-300">Jonas Van Hove</span> | 
-              <button
-                onClick={() => router.push('/documentation')}
-                className="text-blue-400 hover:text-blue-300 transition-colors duration-200 ml-1 underline"
-              >
-                📚 Documentatie
-              </button>
+              by <span className="font-semibold text-gray-300">Jonas Van Hove</span>
             </p>
           </div>
         </div>

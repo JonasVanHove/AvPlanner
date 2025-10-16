@@ -35,7 +35,7 @@ export default function RootLayout({
           defaultTheme="system"
           enableSystem
           disableTransitionOnChange
-          themes={["light", "dark", "system", "autumn", "winter", "spring", "summer"]}
+          themes={["light", "dark", "system", "autumn", "winter", "spring", "summer", "cozy", "blackwhite", "bythestove", "testdev"]}
         >
           {children}
         </ThemeProvider>

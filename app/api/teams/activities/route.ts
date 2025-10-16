@@ -6,7 +6,7 @@ export async function GET(request: NextRequest) {
     const { searchParams } = new URL(request.url)
     const teamId = searchParams.get('teamId')
     const daysBack = parseInt(searchParams.get('daysBack') || '7')
-    const limit = parseInt(searchParams.get('limit') || '50')
+    const limit = parseInt(searchParams.get('limit') || '10')
 
     console.log('🔍 API Request:', { teamId, daysBack, limit })
 
@@ -115,7 +115,7 @@ export async function GET(request: NextRequest) {
         changed_by_name: item.auto_holiday 
           ? 'System' // For auto-holidays, show 'System' as changer
           : (changed_by_member 
-            ? (`${changed_by_member.first_name || ''} ${changed_by_member.last_name || ''}`.trim() || changed_by_member.email)
+            ? (changed_by_member.first_name || changed_by_member.email?.split('@')[0] || 'Unknown')
             : null), // If no changed_by_member found, it's null (not Unknown)
         changed_by_profile_url: item.auto_holiday ? null : (changed_by_member ? getProfileImage(changed_by_member) : null),
         date: item.date,

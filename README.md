@@ -1,119 +1,102 @@
-# AvPlanner
-
 <div align="center">
   <img src="public/web-app-manifest-512x512.png" alt="AvPlanner Logo" width="120" height="120" />
-  
-  <p><strong>A modern, full-stack team availability management application built with Next.js, TypeScript, and Supabase.</strong></p>
+
+  <h1>AvPlanner</h1>
+  <p><strong>Plan availability. Align teams. Ship faster.</strong></p>
+
+  <p>
+    <a href="https://vercel.com/jonasvh39-gmailcoms-projects/v0-full-stack-availability-planner"><img src="https://img.shields.io/badge/Deployed%20on-Vercel-black?style=for-the-badge&logo=vercel" alt="Vercel" /></a>
+    <img src="https://img.shields.io/badge/Next.js-000000?style=for-the-badge&logo=nextdotjs&logoColor=white" alt="Next.js" />
+    <img src="https://img.shields.io/badge/TypeScript-3178C6?style=for-the-badge&logo=typescript&logoColor=white" alt="TypeScript" />
+    <img src="https://img.shields.io/badge/Tailwind-38BDF8?style=for-the-badge&logo=tailwindcss&logoColor=white" alt="Tailwind" />
+    <img src="https://img.shields.io/badge/Supabase-3ECF8E?style=for-the-badge&logo=supabase&logoColor=white" alt="Supabase" />
+  </p>
 </div>
 
-[![Deployed on Vercel](https://img.shields.io/badge/Deployed%20on-Vercel-black?style=for-the-badge&logo=vercel)](https://vercel.com/jonasvh39-gmailcoms-projects/v0-full-stack-availability-planner)
-[![TypeScript](https://img.shields.io/badge/TypeScript-007ACC?style=for-the-badge&logo=typescript&logoColor=white)](https://www.typescriptlang.org/)
-[![Next.js](https://img.shields.io/badge/Next.js-000000?style=for-the-badge&logo=nextdotjs&logoColor=white)](https://nextjs.org/)
-[![Tailwind CSS](https://img.shields.io/badge/Tailwind_CSS-38B2AC?style=for-the-badge&logo=tailwind-css&logoColor=white)](https://tailwindcss.com/)
-[![Supabase](https://img.shields.io/badge/Supabase-3ECF8E?style=for-the-badge&logo=supabase&logoColor=white)](https://supabase.com/)
+## Why AvPlanner?
 
-## ✨ Features
+AvPlanner is the fast, friendly way to track team availability. Built for high-velocity teams who need clarity at a glance—on desktop and mobile. Your schedule, your rules: weekend logic, admin controls, data export, and a polished UI that matches your brand.
 
-- 🗓️ **Interactive Calendar** - Visual availability tracking with intuitive calendar interface
-- 👥 **Team Management** - Create and manage multiple teams with member roles
-- 🌍 **Multi-language Support** - Built-in internationalization for global teams
-- 📊 **Export Functionality** - Export availability data for reporting and analysis
-- 🎨 **Modern UI** - Beautiful, responsive design with dark/light theme support
-- ⚡ **Real-time Updates** - Live synchronization of availability changes
-- 📱 **Mobile Responsive** - Works seamlessly on desktop, tablet, and mobile devices
+### Highlights
 
-## 🚀 Quick Start
+- 🗓️ Interactive, keyboard-friendly calendar with bulk updates
+- 👥 Team management with roles and access controls
+- 🌍 Multilingual (EN/NL/FR), ready for international teams
+- 📊 Yearly analytics with smart weekend logic (admin-configurable)
+- 🎨 Themes, dark mode, and tasteful neon accents in dark UI
+- ⚡ Real-time updates via Supabase
+- 📤 Export to CSV/Excel/JSON
+- 📱 Mobile-first interactions and gestures
 
-### Prerequisites
+## Screenshots
 
-- Node.js 18+ 
-- pnpm (recommended) or npm
-- Supabase account
+> Add your screenshots or animated GIFs here for maximum impact.
+>
+> Example:
+> - Calendar view (light/dark)
+> - Team overview (/my-teams)
+> - Analytics & export
 
-### Installation
+## Quick Start
 
-1. **Clone the repository**
-   ```bash
-   git clone https://github.com/JonasVanHove/availability-planner.git
-   cd availability-planner
-   ```
+Prerequisites: Node.js 18+, pnpm (or npm), Supabase project.
 
-2. **Install dependencies**
-   ```bash
-   pnpm install
-   ```
-
-3. **Set up environment variables**
-   ```bash
-   cp .env.example .env.local
-   ```
-   Fill in your Supabase credentials and other required environment variables.
-
-4. **Set up the database**
-   Run the SQL scripts in the `scripts/` folder in your Supabase SQL editor:
-   ```
-   01-create-tables.sql
-   02-seed-data.sql
-   03-update-members-table.sql
-   04-update-availability-statuses.sql
-   05-fix-availability-constraints.sql
-   06-add-profile-images.sql
-   ```
-
-5. **Start the development server**
-   ```bash
-   pnpm dev
-   ```
-
-6. **Open your browser**
-   Navigate to [http://localhost:3000](http://localhost:3000)
-
-## 🛠️ Tech Stack
-
-- **Frontend**: Next.js 14, React, TypeScript
-- **Styling**: Tailwind CSS, shadcn/ui components  
-- **Backend**: Supabase (PostgreSQL, Auth, Real-time)
-- **State Management**: React hooks and context
-- **Deployment**: Vercel
-- **Package Manager**: pnpm
-
-## 📁 Project Structure
-
-```
-├── app/                    # Next.js app directory
-│   ├── [locale]/          # Internationalized routes
-│   ├── team/              # Team-specific pages
-│   └── globals.css        # Global styles
-├── components/            # Reusable React components
-│   ├── ui/               # shadcn/ui components
-│   └── ...               # Custom components
-├── hooks/                # Custom React hooks
-├── lib/                  # Utility functions and configurations
-├── public/               # Static assets
-├── scripts/              # Database migration scripts
-└── styles/               # Additional styling files
+1) Clone & install
+```bash
+git clone https://github.com/JonasVanHove/availability-planner.git
+cd availability-planner
+pnpm install
 ```
 
-## 🌐 Live Demo
+2) Env vars
+```bash
+cp .env.example .env.local
+```
+Fill in Supabase keys and app settings.
 
-Experience **AvPlanner** live at: **[AvPlanner](https://vercel.com/jonasvh39-gmailcoms-projects/v0-full-stack-availability-planner)**
+3) Database (Supabase)
+Run the SQL scripts in `scripts/` (or your chosen migration flow).
 
-## 🤝 Contributing
+4) Dev server
+```bash
+pnpm dev
+```
+Open http://localhost:3000
 
-Contributions are welcome! Please feel free to submit a Pull Request.
+## Tech Stack
 
-1. Fork the project
-2. Create your feature branch (`git checkout -b feature/AmazingFeature`)
-3. Commit your changes (`git commit -m 'Add some AmazingFeature'`)
-4. Push to the branch (`git push origin feature/AmazingFeature`)
-5. Open a Pull Request
+- Next.js 14, React, TypeScript
+- Tailwind CSS + shadcn/ui
+- Supabase (Postgres, Auth, Realtime)
+- Deployed on Vercel
 
-## 📄 License
+## Project Structure
 
-This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
+```
+app/                # Next.js App Router
+components/         # UI + feature components
+hooks/              # Custom hooks
+lib/                # Utilities, providers
+public/             # Static assets
+scripts/            # Database scripts
+styles/             # Tailwind and global styles
+```
 
-## 🙏 Acknowledgments
+## Contributing
 
-- Built with [shadcn/ui](https://ui.shadcn.com/) for beautiful, accessible components
-- Icons by [Lucide React](https://lucide.dev/)
-- Powered by [Supabase](https://supabase.com/) for backend infrastructure
+PR’s welcome! Please open an issue if you plan a larger change.
+
+1. Fork the repo
+2. Create a feature branch
+3. Commit with clear messages
+4. Open a PR with context and screenshots
+
+## License
+
+MIT — see [LICENSE](LICENSE).
+
+## Credits
+
+- UI components by [shadcn/ui](https://ui.shadcn.com/)
+- Icons by [Lucide](https://lucide.dev/)
+- Backend by [Supabase](https://supabase.com/)

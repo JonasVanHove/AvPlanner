@@ -4,19 +4,20 @@ import { useEffect, useState } from "react"
 import { supabase } from "@/lib/supabase"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
-import { Badge } from "@/components/ui/badge"
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog"
-import { TeamAdminPanel } from "@/components/admin/team-admin-panel"
 import { TeamForm } from "@/components/team-form"
 import { JoinTeamForm } from "@/components/join-team-form"
 import { Loader2, Users, Calendar, Settings, LogOut, Crown, Shield, Home, Plus, UserPlus, RefreshCw, Eye, EyeOff, MapPin } from "lucide-react"
-import { User } from "@supabase/supabase-js"
+import { Switch } from "@/components/ui/switch"
+import { Label } from "@/components/ui/label"
 import { useRouter } from "next/navigation"
 import { MemberAvatar } from "@/components/member-avatar"
 import { useTodayAvailability } from "@/hooks/use-today-availability"
 import { TeamActivities } from "@/components/team-activities"
 import { HolidayManagement } from "@/components/holiday-management-simple"
+import type { User } from "@supabase/supabase-js"
+import { Badge } from "@/components/ui/badge"
 
 interface Team {
   id: string
@@ -45,7 +46,7 @@ interface TeamMember {
   member_status: string
   profile_image_url: string | null
   profile_image: string | null
-  joined_at: string
+  joined_at: string | null
   last_active: string | null
   is_current_user: boolean
   is_hidden?: boolean
@@ -59,9 +60,10 @@ interface DbTeam {
   team_invite_code: string
   team_is_password_protected: boolean
   team_created_at: string
-  user_role: string
+  user_role?: string
+  member_role?: string
   member_count: number
-  is_creator?: boolean // Optional until database function is updated
+  is_creator?: boolean
   profile_image_url: string | null
   auto_holidays_enabled?: boolean
 }
@@ -82,11 +84,8 @@ export function UserDashboard({ user, onLogout, onGoHome }: UserDashboardProps) 
   const router = useRouter()
 
   // Get all member IDs from all teams for today's availability
-  const allMemberIds = teams.flatMap(team => 
-    team.members?.map(member => member.member_id) || []
-  )
+  const allMemberIds = teams.flatMap(team => team.members?.map(member => member.member_id) || [])
   const { todayAvailability } = useTodayAvailability(allMemberIds)
-
   useEffect(() => {
     fetchUserTeams()
     fetchUserProfileImage()
@@ -94,7 +93,6 @@ export function UserDashboard({ user, onLogout, onGoHome }: UserDashboardProps) 
 
   const fetchUserProfileImage = async () => {
     try {
-      // Haal de eerste profielfoto op uit de members table voor deze gebruiker
       const { data, error } = await supabase
         .from('members')
         .select('profile_image, profile_image_url')
@@ -109,12 +107,8 @@ export function UserDashboard({ user, onLogout, onGoHome }: UserDashboardProps) 
       }
 
       if (data) {
-        // Gebruik profile_image_url eerst, dan profile_image als fallback
         const profileImg = data.profile_image_url || data.profile_image
-        if (profileImg) {
-          console.log('🖼️ Found user profile image:', profileImg.substring(0, 50) + '...')
-          setUserProfileImage(profileImg)
-        }
+        if (profileImg) setUserProfileImage(profileImg)
       }
     } catch (error) {
       console.log('Error fetching user profile image:', error)
@@ -132,27 +126,15 @@ export function UserDashboard({ user, onLogout, onGoHome }: UserDashboardProps) 
 
   const fetchUserTeams = async () => {
     try {
-      // Eerst proberen om auth_user_id te linken als dat nog niet gebeurd is
       try {
-        await supabase.rpc('manual_link_auth_user', {
-          user_email: user.email
-        })
+        await supabase.rpc('manual_link_auth_user', { user_email: user.email })
       } catch (linkError) {
-        // Ignore error if already linked or other issues
         console.log('Link error (can be ignored):', linkError)
       }
 
-      // Use the database function to get teams with roles
-      const { data, error } = await supabase.rpc('get_user_teams', {
-        user_email: user.email
-      })
+      const { data, error } = await supabase.rpc('get_user_teams', { user_email: user.email })
 
       if (error) throw error
-      
-      // Debug: Log the raw data to see what's returned
-      console.log('Raw teams data:', data)
-      
-      // Map database result to Team interface
       const mappedTeams: Team[] = (data as DbTeam[] || []).map(dbTeam => ({
         id: dbTeam.team_id,
         name: dbTeam.team_name,
@@ -161,55 +143,60 @@ export function UserDashboard({ user, onLogout, onGoHome }: UserDashboardProps) 
         is_password_protected: dbTeam.team_is_password_protected,
         created_at: dbTeam.team_created_at,
         member_count: dbTeam.member_count,
-        user_role: dbTeam.user_role,
-        is_creator: dbTeam.is_creator || false, // Fallback to false if undefined
+        user_role: dbTeam.user_role || dbTeam.member_role || 'member',
+        is_creator: dbTeam.is_creator || false,
         profile_image_url: dbTeam.profile_image_url,
         auto_holidays_enabled: dbTeam.auto_holidays_enabled || false
       }))
       
-      // Debug: Log the mapped teams
-      console.log('Mapped teams:', mappedTeams)
-      
-      // Fetch team members for each team
       const teamsWithMembers = await Promise.all(
         mappedTeams.map(async (team) => {
           try {
             const { data: membersData, error: membersError } = await supabase.rpc('get_team_members', {
-              team_id_param: team.id,
-              user_email: user.email
+              team_id_param: team.id
             })
-            
-            if (membersError) {
-              console.error(`❌ Failed to load members for team ${team.name}:`, membersError)
-              return { ...team, members: [] }
+
+            let rows: any[] | null = membersData as any[] | null
+
+            if (membersError || !rows) {
+              const { data: directMembers, error: directError } = await supabase
+                .from('members')
+                .select('id, first_name, last_name, email, role, status, profile_image, profile_image_url, last_active, order_index, auth_user_id, is_hidden, created_at')
+                .eq('team_id', team.id)
+                .eq('status', 'active')
+                .order('order_index', { ascending: true })
+                .order('created_at', { ascending: true })
+
+              if (directError) {
+                return { ...team, members: [] }
+              }
+              rows = directMembers || []
             }
-            
-            if (!membersData || membersData.length === 0) {
-              console.warn(`⚠️ No members data returned for team ${team.name}`)
-              return { ...team, members: [] }
-            }
-            
-            // Debug: Log profile image data and visibility for each member
-            console.log(`🔍 Team "${team.name}" member data debug:`)
-            membersData.forEach((member: any, index: number) => {
-              console.log(`  [${index}] ${member.member_name} (${member.member_email}):`)
-              console.log(`    profile_image_url: ${member.profile_image_url ? 'YES' : 'NO'} (${typeof member.profile_image_url})`)
-              console.log(`    profile_image: ${member.profile_image ? 'YES' : 'NO'} (${typeof member.profile_image})`)
-              console.log(`    is_hidden: ${member.is_hidden} (${typeof member.is_hidden})`)
-              if (member.profile_image) {
-                console.log(`    profile_image length: ${member.profile_image.length}`)
-                console.log(`    profile_image preview: ${member.profile_image.substring(0, 50)}...`)
+
+            const normalizedMembers: TeamMember[] = (rows as any[]).map((m: any) => {
+              const member_email = m.member_email || m.email || ''
+              const member_name = (m.member_name || `${m.first_name || ''} ${m.last_name || ''}`.trim() || member_email.split('@')[0]) as string
+              return {
+                member_id: m.member_id || m.id,
+                member_email,
+                member_name,
+                member_role: m.member_role || m.role || 'member',
+                member_status: m.member_status || m.status || 'active',
+                joined_at: m.joined_at || m.created_at || null,
+                profile_image_url: m.profile_image_url || null,
+                profile_image: m.profile_image || null,
+                last_active: m.last_active || null,
+                is_current_user: m.is_current_user ?? (member_email && user.email ? member_email.toLowerCase() === user.email.toLowerCase() : false),
+                is_hidden: m.is_hidden ?? false
               }
             })
-            
-            // Also fetch auto-holidays data for this team
-            let autoHolidays = undefined
+
+            let autoHolidays = undefined as Team["auto_holidays"] | undefined
             try {
               const { data: holidaysData } = await supabase.rpc('get_team_upcoming_holidays', {
                 target_team_id: team.id,
-                days_ahead: 365 // Check for holidays in the next year
+                days_ahead: 365
               })
-              
               if (holidaysData && holidaysData.length > 0) {
                 autoHolidays = {
                   count: holidaysData.length,
@@ -219,15 +206,13 @@ export function UserDashboard({ user, onLogout, onGoHome }: UserDashboardProps) 
             } catch (holidaysErr) {
               console.warn(`Error loading holidays for team ${team.name}:`, holidaysErr)
             }
-            
-            return { ...team, members: membersData || [], auto_holidays: autoHolidays }
+            return { ...team, members: normalizedMembers, auto_holidays: autoHolidays }
           } catch (err) {
             console.warn(`Error loading members for team ${team.name}:`, err)
             return { ...team, members: [] }
           }
         })
       )
-      
       setTeams(teamsWithMembers)
     } catch (error: any) {
       setError(error.message)
@@ -287,9 +272,7 @@ export function UserDashboard({ user, onLogout, onGoHome }: UserDashboardProps) 
   const getInitials = (name: string, email: string) => {
     if (name && name.trim() !== '' && name.trim() !== ' ') {
       const parts = name.trim().split(' ')
-      if (parts.length >= 2) {
-        return `${parts[0][0]}${parts[parts.length - 1][0]}`.toUpperCase()
-      }
+      if (parts.length >= 2) return `${parts[0][0]}${parts[parts.length - 1][0]}`.toUpperCase()
       return parts[0][0].toUpperCase()
     }
     return email[0]?.toUpperCase() || '?'
@@ -308,7 +291,7 @@ export function UserDashboard({ user, onLogout, onGoHome }: UserDashboardProps) 
 
   if (loading) {
     return (
-      <Card className="w-full max-w-4xl">
+      <Card className="w-full max-w-4xl bg-card border border-border">
         <CardContent className="flex items-center justify-center p-8">
           <Loader2 className="h-8 w-8 animate-spin" />
         </CardContent>
@@ -319,28 +302,26 @@ export function UserDashboard({ user, onLogout, onGoHome }: UserDashboardProps) 
   return (
     <div className="w-full max-w-5xl space-y-4 sm:space-y-8">
       {/* User Profile Header */}
-      <Card className="bg-gradient-to-r from-blue-50 to-indigo-50 border-blue-200">
+  <Card className="bg-card border border-border dark:border-cyan-500/30 dark:shadow-[0_0_24px_-10px_rgba(34,211,238,0.5)]">
         <CardHeader className="p-4 sm:pb-4">
           <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
             <div className="flex items-center gap-3 sm:gap-6">
-              <Avatar className="h-16 w-16 sm:h-20 sm:w-20 border-4 border-white shadow-lg flex-shrink-0">
+              <Avatar className="h-16 w-16 sm:h-20 sm:w-20 border-4 border-background shadow-lg flex-shrink-0">
                 {(userProfileImage || user.user_metadata?.avatar_url) && (
                   <AvatarImage 
-                    src={userProfileImage || user.user_metadata?.avatar_url} 
-                    onLoad={() => console.log('✅ User profile image loaded')}
-                    onError={() => console.log('❌ User profile image failed to load')}
+                    src={userProfileImage || user.user_metadata?.avatar_url}
                   />
                 )}
-                <AvatarFallback className="bg-gradient-to-r from-blue-600 to-purple-600 text-white text-lg sm:text-xl">
+                <AvatarFallback className="bg-primary text-primary-foreground text-lg sm:text-xl">
                   {user.user_metadata?.first_name?.[0] || user.email?.[0]?.toUpperCase()}
                 </AvatarFallback>
               </Avatar>
               <div className="min-w-0 flex-1">
-                <h2 className="text-xl sm:text-3xl font-bold text-gray-900 truncate">
+                <h2 className="text-xl sm:text-3xl font-bold truncate">
                   {user.user_metadata?.first_name || 'User'} {user.user_metadata?.last_name || ''}
                 </h2>
-                <p className="text-gray-600 text-sm sm:text-lg truncate">{user.email}</p>
-                <p className="text-xs sm:text-sm text-gray-500 mt-1">
+                <p className="text-muted-foreground text-sm sm:text-lg truncate">{user.email}</p>
+                <p className="text-xs sm:text-sm text-muted-foreground mt-1">
                   Member since {formatDate(user.created_at)}
                 </p>
               </div>
@@ -362,7 +343,7 @@ export function UserDashboard({ user, onLogout, onGoHome }: UserDashboardProps) 
                 onClick={handleLogout}
                 variant="outline"
                 size="sm"
-                className="flex items-center gap-1 sm:gap-2 hover:bg-red-50 hover:text-red-600 hover:border-red-300 text-xs sm:text-sm"
+                className="flex items-center gap-1 sm:gap-2 hover:bg-accent text-xs sm:text-sm"
               >
                 <LogOut className="h-3 w-3 sm:h-4 sm:w-4" />
                 <span className="hidden sm:inline">Logout</span>
@@ -374,22 +355,22 @@ export function UserDashboard({ user, onLogout, onGoHome }: UserDashboardProps) 
       </Card>
 
       {/* Team Actions */}
-      <Card className="border-purple-200 bg-gradient-to-r from-purple-50 to-pink-50">
+  <Card className="bg-card border border-border dark:border-fuchsia-500/30 dark:shadow-[0_0_22px_-10px_rgba(217,70,239,0.45)]">
         <CardHeader className="p-4 sm:pb-4">
           <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
             <div className="flex items-center gap-3">
-              <div className="p-2 bg-purple-100 rounded-lg flex-shrink-0">
-                <Users className="h-5 w-5 sm:h-6 sm:w-6 text-purple-600" />
+              <div className="p-2 bg-muted rounded-lg flex-shrink-0">
+                <Users className="h-5 w-5 sm:h-6 sm:w-6 text-foreground/70" />
               </div>
               <div className="min-w-0 flex-1">
                 <CardTitle className="text-lg sm:text-xl">Team Management</CardTitle>
-                <p className="text-xs sm:text-sm text-gray-600 mt-1">Create new teams or join existing ones</p>
+                <p className="text-xs sm:text-sm text-muted-foreground mt-1">Create new teams or join existing ones</p>
               </div>
             </div>
             <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-2 sm:gap-3">
               <Dialog>
                 <DialogTrigger asChild>
-                  <Button className="flex items-center justify-center gap-2 bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700 shadow-lg text-sm w-full sm:w-auto">
+                  <Button className="flex items-center justify-center gap-2 text-sm w-full sm:w-auto dark:hover:shadow-[0_0_18px_rgba(217,70,239,0.4)] dark:hover:border-fuchsia-500/40">
                     <Plus className="h-4 w-4" />
                     <span className="sm:hidden">Create Team</span>
                     <span className="hidden sm:inline">Create Team</span>
@@ -402,7 +383,7 @@ export function UserDashboard({ user, onLogout, onGoHome }: UserDashboardProps) 
               
               <Dialog>
                 <DialogTrigger asChild>
-                  <Button variant="outline" className="flex items-center justify-center gap-2 border-purple-200 hover:bg-purple-50 text-sm w-full sm:w-auto">
+                  <Button variant="outline" className="flex items-center justify-center gap-2 text-sm w-full sm:w-auto dark:hover:shadow-[0_0_18px_rgba(34,211,238,0.4)] dark:hover:border-cyan-500/40">
                     <UserPlus className="h-4 w-4" />
                     <span className="sm:hidden">Join Team</span>
                     <span className="hidden sm:inline">Join Team</span>
@@ -418,16 +399,16 @@ export function UserDashboard({ user, onLogout, onGoHome }: UserDashboardProps) 
       </Card>
 
       {/* Teams Overview */}
-      <Card className="border-green-200 bg-gradient-to-r from-green-50 to-emerald-50">
+  <Card className="bg-card border border-border dark:border-emerald-500/30 dark:shadow-[0_0_22px_-10px_rgba(16,185,129,0.45)]">
         <CardHeader className="p-4 sm:pb-4">
           <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 sm:gap-4">
             <div className="flex items-center gap-3">
-              <div className="p-2 bg-green-100 rounded-lg flex-shrink-0">
-                <Users className="h-5 w-5 sm:h-6 sm:w-6 text-green-600" />
+              <div className="p-2 bg-muted rounded-lg flex-shrink-0">
+                <Users className="h-5 w-5 sm:h-6 sm:w-6 text-foreground/70" />
               </div>
               <div className="min-w-0 flex-1">
                 <CardTitle className="text-lg sm:text-xl">My Teams ({teams.length})</CardTitle>
-                <p className="text-xs sm:text-sm text-gray-600 mt-1">
+                <p className="text-xs sm:text-sm text-muted-foreground mt-1">
                   {teams.length === 0 ? 'No teams yet' : `You're a member of ${teams.length} team${teams.length !== 1 ? 's' : ''}`}
                 </p>
               </div>
@@ -437,7 +418,7 @@ export function UserDashboard({ user, onLogout, onGoHome }: UserDashboardProps) 
               variant="outline"
               size="sm"
               disabled={isRefreshing}
-              className="flex items-center gap-1 sm:gap-2 border-green-200 hover:bg-green-50 disabled:opacity-50 text-xs sm:text-sm self-start sm:self-auto"
+              className="flex items-center gap-1 sm:gap-2 hover:bg-accent disabled:opacity-50 text-xs sm:text-sm self-start sm:self-auto dark:hover:shadow-[0_0_16px_rgba(16,185,129,0.4)] dark:hover:border-emerald-500/40"
             >
               <RefreshCw className={`h-4 w-4 ${isRefreshing ? 'animate-spin' : ''}`} />
               {isRefreshing ? 'Refreshing...' : 'Refresh'}
@@ -446,25 +427,25 @@ export function UserDashboard({ user, onLogout, onGoHome }: UserDashboardProps) 
         </CardHeader>
         <CardContent className="p-3 sm:p-6 pt-0">
           {error && (
-            <div className="bg-red-50 border border-red-200 rounded-lg p-3 sm:p-4 mb-4 sm:mb-6">
-              <p className="text-red-600 font-medium text-sm">Error loading teams:</p>
-              <p className="text-red-500 text-xs sm:text-sm">{error}</p>
+            <div className="bg-destructive/10 border border-destructive/30 rounded-lg p-3 sm:p-4 mb-4 sm:mb-6 dark:border-rose-500/40 dark:shadow-[0_0_16px_-10px_rgba(244,63,94,0.6)]">
+              <p className="text-destructive font-medium text-sm">Error loading teams:</p>
+              <p className="text-destructive text-xs sm:text-sm">{error}</p>
             </div>
           )}
           
           {teams.length === 0 ? (
             <div className="text-center py-8 sm:py-12">
-              <div className="bg-gray-100 rounded-full p-4 sm:p-6 w-16 h-16 sm:w-24 sm:h-24 mx-auto mb-3 sm:mb-4 flex items-center justify-center">
-                <Users className="h-8 w-8 sm:h-12 sm:w-12 text-gray-400" />
+              <div className="bg-muted rounded-full p-4 sm:p-6 w-16 h-16 sm:w-24 sm:h-24 mx-auto mb-3 sm:mb-4 flex items-center justify-center">
+                <Users className="h-8 w-8 sm:h-12 sm:w-12 text-muted-foreground" />
               </div>
-              <h3 className="text-base sm:text-lg font-semibold text-gray-900 mb-2">No teams yet</h3>
-              <p className="text-sm sm:text-base text-gray-600 mb-3 sm:mb-4">You're not a member of any teams yet.</p>
-              <p className="text-xs sm:text-sm text-gray-500">Create a new team or join an existing one using the buttons above.</p>
+              <h3 className="text-base sm:text-lg font-semibold mb-2">No teams yet</h3>
+              <p className="text-sm sm:text-base text-muted-foreground mb-3 sm:mb-4">You're not a member of any teams yet.</p>
+              <p className="text-xs sm:text-sm text-muted-foreground">Create a new team or join an existing one using the buttons above.</p>
             </div>
           ) : (
             <div className="space-y-4 sm:space-y-6">
               {teams.map((team) => (
-                <Card key={team.id} className="border-l-4 border-l-blue-500 hover:shadow-lg transition-shadow duration-200">
+                <Card key={team.id} className="border-l-4 border-l-primary/50 hover:shadow-lg transition-shadow duration-200 dark:border-cyan-500/30 dark:hover:shadow-[0_0_24px_-10px_rgba(34,211,238,0.5)]">
                   <CardContent className="p-4 sm:p-6">
                     <div className="flex flex-col lg:flex-row lg:items-start lg:justify-between gap-4">
                       <div className="flex-1 min-w-0">
@@ -473,7 +454,7 @@ export function UserDashboard({ user, onLogout, onGoHome }: UserDashboardProps) 
                           {getRoleIcon(team.user_role, team.is_creator)}
                           {getRoleBadge(team.user_role, team.is_creator)}
                           {team.is_password_protected && (
-                            <Badge variant="outline" className="bg-yellow-50 text-yellow-700 border-yellow-200 text-xs">
+                            <Badge variant="outline" className="text-xs">
                               🔒 Protected
                             </Badge>
                           )}
@@ -482,7 +463,7 @@ export function UserDashboard({ user, onLogout, onGoHome }: UserDashboardProps) 
                         <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 text-sm">
                           <div className="space-y-2">
                             <div className="flex items-center gap-2">
-                              <span className="font-medium text-gray-700 text-xs sm:text-sm">Your Profile:</span>
+                              <span className="font-medium text-xs sm:text-sm">Your Profile:</span>
                               <div className="flex items-center gap-2">
                                 {(() => {
                                   // Zoek de huidige gebruiker in de team members
@@ -492,11 +473,7 @@ export function UserDashboard({ user, onLogout, onGoHome }: UserDashboardProps) 
                                   return (
                                     <Avatar className="h-5 w-5 sm:h-6 sm:w-6">
                                       {profileImage && (
-                                        <AvatarImage 
-                                          src={profileImage} 
-                                          onLoad={() => console.log('✅ Team profile image loaded')}
-                                          onError={() => console.log('❌ Team profile image failed')}
-                                        />
+                                        <AvatarImage src={profileImage} />
                                       )}
                                       <AvatarFallback className="text-xs">
                                         {user.user_metadata?.first_name?.[0] || user.email?.[0]?.toUpperCase()}
@@ -504,7 +481,7 @@ export function UserDashboard({ user, onLogout, onGoHome }: UserDashboardProps) 
                                     </Avatar>
                                   )
                                 })()}
-                                <span className="text-gray-600 text-xs">
+                                <span className="text-muted-foreground text-xs">
                                   {(() => {
                                     const currentUserInTeam = team.members?.find(member => member.is_current_user)
                                     const hasProfileImage = currentUserInTeam?.profile_image_url || currentUserInTeam?.profile_image || userProfileImage
@@ -514,13 +491,13 @@ export function UserDashboard({ user, onLogout, onGoHome }: UserDashboardProps) 
                               </div>
                             </div>
                             <div className="flex items-center gap-2">
-                              <span className="font-medium text-gray-700 text-xs sm:text-sm">Team Name:</span>
-                              <span className="text-gray-600 text-xs sm:text-sm truncate">{team.name}</span>
+                              <span className="font-medium text-xs sm:text-sm">Team Name:</span>
+                              <span className="text-muted-foreground text-xs sm:text-sm truncate">{team.name}</span>
                             </div>
                             <div className="flex items-start gap-2">
-                              <span className="font-medium text-gray-700 text-xs sm:text-sm flex-shrink-0">Invite Code:</span>
+                              <span className="font-medium text-xs sm:text-sm flex-shrink-0">Invite Code:</span>
                               <div className="flex items-center gap-1 sm:gap-2 min-w-0">
-                                <code className="bg-gray-100 px-1 sm:px-2 py-1 rounded text-xs font-mono select-all truncate">
+                                <code className="bg-muted px-1 sm:px-2 py-1 rounded text-xs font-mono select-all truncate dark:outline dark:outline-1 dark:outline-cyan-500/30 dark:shadow-[0_0_12px_-8px_rgba(34,211,238,0.6)]">
                                   {team.invite_code}
                                 </code>
                                 <Button
@@ -537,13 +514,13 @@ export function UserDashboard({ user, onLogout, onGoHome }: UserDashboardProps) 
                               </div>
                             </div>
                             <div className="flex items-center gap-2">
-                              <span className="font-medium text-gray-700 text-xs sm:text-sm">Members:</span>
+                              <span className="font-medium text-xs sm:text-sm">Members:</span>
                               <Badge variant="secondary" className="text-xs">
                                 {team.member_count} {team.member_count === 1 ? 'member' : 'members'}
                               </Badge>
                             </div>
                             <div className="flex items-center gap-2">
-                              <span className="font-medium text-gray-700 text-xs sm:text-sm">Security:</span>
+                              <span className="font-medium text-xs sm:text-sm">Security:</span>
                               <Badge variant={team.is_password_protected ? "destructive" : "secondary"} className="text-xs">
                                 {team.is_password_protected ? 'Protected' : 'Open'}
                               </Badge>
@@ -552,13 +529,13 @@ export function UserDashboard({ user, onLogout, onGoHome }: UserDashboardProps) 
                           
                           <div className="space-y-2">
                             <div className="flex items-center gap-2">
-                              <span className="font-medium text-gray-700 text-xs sm:text-sm">Created:</span>
-                              <span className="text-gray-600 text-xs sm:text-sm">{formatDate(team.created_at)}</span>
+                              <span className="font-medium text-xs sm:text-sm">Created:</span>
+                              <span className="text-muted-foreground text-xs sm:text-sm">{formatDate(team.created_at)}</span>
                             </div>
                               <div className="flex items-start gap-2">
-                                <span className="font-medium text-gray-700 mt-1 text-xs sm:text-sm flex-shrink-0">Team ID:</span>
+                                <span className="font-medium mt-1 text-xs sm:text-sm flex-shrink-0">Team ID:</span>
                                 <div className="flex items-center gap-1 sm:gap-2 flex-1 min-w-0">
-                                  <code className="bg-gray-100 px-1 sm:px-2 py-1 rounded text-xs font-mono select-all break-all flex-1">
+                                  <code className="bg-muted px-1 sm:px-2 py-1 rounded text-xs font-mono select-all break-all flex-1 dark:outline dark:outline-1 dark:outline-fuchsia-500/30 dark:shadow-[0_0_12px_-8px_rgba(217,70,239,0.6)]">
                                     {team.id}
                                   </code>
                                   <Button
@@ -575,7 +552,7 @@ export function UserDashboard({ user, onLogout, onGoHome }: UserDashboardProps) 
                                 </div>
                               </div>
                             <div className="flex items-center gap-2">
-                              <span className="font-medium text-gray-700 text-xs sm:text-sm">Your Role:</span>
+                              <span className="font-medium text-xs sm:text-sm">Your Role:</span>
                               <Badge variant={team.is_creator ? "default" : "secondary"} className="text-xs">
                                 {team.is_creator ? 'Creator' : team.user_role}
                               </Badge>
@@ -583,21 +560,21 @@ export function UserDashboard({ user, onLogout, onGoHome }: UserDashboardProps) 
 
                             {team.auto_holidays && (
                               <div className="flex items-center gap-2">
-                                <span className="font-medium text-gray-700 text-xs sm:text-sm">Auto-Holidays:</span>
-                                <Badge variant="outline" className="text-xs bg-green-50 border-green-200 text-green-700">
+                                <span className="font-medium text-xs sm:text-sm">Auto-Holidays:</span>
+                                <Badge variant="outline" className="text-xs">
                                   {team.auto_holidays.count} active
                                 </Badge>
                                 {team.auto_holidays.next_holiday && (
-                                  <span className="text-xs text-gray-600">
+                                  <span className="text-xs text-muted-foreground">
                                     Next: {team.auto_holidays.next_holiday}
                                   </span>
                                 )}
                               </div>
                             )}
                             <div className="flex items-start gap-2">
-                              <span className="font-medium text-gray-700 text-xs sm:text-sm flex-shrink-0">Slug:</span>
+                              <span className="font-medium text-xs sm:text-sm flex-shrink-0">Slug:</span>
                               <div className="flex items-center gap-1 sm:gap-2 min-w-0">
-                                <code className="bg-gray-100 px-1 sm:px-2 py-1 rounded text-xs font-mono select-all truncate">
+                                <code className="bg-muted px-1 sm:px-2 py-1 rounded text-xs font-mono select-all truncate dark:outline dark:outline-1 dark:outline-emerald-500/30 dark:shadow-[0_0_12px_-8px_rgba(16,185,129,0.6)]">
                                   {team.slug || 'Not set'}
                                 </code>
                                 {team.slug && (
@@ -620,19 +597,19 @@ export function UserDashboard({ user, onLogout, onGoHome }: UserDashboardProps) 
 
                         {/* Team Members Section */}
                         {team.members && team.members.length > 0 && (
-                          <div className="mt-4 sm:mt-6 pt-3 sm:pt-4 border-t border-gray-200">
+                          <div className="mt-4 sm:mt-6 pt-3 sm:pt-4 border-t border-border dark:border-cyan-500/20">
                             <div className="flex items-center justify-between mb-2 sm:mb-3">
-                              <h4 className="font-medium text-gray-900 flex items-center gap-2 text-sm sm:text-base">
+                              <h4 className="font-medium flex items-center gap-2 text-sm sm:text-base">
                                 <Users className="h-3 w-3 sm:h-4 sm:w-4" />
                                 Team Members ({team.members.length})
                               </h4>
                               <div className="flex items-center gap-2 text-xs">
-                                <Badge variant="outline" className="bg-green-50 text-green-700 border-green-300">
+                                <Badge variant="outline" className="">
                                   <Eye className="h-3 w-3 mr-1" />
                                   {team.members.filter(m => !m.is_hidden).length} Visible
                                 </Badge>
                                 {team.members.some(m => m.is_hidden) && (
-                                  <Badge variant="outline" className="bg-gray-100 text-gray-600 border-gray-300">
+                                  <Badge variant="outline" className="">
                                     <EyeOff className="h-3 w-3 mr-1" />
                                     {team.members.filter(m => m.is_hidden).length} Hidden
                                   </Badge>
@@ -641,7 +618,7 @@ export function UserDashboard({ user, onLogout, onGoHome }: UserDashboardProps) 
                             </div>
                             <div className="space-y-2">
                               {team.members.slice(0, 8).map((member) => (
-                                <div key={member.member_id} className={`flex items-center justify-between p-2 sm:p-3 bg-gray-50 rounded-lg ${member.is_hidden ? 'opacity-60 bg-gray-100' : ''}`}>
+                                <div key={member.member_id} className={`flex items-center justify-between p-2 sm:p-3 bg-muted rounded-lg ${member.is_hidden ? 'opacity-70' : ''}`}>
                                   <div className="flex items-center gap-2 sm:gap-3 min-w-0 flex-1">
                                     <MemberAvatar
                                       firstName={member.member_name.trim() ? member.member_name.split(' ')[0] : member.member_email.split('@')[0]}
@@ -655,7 +632,7 @@ export function UserDashboard({ user, onLogout, onGoHome }: UserDashboardProps) 
                                     />
                                     <div className="min-w-0 flex-1">
                                       <div className="flex items-center gap-1 sm:gap-2">
-                                        <p className="text-xs sm:text-sm font-medium text-gray-900 truncate">
+                                        <p className="text-xs sm:text-sm font-medium truncate">
                                           {member.member_name.trim() !== '' && member.member_name.trim() !== ' ' 
                                             ? member.member_name 
                                             : member.member_email.split('@')[0]}
@@ -664,7 +641,7 @@ export function UserDashboard({ user, onLogout, onGoHome }: UserDashboardProps) 
                                           <Badge variant="outline" className="text-xs">You</Badge>
                                         )}
                                       </div>
-                                      <p className="text-xs text-gray-500 truncate">{member.member_email}</p>
+                                      <p className="text-xs text-muted-foreground truncate">{member.member_email}</p>
                                     </div>
                                   </div>
                                   <div className="flex items-center gap-1 sm:gap-2 flex-shrink-0">
@@ -674,7 +651,7 @@ export function UserDashboard({ user, onLogout, onGoHome }: UserDashboardProps) 
                                     {/* Visibility indicator */}
                                     <Badge 
                                       variant="outline" 
-                                      className={`text-xs flex items-center gap-1 ${member.is_hidden ? 'bg-gray-100 text-gray-600 border-gray-300' : 'bg-green-50 text-green-700 border-green-300'}`}
+                                      className={`text-xs flex items-center gap-1`}
                                       title={member.is_hidden ? 'This member is hidden from the calendar' : 'This member is visible on the calendar'}
                                     >
                                       {member.is_hidden ? (
@@ -700,7 +677,7 @@ export function UserDashboard({ user, onLogout, onGoHome }: UserDashboardProps) 
                               ))}
                               {team.members.length > 8 && (
                                 <div className="text-center py-2">
-                                  <span className="text-xs sm:text-sm text-gray-500">
+                                  <span className="text-xs sm:text-sm text-muted-foreground">
                                     +{team.members.length - 8} more member{team.members.length - 8 !== 1 ? 's' : ''}
                                   </span>
                                 </div>
@@ -728,6 +705,23 @@ export function UserDashboard({ user, onLogout, onGoHome }: UserDashboardProps) 
                           <span className="hidden sm:inline">View Calendar</span>
                           <span className="sm:hidden">Calendar</span>
                         </Button>
+                        {canManageTeam(team.user_role, team.is_creator) && (
+                          <div className="flex items-center justify-between border rounded-md px-3 py-2 bg-muted/30">
+                            <div className="flex flex-col">
+                              <Label className="text-xs sm:text-sm">Treat weekends as weekdays</Label>
+                              <span className="text-[10px] sm:text-xs text-muted-foreground">Affects yearly analytics for this team</span>
+                            </div>
+                            <Switch
+                              checked={typeof window !== 'undefined' ? localStorage.getItem(`weekendsAsWeekdays:${team.id}`) === 'true' : false}
+                              onCheckedChange={(enabled) => {
+                                localStorage.setItem(`weekendsAsWeekdays:${team.id}`, enabled.toString())
+                                window.dispatchEvent(new CustomEvent('weekendsAsWeekdaysChanged', { detail: { teamId: team.id, enabled } }))
+                              }}
+                              className="h-4 w-7"
+                            />
+                          </div>
+                        )}
+
                         {canManageTeam(team.user_role, team.is_creator) && (
                           <Dialog>
                             <DialogTrigger asChild>
@@ -776,7 +770,7 @@ export function UserDashboard({ user, onLogout, onGoHome }: UserDashboardProps) 
                     </div>
                     
                     {/* Team Activities - Show for all team members */}
-                    <div className="mt-6 pt-4 border-t border-gray-200">
+                    <div className="mt-6 pt-4 border-t border-border">
                       <TeamActivities 
                         teamId={team.id} 
                         isVisible={true}

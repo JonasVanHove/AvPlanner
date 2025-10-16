@@ -20,7 +20,7 @@ import {
 } from "@/components/ui/drawer"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { Input } from "@/components/ui/input"
-import { Settings, Download, Moon, Sun, Globe, Bell, ChevronDown, Monitor, Share2, Copy, QrCode, Eye, EyeOff, Leaf, Snowflake, Flower, Sun as SummerSun, Home, Square, Flame } from "lucide-react"
+import { Settings, Download, Moon, Sun, Globe, Bell, ChevronDown, Monitor, Share2, Copy, QrCode, Eye, EyeOff, Leaf, Snowflake, Flower, Sun as SummerSun, Home, Square, Flame, Terminal } from "lucide-react"
 import { ExportDialog } from "./export-dialog"
 
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog"
@@ -110,6 +110,7 @@ export function SettingsDropdown({ currentLocale, members, team, forceOpen, onOp
     // Dispatch event to notify other components
     window.dispatchEvent(new CustomEvent('simplifiedModeChanged', { detail: enabled }))
   }
+
 
   const handleLanguageChange = (locale: Locale) => {
     try {
@@ -413,6 +414,7 @@ export function SettingsDropdown({ currentLocale, members, team, forceOpen, onOp
             className="h-4 w-7"
           />
         </div>
+
       </div>
 
       {/* Theme selector - only available for efficiency-team */}
@@ -438,6 +440,8 @@ export function SettingsDropdown({ currentLocale, members, team, forceOpen, onOp
                 <Square className="mr-2 h-4 w-4 text-gray-600" />
               ) : theme === "bythestove" ? (
                 <Flame className="mr-2 h-4 w-4 text-red-600" />
+              ) : theme === "testdev" ? (
+                <Terminal className="mr-2 h-4 w-4 text-purple-600" />
               ) : (
                 <Monitor className="mr-2 h-4 w-4" />
               )}
@@ -509,6 +513,12 @@ export function SettingsDropdown({ currentLocale, members, team, forceOpen, onOp
                 <div className="flex items-center">
                   <Flame className="mr-2 h-3 w-3 text-red-600" />
                   {currentLocale === "en" ? "By the Stove" : currentLocale === "nl" ? "Bij de Kachel" : "Près du Poêle"}
+                </div>
+              </SelectItem>
+              <SelectItem value="testdev" className="text-sm cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-700">
+                <div className="flex items-center">
+                  <Terminal className="mr-2 h-3 w-3 text-purple-600" />
+                  {currentLocale === "en" ? "Test & Development" : currentLocale === "nl" ? "Test & Ontwikkeling" : "Test & Développement"}
                 </div>
               </SelectItem>
             </SelectContent>

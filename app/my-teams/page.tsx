@@ -122,10 +122,10 @@ export default function MyTeamsPage() {
 
   if (loading) {
     return (
-      <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100 flex items-center justify-center">
+      <div className="min-h-screen bg-background text-foreground flex items-center justify-center">
         <div className="text-center">
-          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600 mx-auto"></div>
-          <p className="mt-2 text-gray-600">{t('myTeams.loading')}</p>
+          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary mx-auto"></div>
+          <p className="mt-2 text-muted-foreground">{t('myTeams.loading')}</p>
         </div>
       </div>
     )
@@ -133,11 +133,11 @@ export default function MyTeamsPage() {
 
   if (!user) {
     return (
-      <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100 flex items-center justify-center">
+      <div className="min-h-screen bg-background text-foreground flex items-center justify-center">
         <div className="w-full max-w-md">
           <div className="text-center mb-8">
-            <h1 className="text-3xl font-bold text-gray-900">{t('myTeams.title')}</h1>
-            <p className="text-gray-600 mt-2">{t('myTeams.pleaseLogin')}</p>
+            <h1 className="text-3xl font-bold">{t('myTeams.title')}</h1>
+            <p className="text-muted-foreground mt-2">{t('myTeams.pleaseLogin')}</p>
           </div>
           <LoginForm />
         </div>
@@ -146,15 +146,15 @@ export default function MyTeamsPage() {
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-blue-50 via-indigo-50 to-purple-50">
+    <div className="min-h-screen bg-background text-foreground">
       {/* Header - Consistent with Landing Page */}
-      <header className="bg-white/80 backdrop-blur-md shadow-sm border-b border-white/20 sticky top-0 z-50 will-change-transform">
+  <header className="sticky top-0 z-50 will-change-transform backdrop-blur supports-[backdrop-filter]:bg-white/40 dark:supports-[backdrop-filter]:bg-black/20 bg-white/70 dark:bg-black/30 border-b border-black/5 dark:border-cyan-500/20 shadow-sm dark:shadow-[0_0_24px_-8px_rgba(34,211,238,0.6)]">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="flex justify-between items-center h-16">
             <div className="flex items-center gap-3">
               <img src="/favicon.svg" alt="Availability Planner Logo" className="h-8 w-8" />
-              <h1 className="text-xl font-bold text-black hidden sm:block">{t('myTeams.title')}</h1>
-              <h1 className="text-lg font-bold text-black sm:hidden">{t('myTeams.title')}</h1>
+              <h1 className="text-xl font-bold hidden sm:block">{t('myTeams.title')}</h1>
+              <h1 className="text-lg font-bold sm:hidden">{t('myTeams.title')}</h1>
             </div>
             <div className="flex items-center gap-4">
               {/* Desktop Navigation */}
@@ -163,7 +163,7 @@ export default function MyTeamsPage() {
                   <DropdownMenuTrigger asChild>
                     <Button 
                       variant="outline" 
-                      className="flex items-center gap-2 px-3 transition-all duration-200 hover:bg-blue-50 hover:border-blue-200 hover:shadow-md focus:ring-2 focus:ring-blue-200 focus:ring-offset-1"
+                      className="flex items-center gap-2 px-3 transition-all duration-200 hover:bg-accent/60 hover:border-border hover:shadow-md focus:ring-2 focus:ring-ring focus:ring-offset-1"
                     >
                       <Avatar className="h-6 w-6">
                         {(userProfileImage || user?.user_metadata?.avatar_url) && (
@@ -186,7 +186,7 @@ export default function MyTeamsPage() {
                   <DropdownMenuContent align="end" className="w-48">
                     <DropdownMenuItem 
                       onClick={handleGoHome}
-                      className="cursor-pointer transition-all duration-200 hover:bg-blue-50 hover:text-blue-700 focus:bg-blue-50 focus:text-blue-700"
+                      className="cursor-pointer transition-all duration-200 hover:bg-accent focus:bg-accent"
                     >
                       <Home className="h-4 w-4 mr-2 transition-colors duration-200" />
                       {t('myTeams.backToHome')}
@@ -194,7 +194,7 @@ export default function MyTeamsPage() {
                     {isAdmin && (
                       <DropdownMenuItem 
                         onClick={handleAdminNavigation}
-                        className="cursor-pointer transition-all duration-200 hover:bg-purple-50 hover:text-purple-700 focus:bg-purple-50 focus:text-purple-700"
+                        className="cursor-pointer transition-all duration-200 hover:bg-accent focus:bg-accent"
                       >
                         <Shield className="h-4 w-4 mr-2 transition-colors duration-200" />
                         {t('myTeams.adminPanel')}
@@ -203,7 +203,7 @@ export default function MyTeamsPage() {
                     <DropdownMenuSeparator />
                     <DropdownMenuItem 
                       onClick={handleLogout}
-                      className="cursor-pointer transition-all duration-200 hover:bg-red-50 hover:text-red-700 focus:bg-red-50 focus:text-red-700"
+                      className="cursor-pointer transition-all duration-200 hover:bg-accent focus:bg-accent"
                     >
                       <LogOut className="h-4 w-4 mr-2 transition-colors duration-200" />
                       {t('myTeams.logout')}

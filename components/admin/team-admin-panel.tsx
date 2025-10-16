@@ -41,8 +41,7 @@ export function TeamAdminPanel({ teamId, teamName, user, onClose }: TeamAdminPan
     try {
       setError("")
       const { data, error } = await supabase.rpc('get_team_members_with_roles', {
-        team_id_param: teamId,
-        user_email: user.email
+        team_id_param: teamId
       })
 
       if (error) throw error

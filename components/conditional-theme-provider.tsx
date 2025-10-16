@@ -20,7 +20,7 @@ export function ConditionalThemeProvider({ children, teamSlug }: ConditionalThem
     const htmlElement = document.documentElement
     
     // Remove all theme classes first
-    const themeClasses = ['autumn', 'winter', 'spring', 'summer', 'cozy', 'blackwhite', 'bythestove']
+  const themeClasses = ['autumn', 'winter', 'spring', 'summer', 'cozy', 'blackwhite', 'bythestove', 'testdev']
     themeClasses.forEach(cls => htmlElement.classList.remove(cls))
     
     // Only apply advanced themes if on efficiency-team page

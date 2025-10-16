@@ -79,10 +79,12 @@ export function TeamActivities({ teamId, isVisible = true, locale = "en" }: Team
   const { t } = useTranslation(locale)
   const [activities, setActivities] = useState<ActivityItem[]>([])
   const [filteredActivities, setFilteredActivities] = useState<ActivityItem[]>([])
-  const [loading, setLoading] = useState(true)
+  const [loading, setLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [isOpen, setIsOpen] = useState(false)
   const [daysBack, setDaysBack] = useState(7)
+  const [limit, setLimit] = useState(10)
+  const [hasSearched, setHasSearched] = useState(false)
   
   // Sort and filter state
   const [sortBy, setSortBy] = useState<SortOption>('date_changed')
@@ -93,11 +95,12 @@ export function TeamActivities({ teamId, isVisible = true, locale = "en" }: Team
   const fetchActivities = async () => {
     if (!teamId || !isVisible) return
 
+    setHasSearched(true)
     setLoading(true)
     setError(null)
 
     try {
-      const response = await fetch(`/api/teams/activities?teamId=${teamId}&daysBack=${daysBack}&limit=50`)
+      const response = await fetch(`/api/teams/activities?teamId=${teamId}&daysBack=${daysBack}&limit=${limit}`)
       
       if (!response.ok) {
         const errorText = await response.text()
@@ -186,11 +189,10 @@ export function TeamActivities({ teamId, isVisible = true, locale = "en" }: Team
     setFilteredActivities(filtered)
   }
 
+  // Do not auto-fetch; only fetch when user clicks Search
   useEffect(() => {
-    if (isVisible) {
-      fetchActivities()
-    }
-  }, [teamId, isVisible, daysBack])
+    // intentionally empty to avoid auto-fetching on mount/changes
+  }, [])
 
   // Apply filters and sorting when activities or filter/sort options change
   useEffect(() => {
@@ -228,7 +230,7 @@ export function TeamActivities({ teamId, isVisible = true, locale = "en" }: Team
         <CollapsibleContent>
           <CardContent>
             <div className="space-y-4 mb-4">
-              {/* Period and Refresh */}
+              {/* Period and Search */}
               <div className="flex items-center gap-2 flex-wrap">
                 <span className="text-sm text-gray-600 dark:text-gray-400">
                   {t('activities.period')}
@@ -244,13 +246,26 @@ export function TeamActivities({ teamId, isVisible = true, locale = "en" }: Team
                   <option value={14}>{t('activities.last2Weeks')}</option>
                   <option value={30}>{t('activities.lastMonth')}</option>
                 </select>
+                <span className="text-sm text-gray-600 dark:text-gray-400 ml-2">
+                  Records
+                </span>
+                <select
+                  value={limit}
+                  onChange={(e) => setLimit(parseInt(e.target.value))}
+                  className="text-sm border rounded px-2 py-1 bg-white dark:bg-gray-800"
+                >
+                  <option value={5}>5</option>
+                  <option value={10}>10</option>
+                  <option value={20}>20</option>
+                  <option value={50}>50</option>
+                </select>
                 <Button 
                   variant="outline" 
                   size="sm" 
                   onClick={fetchActivities}
                   className="ml-2"
                 >
-                  {t('activities.refresh')}
+                  <Search className="h-3.5 w-3.5 mr-1" /> Search
                 </Button>
               </div>
 
@@ -350,7 +365,9 @@ export function TeamActivities({ teamId, isVisible = true, locale = "en" }: Team
               </div>
             </div>
 
-            {loading ? (
+            {!hasSearched ? (
+              <div className="py-4" />
+            ) : loading ? (
               <div className="flex items-center justify-center py-8">
                 <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-blue-600"></div>
                 <span className="ml-2 text-sm text-gray-600 dark:text-gray-400">
@@ -394,8 +411,8 @@ export function TeamActivities({ teamId, isVisible = true, locale = "en" }: Team
                 )}
               </div>
             ) : (
-              <ScrollArea className="h-80">
-                <div className="space-y-3">
+              <ScrollArea className="h-64">
+                <div className="space-y-1">
                   {filteredActivities.length === 0 ? (
                     <div className="flex flex-col items-center justify-center py-8 text-center">
                       <Calendar className="h-12 w-12 text-gray-400 dark:text-gray-600 mb-3" />
@@ -412,107 +429,74 @@ export function TeamActivities({ teamId, isVisible = true, locale = "en" }: Team
                       const changeDate = activity.updated_at || activity.created_at
                       const isNewRecord = !activity.updated_at
                       const changedByDifferentPerson = activity.auto_holiday || (activity.changed_by_id != null && activity.changed_by_id !== activity.member_id)
+                      const isAnonymousChange = !activity.auto_holiday && (activity.changed_by_id == null)
+                      const showChanger = activity.auto_holiday || isAnonymousChange || (activity.changed_by_id != null && activity.changed_by_id !== activity.member_id)
                       
                       return (
                         <div
                           key={activity.id}
-                          className="flex items-start gap-3 p-4 rounded-lg bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 hover:shadow-sm transition-all"
+                          className="flex items-center gap-2 p-2 rounded-lg bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 hover:bg-gray-50 dark:hover:bg-gray-750 transition-all"
                         >
-                          {/* Member Avatar with Status Indicator */}
+                          {/* Compact Member Avatar with Status */}
                           <div className="relative flex-shrink-0">
-                            <Avatar className="h-10 w-10 border-2 border-white shadow-sm">
+                            <Avatar className="h-6 w-6 border">
                               {activity.profile_image_url && (
                                 <AvatarImage 
                                   src={activity.profile_image_url} 
                                   alt={`${activity.member_name}'s profile`}
                                 />
                               )}
-                              <AvatarFallback className="bg-gradient-to-br from-blue-500 to-purple-600 text-white text-sm font-medium">
+                              <AvatarFallback className="bg-gradient-to-br from-blue-500 to-purple-600 text-white text-xs font-medium">
                                 {activity.member_name?.split(' ').map(n => n[0]).join('').toUpperCase() || 
                                 activity.member_email?.charAt(0)?.toUpperCase()}
                               </AvatarFallback>
                             </Avatar>
-                            {/* Status badge on avatar */}
-                            <div className="absolute -bottom-1 -right-1 w-5 h-5 rounded-full border-2 border-white bg-white flex items-center justify-center shadow-sm">
-                              <span className="text-xs">
+                            {/* Small status indicator */}
+                            <div className="absolute -bottom-0.5 -right-0.5 w-3 h-3 rounded-full border border-white bg-white flex items-center justify-center">
+                              <span className="text-[8px]">
                                 {statusInfo.emoji}
                               </span>
                             </div>
                           </div>
 
-                          <div className="flex-1 min-w-0">
-                            {/* Main Activity Description */}
-                            <div className="flex items-start justify-between gap-2 mb-2">
-                              <div className="flex-1">
-                                <div className="flex items-center gap-2 mb-1 flex-wrap">
-                                  {changedByDifferentPerson ? (
-                                    <>
-                                      <span className="font-semibold text-blue-600 dark:text-blue-400">
-                                        {activity.changed_by_name === 'System' ? t('activities.system') : (activity.changed_by_name || t('activities.unknown'))}
-                                      </span>
-                                      <span className="text-sm text-gray-600 dark:text-gray-400">
-                                        {t('activities.changedAvailabilityFor')}
-                                      </span>
-                                      <span className="font-semibold text-gray-900 dark:text-gray-100">
-                                        {activity.member_name || activity.member_email?.split('@')[0]}
-                                      </span>
-                                      <span className="text-sm text-gray-600 dark:text-gray-400">
-                                        {t('activities.to')}
-                                      </span>
-                                    </>
+                          {/* Compact activity info */}
+                          <div className="flex-1 min-w-0 text-xs">
+                            <div className="flex items-center gap-1 mb-0.5">
+                              <span className="font-medium text-gray-900 dark:text-gray-100 truncate">
+                                {activity.member_name || activity.member_email?.split('@')[0]}
+                              </span>
+                              <span className="text-gray-500 dark:text-gray-400">→</span>
+                              <span className={`inline-flex items-center gap-1 font-medium ${statusInfo.color.replace('bg-', 'text-')}`}>
+                                <div className={`w-2 h-2 rounded-full ${statusInfo.color}`} />
+                                {statusInfo.label}
+                              </span>
+                              {isNewRecord && (
+                                <Badge variant="secondary" className="text-[10px] py-0 px-1 h-4">
+                                  {t('activities.new')}
+                                </Badge>
+                              )}
+                            </div>
+                            <div className="flex items-center gap-2 text-[11px] text-gray-500 dark:text-gray-400">
+                              {/* Availability date (for which day) */}
+                              <span>{format(new Date(activity.date), 'EEE dd/MM', { locale: locale === 'nl' ? nl : locale === 'fr' ? fr : enUS })}</span>
+                              <span>•</span>
+                              {/* When it was changed (day + time) */}
+                              <span>{format(new Date(changeDate), 'EEE dd/MM HH:mm', { locale: locale === 'nl' ? nl : locale === 'fr' ? fr : enUS })}</span>
+                              {showChanger && (
+                                <>
+                                  <span>•</span>
+                                  {isAnonymousChange ? (
+                                    <span className="text-blue-600 dark:text-blue-400 font-medium">
+                                      anonymous user changed availability
+                                    </span>
                                   ) : (
-                                    <>
-                                      <span className="font-semibold text-gray-900 dark:text-gray-100">
-                                        {activity.member_name || activity.member_email?.split('@')[0]}
-                                      </span>
-                                      <span className="text-sm text-gray-600 dark:text-gray-400">
-                                        {t('activities.hasChangedAvailabilityTo')}
-                                      </span>
-                                    </>
+                                    <span className="text-blue-600 dark:text-blue-400 font-medium">
+                                      {activity.changed_by_name === 'System' ? t('activities.system') : (activity.changed_by_name || t('activities.unknown'))}
+                                    </span>
                                   )}
-                                  {isNewRecord && (
-                                    <Badge variant="secondary" className="text-xs py-0 px-2">
-                                      {t('activities.new')}
-                                    </Badge>
-                                  )}
-                                </div>
-                                <div className="flex items-center gap-2">
-                                  <div className={`w-3 h-3 rounded-full ${statusInfo.color}`} />
-                                  <span className="text-base font-semibold text-gray-900 dark:text-gray-100">
-                                    {statusInfo.label}
-                                  </span>
-                                </div>
-                              </div>
+                                </>
+                              )}
                             </div>
-                            
-                            {/* Date and Time Info */}
-                            <div className="flex items-center gap-4 text-xs text-gray-500 dark:text-gray-400 flex-wrap">
-                              <div className="flex items-center gap-1">
-                                <Calendar className="h-3 w-3" />
-                                <span>{t('activities.forDate')} {format(new Date(activity.date), 'dd MMM yyyy', { locale: locale === 'nl' ? nl : locale === 'fr' ? fr : enUS })}</span>
-                              </div>
-                              <div className="flex items-center gap-1">
-                                <Clock className="h-3 w-3" />
-                                <span>
-                                  {isNewRecord ? t('activities.setOn') : t('activities.changedOn')} {format(new Date(changeDate), 'dd MMM HH:mm', { locale: locale === 'nl' ? nl : locale === 'fr' ? fr : enUS })}
-                                </span>
-                              </div>
-                            </div>
-
-                            {/* Show who made the change when it's different from the member */}
-                            {changedByDifferentPerson && (
-                              <div className="flex items-center gap-2 mt-2 p-2 bg-blue-50 dark:bg-blue-900/20 rounded text-xs text-blue-700 dark:text-blue-300 border border-blue-200 dark:border-blue-700">
-                                <Avatar className="h-4 w-4">
-                                  {activity.changed_by_profile_url && (
-                                    <AvatarImage src={activity.changed_by_profile_url} />
-                                  )}
-                                  <AvatarFallback className="text-xs bg-blue-100 dark:bg-blue-800 text-blue-600 dark:text-blue-200">
-                                    {activity.changed_by_name?.charAt(0)?.toUpperCase() || '?'}
-                                  </AvatarFallback>
-                                </Avatar>
-                                <span className="font-medium">{t('activities.changedBy')} {activity.changed_by_name === 'System' ? t('activities.system') : (activity.changed_by_name || t('activities.unknown'))}</span>
-                              </div>
-                            )}
                           </div>
                         </div>
                       )

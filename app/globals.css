@@ -32,30 +32,34 @@
   }
 
   .dark {
-    --background: 222.2 84% 4.9%;
-    --foreground: 210 40% 98%;
-    --card: 222.2 84% 4.9%;
-    --card-foreground: 210 40% 98%;
-    --popover: 222.2 84% 4.9%;
-    --popover-foreground: 210 40% 98%;
-    --primary: 217.2 91.2% 59.8%;
-    --primary-foreground: 222.2 84% 4.9%;
-    --secondary: 217.2 32.6% 17.5%;
-    --secondary-foreground: 210 40% 98%;
-    --muted: 217.2 32.6% 17.5%;
-    --muted-foreground: 215 20.2% 65.1%;
-    --accent: 217.2 32.6% 17.5%;
-    --accent-foreground: 210 40% 98%;
-    --destructive: 0 62.8% 30.6%;
-    --destructive-foreground: 210 40% 98%;
-    --border: 217.2 32.6% 17.5%;
-    --input: 217.2 32.6% 17.5%;
-    --ring: 224.3 76.3% 94.1%;
-    --chart-1: 220 70% 50%;
-    --chart-2: 160 60% 45%;
-    --chart-3: 30 80% 55%;
-    --chart-4: 280 65% 60%;
-    --chart-5: 340 75% 55%;
+    /* Softer, less saturated dark theme */
+    --background: 222 22% 12%;
+    --foreground: 210 30% 96%;
+    --card: 222 22% 14%;
+    --card-foreground: 210 30% 96%;
+    --popover: 222 22% 14%;
+    --popover-foreground: 210 30% 96%;
+    /* Muted primary to be less in-your-face */
+    --primary: 217 55% 52%;
+    --primary-foreground: 210 40% 98%;
+    --secondary: 220 16% 18%;
+    --secondary-foreground: 210 30% 96%;
+    --muted: 220 16% 18%;
+    --muted-foreground: 215 18% 70%;
+    --accent: 220 16% 20%;
+    --accent-foreground: 210 30% 96%;
+    --destructive: 0 55% 36%;
+    --destructive-foreground: 210 30% 96%;
+    --border: 220 14% 26%;
+    --input: 220 14% 26%;
+    /* Subtle ring color that still meets contrast */
+    --ring: 217 55% 52%;
+    /* Charts toned down */
+    --chart-1: 220 55% 46%;
+    --chart-2: 160 45% 42%;
+    --chart-3: 30 60% 52%;
+    --chart-4: 280 50% 56%;
+    --chart-5: 340 55% 52%;
   }
 
   /* Autumn Theme - Warme herfstskleuren */
@@ -170,113 +174,120 @@
     --chart-5: 15 95% 65%;
   }
 
-  /* Cozy Theme - Warme winterhuiskamer met sneeuw */
+  /* Cozy Theme - modern warm minimal */
   .cozy {
-    --background: 25 15% 96%;
-    --foreground: 15 20% 28%;
-    --card: 28 12% 92%;
-    --card-foreground: 15 20% 28%;
-    --popover: 25 15% 97%;
-    --popover-foreground: 15 20% 28%;
-    --primary: 15 28% 52%;
-    --primary-foreground: 25 15% 96%;
-    --secondary: 20 12% 88%;
-    --secondary-foreground: 15 20% 28%;
-    --muted: 22 8% 85%;
-    --muted-foreground: 15 12% 48%;
-    --accent: 30 18% 90%;
-    --accent-foreground: 15 20% 28%;
-    --destructive: 5 35% 55%;
-    --destructive-foreground: 25 15% 96%;
-    --border: 20 10% 85%;
-    --input: 22 8% 90%;
-    --ring: 15 28% 52%;
+    --background: 30 20% 98%;
+    --foreground: 20 15% 20%;
+    --card: 30 16% 96%;
+    --card-foreground: 20 15% 22%;
+    --popover: 30 20% 99%;
+    --popover-foreground: 20 15% 20%;
+    --primary: 22 40% 45%;
+    --primary-foreground: 30 20% 98%;
+    --secondary: 28 18% 92%;
+    --secondary-foreground: 20 15% 22%;
+    --muted: 28 14% 90%;
+    --muted-foreground: 22 10% 40%;
+    --accent: 35 24% 88%;
+    --accent-foreground: 20 15% 22%;
+    --destructive: 5 70% 50%;
+    --destructive-foreground: 0 0% 100%;
+    --border: 26 12% 85%;
+    --input: 26 12% 85%;
+    --ring: 22 40% 45%;
     --radius: 0.75rem;
-    --chart-1: 15 45% 48%;
-    --chart-2: 30 40% 55%;
-    --chart-3: 35 50% 60%;
-    --chart-4: 25 45% 50%;
-    --chart-5: 40 55% 65%;
-    
-    /* Custom cozy winter properties */
-    --cozy-firelight: 15 25% 65%;
-    --cozy-wool: 20 8% 82%;
-    --cozy-snow: 0 0% 98%;
-    --cozy-frost: 210 15% 92%;
-    --cozy-ember: 10 35% 45%;
-    --cozy-blanket: 25 12% 88%;
+    --chart-1: 22 50% 45%;
+    --chart-2: 28 40% 55%;
+    --chart-3: 35 40% 60%;
+    --chart-4: 25 35% 50%;
+    --chart-5: 40 45% 65%;
   }
 
-  /* Black & White Theme - Classy monochrome elegance */
+  /* Black & White Theme - modern minimal monochrome */
   .blackwhite {
-    --background: 0 0% 98%;
-    --foreground: 0 0% 8%;
-    --card: 0 0% 95%;
-    --card-foreground: 0 0% 12%;
-    --popover: 0 0% 99%;
-    --popover-foreground: 0 0% 12%;
-    --primary: 0 0% 15%;
-    --primary-foreground: 0 0% 96%;
-    --secondary: 0 0% 90%;
-    --secondary-foreground: 0 0% 20%;
-    --muted: 0 0% 85%;
-    --muted-foreground: 0 0% 45%;
-    --accent: 0 0% 88%;
-    --accent-foreground: 0 0% 15%;
-    --destructive: 0 0% 25%;
-    --destructive-foreground: 0 0% 96%;
-    --border: 0 0% 80%;
-    --input: 0 0% 92%;
-    --ring: 0 0% 15%;
-    --radius: 0.25rem;
-    --chart-1: 0 0% 15%;
+    --background: 0 0% 99%;
+    --foreground: 0 0% 7%;
+    --card: 0 0% 98%;
+    --card-foreground: 0 0% 10%;
+    --popover: 0 0% 100%;
+    --popover-foreground: 0 0% 8%;
+    --primary: 0 0% 10%;
+    --primary-foreground: 0 0% 100%;
+    --secondary: 0 0% 94%;
+    --secondary-foreground: 0 0% 12%;
+    --muted: 0 0% 90%;
+    --muted-foreground: 0 0% 40%;
+    --accent: 0 0% 92%;
+    --accent-foreground: 0 0% 10%;
+    --destructive: 0 70% 45%;
+    --destructive-foreground: 0 0% 100%;
+    --border: 0 0% 86%;
+    --input: 0 0% 90%;
+    --ring: 0 0% 10%;
+    --radius: 0.5rem;
+    --chart-1: 0 0% 10%;
     --chart-2: 0 0% 30%;
-    --chart-3: 0 0% 45%;
-    --chart-4: 0 0% 60%;
-    --chart-5: 0 0% 75%;
-    
-    /* Custom B&W properties (classy) */
-    --bw-charcoal: 0 0% 15%;
-    --bw-pearl: 0 0% 97%;
-    --bw-silver: 0 0% 65%;
-    --bw-platinum: 0 0% 88%;
-    --bw-graphite: 0 0% 30%;
+    --chart-3: 0 0% 50%;
+    --chart-4: 0 0% 70%;
+    --chart-5: 0 0% 85%;
   }
 
-  /* By the Stove Theme - Warme keuken/kachel kleuren (subtle) */
+  /* By the Stove Theme - modern warm professional */
   .bythestove {
-    --background: 18 20% 95%;
-    --foreground: 8 25% 20%;
-    --card: 22 18% 88%;
-    --card-foreground: 8 25% 20%;
-    --popover: 20 25% 96%;
-    --popover-foreground: 8 25% 20%;
-    --primary: 12 45% 42%;
-    --primary-foreground: 20 25% 96%;
-    --secondary: 28 20% 82%;
-    --secondary-foreground: 8 25% 20%;
-    --muted: 25 15% 85%;
-    --muted-foreground: 8 20% 40%;
-    --accent: 35 25% 82%;
-    --accent-foreground: 8 25% 20%;
-    --destructive: 2 55% 48%;
-    --destructive-foreground: 20 25% 96%;
-    --border: 25 15% 78%;
-    --input: 28 12% 88%;
-    --ring: 12 45% 42%;
-    --radius: 1rem;
-    --chart-1: 12 75% 38%;
-    --chart-2: 25 65% 45%;
-    --chart-3: 35 60% 50%;
-    --chart-4: 45 55% 55%;
-    --chart-5: 8 80% 32%;
-    
-    /* Custom stove properties (subtle) */
-    --stove-ember: 8 45% 42%;
-    --stove-flame: 15 55% 52%;
-    --stove-ash: 25 10% 75%;
-    --stove-iron: 0 3% 35%;
-    --stove-warmth: 20 35% 90%;
+    --background: 25 18% 98%;
+    --foreground: 15 20% 20%;
+    --card: 25 14% 96%;
+    --card-foreground: 15 20% 22%;
+    --popover: 25 20% 99%;
+    --popover-foreground: 15 20% 20%;
+    --primary: 18 55% 42%;
+    --primary-foreground: 0 0% 100%;
+    --secondary: 30 20% 92%;
+    --secondary-foreground: 15 20% 22%;
+    --muted: 28 16% 90%;
+    --muted-foreground: 15 14% 40%;
+    --accent: 35 22% 88%;
+    --accent-foreground: 15 20% 22%;
+    --destructive: 5 70% 48%;
+    --destructive-foreground: 0 0% 100%;
+    --border: 26 14% 86%;
+    --input: 26 14% 86%;
+    --ring: 18 55% 42%;
+    --radius: 0.75rem;
+    --chart-1: 18 60% 40%;
+    --chart-2: 28 55% 48%;
+    --chart-3: 35 50% 54%;
+    --chart-4: 42 48% 58%;
+    --chart-5: 10 65% 38%;
+  }
+
+  /* Test & Development Theme - vibrant yet functional dev look */
+  .testdev {
+    --background: 240 10% 8%;
+    --foreground: 0 0% 98%;
+    --card: 240 9% 12%;
+    --card-foreground: 0 0% 98%;
+    --popover: 240 9% 12%;
+    --popover-foreground: 0 0% 98%;
+    --primary: 260 90% 60%; /* electric purple */
+    --primary-foreground: 0 0% 100%;
+    --secondary: 200 90% 50%; /* cyan accents */
+    --secondary-foreground: 0 0% 100%;
+    --muted: 240 8% 18%;
+    --muted-foreground: 240 5% 70%;
+    --accent: 160 85% 45%; /* green for success cues */
+    --accent-foreground: 0 0% 10%;
+    --destructive: 0 85% 55%;
+    --destructive-foreground: 0 0% 100%;
+    --border: 240 8% 22%;
+    --input: 240 8% 22%;
+    --ring: 260 90% 60%;
+    --radius: 0.5rem;
+    --chart-1: 260 90% 60%;
+    --chart-2: 200 90% 50%;
+    --chart-3: 160 85% 45%;
+    --chart-4: 40 90% 55%;
+    --chart-5: 0 85% 55%;
   }
 }
 

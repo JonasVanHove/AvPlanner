@@ -1,5 +1,4 @@
 "use client"
-
 import { useState, useEffect, useCallback, useRef } from "react"
 import { Button } from "@/components/ui/button"
 import { useRouter } from "next/navigation"
@@ -129,6 +128,8 @@ const AvailabilityCalendarRedesigned = ({
     endDate?: Date
     isActive: boolean
   }>({ isActive: false })
+  // Weekend behavior: when true, weekends count as weekdays for completion
+  const [weekendsAsWeekdays, setWeekendsAsWeekdays] = useState<boolean>(false)
   const router = useRouter()
   const { t } = useTranslation(locale)
 
@@ -141,6 +142,23 @@ const AvailabilityCalendarRedesigned = ({
   
   // Mobile responsive hook
   const isMobile = useIsMobile()
+
+  // Load weekend preference per team and listen for changes
+  useEffect(() => {
+    try {
+      const saved = localStorage.getItem(`weekendsAsWeekdays:${teamId}`) === 'true'
+      setWeekendsAsWeekdays(saved)
+    } catch {}
+
+    const handler = (e: Event) => {
+      const detail = (e as CustomEvent).detail as { teamId: string; enabled: boolean }
+      if (!detail) return
+      if (detail.teamId !== teamId) return
+      setWeekendsAsWeekdays(detail.enabled)
+    }
+    window.addEventListener('weekendsAsWeekdaysChanged', handler as EventListener)
+    return () => window.removeEventListener('weekendsAsWeekdaysChanged', handler as EventListener)
+  }, [teamId])
 
   // Get theme-specific colors for background and header
   const getThemeColors = () => {
@@ -245,6 +263,7 @@ const AvailabilityCalendarRedesigned = ({
   }
 
   const themeClasses = getThemeClasses()
+
 
   // Memoized callback for bulk range selection changes
   const handleRangeSelectionChange = useCallback((startDate?: Date, endDate?: Date, isActive?: boolean) => {
@@ -509,37 +528,37 @@ const AvailabilityCalendarRedesigned = ({
       const statusConfig = {
         available: {
           icon: "🟢",
-          color: "bg-green-50 border-green-200 dark:bg-green-900/20 dark:border-green-700/50",
+          color: "bg-green-50 border-green-200 dark:bg-green-500/20 dark:border-green-400/60 dark:ring-1 dark:ring-green-300/40 dark:shadow-[0_0_10px_rgba(34,197,94,0.35)]",
           label: t("status.available"),
           textColor: "text-green-700 dark:text-green-300",
         },
         remote: {
           icon: "🟣",
-          color: "bg-purple-50 border-purple-200 dark:bg-purple-900/20 dark:border-purple-700/50",
+          color: "bg-purple-50 border-purple-200 dark:bg-purple-500/20 dark:border-purple-400/60 dark:ring-1 dark:ring-purple-300/40 dark:shadow-[0_0_10px_rgba(168,85,247,0.35)]",
           label: t("status.remote"),
           textColor: "text-purple-700 dark:text-purple-300",
         },
         unavailable: {
           icon: "🔴",
-          color: "bg-red-50 border-red-200 dark:bg-red-900/20 dark:border-red-700/50",
+          color: "bg-red-50 border-red-200 dark:bg-red-500/20 dark:border-red-400/60 dark:ring-1 dark:ring-red-300/40 dark:shadow-[0_0_10px_rgba(239,68,68,0.35)]",
           label: t("status.unavailable"),
           textColor: "text-red-700 dark:text-red-300",
         },
         need_to_check: {
           icon: "🔵",
-          color: "bg-blue-50 border-blue-200 dark:bg-blue-900/20 dark:border-blue-700/50",
+          color: "bg-blue-50 border-blue-200 dark:bg-blue-500/20 dark:border-blue-400/60 dark:ring-1 dark:ring-blue-300/40 dark:shadow-[0_0_10px_rgba(59,130,246,0.35)]",
           label: t("status.need_to_check"),
           textColor: "text-blue-700 dark:text-blue-300",
         },
         absent: {
           icon: "⚫",
-          color: "bg-gray-50 border-gray-200 dark:bg-gray-900/20 dark:border-gray-700/50",
+          color: "bg-gray-50 border-gray-200 dark:bg-gray-800/40 dark:border-gray-600/70",
           label: t("status.absent"),
           textColor: "text-gray-700 dark:text-gray-300",
         },
         holiday: {
           icon: "🟡",
-          color: "bg-yellow-50 border-yellow-200 dark:bg-yellow-900/20 dark:border-yellow-700/50",
+          color: "bg-yellow-50 border-yellow-200 dark:bg-yellow-500/20 dark:border-yellow-400/60 dark:ring-1 dark:ring-yellow-300/40 dark:shadow-[0_0_10px_rgba(234,179,8,0.35)]",
           label: t("status.holiday"),
           textColor: "text-yellow-700 dark:text-yellow-300",
         },
@@ -616,8 +635,8 @@ const AvailabilityCalendarRedesigned = ({
     fetchAvailability()
   }, [currentDate, members, weeksToShow])
 
-  const fetchAvailability = async () => {
-    if (members.length === 0) return
+  const fetchAvailability = async (): Promise<Availability[]> => {
+    if (members.length === 0) return []
 
     setIsLoading(true)
     console.log('🔄 Fetching availability data...')
@@ -657,9 +676,12 @@ const AvailabilityCalendarRedesigned = ({
         console.log(`📅 Unique dates in fetched data: ${uniqueDates.slice(0, 5).join(', ')}${uniqueDates.length > 5 ? ` (+${uniqueDates.length - 5} more)` : ''}`)
       }
       
-      setAvailability(data || [])
+      const fresh = data || []
+      setAvailability(fresh)
+      return fresh
     } catch (error) {
       console.error("Error fetching availability:", error)
+      return []
     } finally {
       setIsLoading(false)
     }
@@ -751,11 +773,30 @@ const AvailabilityCalendarRedesigned = ({
 
       // Activity logging is now handled automatically by database triggers
 
-      console.log('Availability updated successfully')
-      fetchAvailability()
+    console.log('Availability updated successfully')
+    const fresh = await fetchAvailability()
+    // Evaluate completion for the current user in the current visible week using fresh data
+    const weekStart = getMondayOfWeek(currentDate)
+    triggerConfettiIfWeekComplete(weekStart, fresh)
     } catch (error) {
       console.error("Error updating availability:", error)
       alert("Er is een fout opgetreden bij het bijwerken van de beschikbaarheid.")
+    }
+  }
+
+  const clearAvailability = async (memberId: string, date: string) => {
+    if (!editMode) return
+    try {
+      const { error } = await supabase
+        .from("availability")
+        .delete()
+        .eq("member_id", memberId)
+        .eq("date", date)
+      if (error) throw error
+      fetchAvailability()
+    } catch (error) {
+      console.error("Error clearing availability:", error)
+      alert("Er is een fout opgetreden bij het leegmaken van de beschikbaarheid.")
     }
   }
 
@@ -854,9 +895,10 @@ const AvailabilityCalendarRedesigned = ({
     }
   }
 
-  const getAvailabilityForDate = (memberId: string, date: Date) => {
+  const getAvailabilityForDate = (memberId: string, date: Date, source?: Availability[]) => {
     const dateString = getDateString(date)
-    return availability.find((a) => a.member_id === memberId && a.date === dateString)
+    const src = source || availability
+    return src.find((a) => a.member_id === memberId && a.date === dateString)
   }
 
   const getTodayAvailability = (memberId: string) => {
@@ -905,6 +947,62 @@ const AvailabilityCalendarRedesigned = ({
       date.getMonth() === today.getMonth() &&
       date.getFullYear() === today.getFullYear()
     )
+  }
+
+  // Determine if a given week for a member is fully filled according to the rules
+  // Success criteria:
+  // - Count only weekdays by default; if includeWeekends=true then count all 7 days
+  // - A day is considered "filled" if there is an availability record with any status (including holiday/remote)
+  // - Auto-holiday still counts as filled
+  const isMemberWeekComplete = (memberId: string, weekStart: Date, includeWeekends?: boolean, source?: Availability[]) => {
+    const days: Date[] = Array.from({ length: 7 }, (_, i) => {
+      const d = new Date(weekStart)
+      d.setDate(d.getDate() + i)
+      return d
+    })
+
+    // Determine which days to include in denominator
+    const consideredDays = days.filter(d => includeWeekends ? true : !isWeekend(d))
+    if (consideredDays.length === 0) return false
+
+    // For each considered day, require an availability record (any status)
+    const allFilled = consideredDays.every(d => !!getAvailabilityForDate(memberId, d, source))
+    return allFilled
+  }
+
+  // Trigger confetti when a member completes their current visible week
+  const triggerConfettiIfWeekComplete = (weekStart: Date, source?: Availability[]) => {
+    try {
+      // Confetti is only for the current user's own week (regardless of which member was updated)
+      if (!userEmail) return
+      const currentUserMember = members.find(m => m.email && userEmail && m.email.toLowerCase() === userEmail.toLowerCase())
+      if (!currentUserMember) return
+
+      // Requirement: Only weekdays count for confetti (exclude weekends regardless of admin toggle)
+      const includeWeekends = false
+      // Normalize to Monday 00:00 to keep keys stable even if weekStart carried a time
+      const normalizedWeekStart = getMondayOfWeek(weekStart)
+      normalizedWeekStart.setHours(0,0,0,0)
+
+      // Optional early-week guard: Only celebrate once it's reasonable (Fri or later) to avoid premature fireworks
+      const today = new Date()
+      const isInThisWeek = today >= normalizedWeekStart && today <= new Date(normalizedWeekStart.getTime() + 6 * 86400000)
+      const isFriOrLater = today.getDay() === 5 || today.getDay() === 6 || today.getDay() === 0 // Fri/Sat/Sun
+
+      if (!isMemberWeekComplete(currentUserMember.id, normalizedWeekStart, includeWeekends, source)) return
+      if (isInThisWeek && !isFriOrLater) {
+        // Defer celebration until later in the week to reduce noise
+        return
+      }
+      // Avoid duplicate celebration per member/week/mode
+      const key = `celebrated:${teamId}:${currentUserMember.id}:${getDateString(normalizedWeekStart)}:wkdaysOnly`
+      if (localStorage.getItem(key) === 'true') return
+      // Lazy import local utility
+      import('@/lib/confetti').then(mod => mod.createConfetti())
+      localStorage.setItem(key, 'true')
+    } catch (e) {
+      console.warn('Confetti trigger failed', e)
+    }
   }
 
   const navigateDate = (direction: "prev" | "next") => {
@@ -1345,14 +1443,24 @@ const AvailabilityCalendarRedesigned = ({
                               {isWeekendDay ? (
                                 <span className="text-gray-400 dark:text-gray-500 text-2xl font-light">×</span>
                               ) : editMode ? (
-                                <AvailabilityDropdown
-                                  value={record?.status}
-                                  onValueChange={(status: "available" | "unavailable" | "need_to_check" | "absent" | "holiday" | "remote") => 
-                                    updateAvailability(member.id, getDateString(date), status)
-                                  }
-                                  locale={locale}
-                                  size="sm"
-                                />
+                                <div className="flex flex-col items-center gap-1">
+                                  <AvailabilityDropdown
+                                    value={record?.status}
+                                    onValueChange={(status: "available" | "unavailable" | "need_to_check" | "absent" | "holiday" | "remote") => 
+                                      updateAvailability(member.id, getDateString(date), status)
+                                    }
+                                    locale={locale}
+                                    size="sm"
+                                  />
+                                  {record && (
+                                    <button
+                                      className="text-[10px] text-muted-foreground hover:text-foreground"
+                                      onClick={() => clearAvailability(member.id, getDateString(date))}
+                                    >
+                                      Clear
+                                    </button>
+                                  )}
+                                </div>
                               ) : (
                                 <div className="text-xl">
                                   {getStatusConfig(record?.status || "").icon}
@@ -1650,9 +1758,17 @@ const AvailabilityCalendarRedesigned = ({
                                       <div className="flex items-center gap-3">
                                         <span className="text-lg">{config.icon}</span>
                                         <span className="font-medium">{config.label}</span>
-                                      </div>                                      </DropdownMenuItem>
+                                      </div>
+                                    </DropdownMenuItem>
                                     )
                                   })}
+                                  <DropdownMenuItem
+                                    onClick={() => clearAvailability(member.id, getDateString(date))}
+                                    className="text-red-600 hover:bg-red-50 dark:text-red-400 dark:hover:bg-red-900/20"
+                                    disabled={!availability}
+                                  >
+                                    Clear
+                                  </DropdownMenuItem>
                                 </DropdownMenuContent>
                               </DropdownMenu>
                               )}

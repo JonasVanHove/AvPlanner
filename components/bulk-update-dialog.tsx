@@ -62,6 +62,28 @@ export function AnalyticsButton({ members, locale, weeksToShow, currentDate, tea
     date.setDate(date.getDate() + 6)
     return date
   })
+  // Year overview state
+  const [viewMode, setViewMode] = useState<'overview' | 'year'>('overview')
+  const [availableYears, setAvailableYears] = useState<number[]>([])
+  const [selectedYear, setSelectedYear] = useState<number>(new Date().getFullYear())
+  const [yearLoading, setYearLoading] = useState<boolean>(false)
+  const [yearStats, setYearStats] = useState<null | {
+    workdays: number
+    weekends: number
+    teamTotals: Record<string, number>
+    memberBreakdown: Record<string, {
+      available: number
+      remote: number
+      unavailable: number
+      need_to_check: number
+      absent: number
+      holiday: number
+      unfilled: number
+      workdays: number
+    }>
+  }>(null)
+  // Weekend behavior setting: when true, weekends are treated as weekdays (countable)
+  const [weekendsAsWeekdays, setWeekendsAsWeekdays] = useState<boolean>(false)
   const { t } = useTranslation(locale)
 
   // Get date-fns locale based on current locale
@@ -100,6 +122,27 @@ export function AnalyticsButton({ members, locale, weeksToShow, currentDate, tea
     const savedShowPersonalCharts = localStorage.getItem("showPersonalCharts") === "true"
     setShowPersonalCharts(savedShowPersonalCharts)
   }, [])
+
+  // Load weekend behavior preference and listen for changes
+  useEffect(() => {
+    // Load per-team preference
+    if (teamId) {
+      const saved = localStorage.getItem(`weekendsAsWeekdays:${teamId}`) === 'true'
+      setWeekendsAsWeekdays(saved)
+    }
+    const handler = (e: any) => {
+      const detail = e?.detail
+      if (!detail || (detail && detail.teamId === teamId)) {
+        const val = typeof detail === 'object' ? !!detail.enabled : !!detail
+        setWeekendsAsWeekdays(val)
+        if (showAnalytics && viewMode === 'year') {
+          ensureYearsAndFetch(selectedYear)
+        }
+      }
+    }
+    window.addEventListener('weekendsAsWeekdaysChanged', handler as EventListener)
+    return () => window.removeEventListener('weekendsAsWeekdaysChanged', handler as EventListener)
+  }, [showAnalytics, viewMode, selectedYear, teamId])
 
   // Process analytics data with unique member counting per day
   const processAnalyticsData = (data: any[], level: "day" | "week" | "month") => {
@@ -223,18 +266,179 @@ export function AnalyticsButton({ members, locale, weeksToShow, currentDate, tea
 
   useEffect(() => {
     if (showAnalytics) {
-      fetchAnalyticsData()
-      fetchMemberStats()
+      if (viewMode === 'overview') {
+        fetchAnalyticsData()
+        fetchMemberStats()
+      } else {
+        ensureYearsAndFetch(selectedYear)
+      }
     }
-  }, [showAnalytics, weeksToShow, currentDate, selectedPeriod, customStartDate, customEndDate])
+  }, [showAnalytics, weeksToShow, currentDate, selectedPeriod, customStartDate, customEndDate, viewMode, selectedYear])
 
   const handleShowAnalytics = () => {
     setShowAnalytics(true)
-    if (!analyticsData) {
-      fetchAnalyticsData()
+    if (viewMode === 'overview') {
+      if (!analyticsData) {
+        fetchAnalyticsData()
+      }
+      if (Object.keys(memberStats).length === 0) {
+        fetchMemberStats()
+      }
+    } else {
+      ensureYearsAndFetch(selectedYear)
     }
-    if (Object.keys(memberStats).length === 0) {
-      fetchMemberStats()
+  }
+
+  // Year helpers
+  const ensureYearsAndFetch = async (year: number) => {
+    if (!availableYears || availableYears.length === 0) {
+      await fetchAvailableYears()
+    }
+    await fetchYearStats(year)
+  }
+
+  const fetchAvailableYears = async () => {
+    try {
+      const { data, error } = await supabase
+        .from('availability')
+        .select(`date, members!inner(team_id)`) 
+        .eq('members.team_id', teamId)
+        .order('date', { ascending: true })
+
+      if (error) {
+        console.error('Error fetching years:', error)
+        return
+      }
+
+      const yearsSet = new Set<number>()
+      ;(data || []).forEach((row: any) => {
+        if (row.date) {
+          yearsSet.add(new Date(row.date).getFullYear())
+        }
+      })
+      const years = Array.from(yearsSet).sort((a, b) => b - a)
+      setAvailableYears(years)
+      if (years.length > 0 && !years.includes(selectedYear)) {
+        setSelectedYear(years[0])
+      }
+    } catch (e) {
+      console.error('Years fetch error:', e)
+    }
+  }
+
+  const fetchYearStats = async (year: number) => {
+    setYearLoading(true)
+    try {
+      const start = new Date(year, 0, 1)
+      const end = new Date(year, 11, 31)
+      const { data, error } = await supabase
+        .from('availability')
+        .select(`date, status, member_id, created_at, members!inner(team_id)`) 
+        .eq('members.team_id', teamId)
+        .gte('date', start.toISOString().split('T')[0])
+        .lte('date', end.toISOString().split('T')[0])
+        .order('date', { ascending: true })
+
+      if (error) {
+        console.error('Error fetching year stats:', error)
+        setYearLoading(false)
+        return
+      }
+
+      // Deduplicate by member-date keep latest
+      const latestByMemberDate: Record<string, any> = {}
+      ;(data || []).forEach((row: any) => {
+        const key = `${row.member_id}-${row.date}`
+        const prev = latestByMemberDate[key]
+        if (!prev || new Date(row.created_at || 0) > new Date(prev.created_at || 0)) {
+          latestByMemberDate[key] = row
+        }
+      })
+
+      // Precompute workdays/weekends in year
+      let totalWorkdays = 0
+      let totalWeekends = 0
+      const daysInYear: string[] = []
+      const cursor = new Date(start)
+      while (cursor <= end) {
+        const iso = cursor.toISOString().split('T')[0]
+        daysInYear.push(iso)
+        if (isWeekend(cursor)) totalWeekends++
+        else totalWorkdays++
+        cursor.setDate(cursor.getDate() + 1)
+      }
+
+      // Initialize per-member breakdown
+      const breakdown: Record<string, any> = {}
+      members.forEach(m => {
+        breakdown[m.id] = {
+          available: 0,
+          remote: 0,
+          unavailable: 0,
+          need_to_check: 0,
+          absent: 0,
+          holiday: 0,
+          unfilled: 0,
+          // workdays will represent counted days: weekdays only by default,
+          // or all days if weekends are treated as weekdays
+          workdays: weekendsAsWeekdays ? (totalWorkdays + totalWeekends) : totalWorkdays
+        }
+      })
+
+      // Count statuses per member
+      for (const iso of daysInYear) {
+        const dt = new Date(iso)
+        const isWknd = isWeekend(dt)
+        // Skip weekends unless weekends are treated as weekdays
+        if (isWknd && !weekendsAsWeekdays) continue
+        members.forEach(m => {
+          const key = `${m.id}-${iso}`
+          const entry = latestByMemberDate[key]
+          if (!entry) {
+            breakdown[m.id].unfilled++
+          } else {
+            const status = entry.status || 'available'
+            if (breakdown[m.id][status] !== undefined) {
+              breakdown[m.id][status]++
+            } else {
+              // Unknown statuses do not count; treat as unavailable fallback
+              breakdown[m.id].unavailable++
+            }
+          }
+        })
+      }
+
+      // Team totals
+      const totals: Record<string, number> = {
+        available: 0,
+        remote: 0,
+        unavailable: 0,
+        need_to_check: 0,
+        absent: 0,
+        holiday: 0,
+        unfilled: 0
+      }
+      Object.values(breakdown).forEach((b: any) => {
+        totals.available += b.available
+        totals.remote += b.remote
+        totals.unavailable += b.unavailable
+        totals.need_to_check += b.need_to_check
+        totals.absent += b.absent
+        totals.holiday += b.holiday
+        totals.unfilled += b.unfilled
+      })
+
+      setYearStats({
+        // workdays here means counted workdays (weekdays) for the year header; keep original numbers for display
+        workdays: totalWorkdays,
+        weekends: totalWeekends,
+        teamTotals: totals,
+        memberBreakdown: breakdown
+      })
+    } catch (e) {
+      console.error('Year stats error:', e)
+    } finally {
+      setYearLoading(false)
     }
   }
 
@@ -506,8 +710,30 @@ export function AnalyticsButton({ members, locale, weeksToShow, currentDate, tea
             <DialogDescription className="text-xs sm:text-sm text-gray-600 dark:text-gray-300">
               {t("analytics.description")} - {getPeriodDescription()}
             </DialogDescription>
+            {/* View mode tabs */}
+            <div className="mt-2 bg-gray-50 dark:bg-gray-900/50 border border-gray-200 dark:border-gray-700 rounded-lg p-2">
+              <div className="flex gap-2">
+                <Button
+                  variant={viewMode === 'overview' ? 'default' : 'outline'}
+                  size="sm"
+                  onClick={() => setViewMode('overview')}
+                  className={viewMode === 'overview' ? 'h-8 text-xs bg-blue-600 hover:bg-blue-700 text-white' : 'h-8 text-xs'}
+                >
+                  {t('analytics.trend')}
+                </Button>
+                <Button
+                  variant={viewMode === 'year' ? 'default' : 'outline'}
+                  size="sm"
+                  onClick={() => setViewMode('year')}
+                  className={viewMode === 'year' ? 'h-8 text-xs bg-blue-600 hover:bg-blue-700 text-white' : 'h-8 text-xs'}
+                >
+                  {t('analytics.yearly')}
+                </Button>
+              </div>
+            </div>
             
-            {/* Period Selector */}
+            {/* Period Selector (only for overview) */}
+            {viewMode === 'overview' && (
             <div className="bg-gray-50 dark:bg-gray-900/50 border border-gray-200 dark:border-gray-700 rounded-lg p-3 mt-2">
               <div className="flex flex-col gap-3">
                 <div className="flex items-center gap-4">
@@ -623,6 +849,7 @@ export function AnalyticsButton({ members, locale, weeksToShow, currentDate, tea
                 )}
               </div>
             </div>
+            )}
 
             <div className="bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-700 rounded-lg p-2 mt-2">
               <p className="text-xs text-blue-800 dark:text-blue-200">
@@ -632,6 +859,22 @@ export function AnalyticsButton({ members, locale, weeksToShow, currentDate, tea
           </DialogHeader>
 
           <div className="space-y-3 py-1">
+            {viewMode === 'year' && (
+              <YearOverviewSection 
+                members={members}
+                teamId={teamId}
+                selectedYear={selectedYear}
+                setSelectedYear={setSelectedYear}
+                availableYears={availableYears}
+                yearLoading={yearLoading}
+                yearStats={yearStats}
+                weekendsAsWeekdays={weekendsAsWeekdays}
+                t={t}
+              />
+            )}
+
+            {viewMode === 'overview' && (
+            <>
             {/* Summary Cards */}
             {analyticsData && analyticsData.timeData && (
               <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-6 gap-2">
@@ -1013,6 +1256,8 @@ export function AnalyticsButton({ members, locale, weeksToShow, currentDate, tea
                 </div>
               </div>
             ) : null}
+            </>
+            )}
           </div>
 
           <DialogFooter className="pt-2">
@@ -1032,6 +1277,178 @@ export function AnalyticsButton({ members, locale, weeksToShow, currentDate, tea
         </DialogContent>
       </Dialog>
     </>
+  )
+}
+
+// Year overview visual section
+function YearOverviewSection({
+  members,
+  teamId,
+  selectedYear,
+  setSelectedYear,
+  availableYears,
+  yearLoading,
+  yearStats,
+  weekendsAsWeekdays,
+  t
+}: {
+  members: Member[]
+  teamId: string
+  selectedYear: number
+  setSelectedYear: (y: number) => void
+  availableYears: number[]
+  yearLoading: boolean
+  yearStats: null | {
+    workdays: number
+    weekends: number
+    teamTotals: Record<string, number>
+    memberBreakdown: Record<string, {
+      available: number
+      remote: number
+      unavailable: number
+      need_to_check: number
+      absent: number
+      holiday: number
+      unfilled: number
+      workdays: number
+    }>
+  }
+  weekendsAsWeekdays: boolean
+  t: any
+}) {
+  const statusOrder: Array<'available'|'remote'|'unavailable'|'need_to_check'|'absent'|'holiday'|'unfilled'> = [
+    'available','remote','unavailable','need_to_check','absent','holiday','unfilled'
+  ]
+  const getStatusLabel = (status: string) => {
+    switch (status) {
+      case 'available': return t('status.available')
+      case 'remote': return t('status.remote')
+      case 'unavailable': return t('status.unavailable')
+      case 'need_to_check': return t('status.need_to_check')
+      case 'absent': return t('status.absent')
+      case 'holiday': return t('status.holiday')
+      case 'unfilled': return t('analytics.unfilled')
+      default: return status
+    }
+  }
+  const getStatusColor = (status: string) => {
+    switch (status) {
+      case 'available': return 'bg-green-500'
+      case 'remote': return 'bg-purple-500'
+      case 'unavailable': return 'bg-red-500'
+      case 'need_to_check': return 'bg-blue-500'
+      case 'absent': return 'bg-gray-500'
+      case 'holiday': return 'bg-yellow-500'
+      case 'unfilled': return 'bg-slate-400'
+      default: return 'bg-gray-400'
+    }
+  }
+
+  return (
+    <div className="space-y-3">
+      <div className="bg-gray-50 dark:bg-gray-900 rounded-lg p-3 border border-gray-200 dark:border-gray-700">
+        <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-2">
+          <div className="flex items-center gap-2">
+            <span className="text-sm font-semibold text-gray-900 dark:text-white">{t('analytics.yearly')}</span>
+            {!weekendsAsWeekdays ? (
+              <span className="text-xs text-gray-600 dark:text-gray-400">{t('analytics.weekendsExcluded')}</span>
+            ) : (
+              <span className="text-xs text-gray-600 dark:text-gray-400">{t('analytics.treatWeekendsAsWeekdays')}</span>
+            )}
+          </div>
+          <div className="flex items-center gap-2">
+            <label className="text-xs text-gray-600 dark:text-gray-400">{t('analytics.selectYear')}</label>
+            <select
+              className="h-8 text-xs rounded border border-gray-300 dark:border-gray-700 bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100 px-2"
+              value={selectedYear}
+              onChange={(e) => setSelectedYear(Number(e.target.value))}
+            >
+              {availableYears.length === 0 ? (
+                <option value={selectedYear}>{selectedYear}</option>
+              ) : (
+                availableYears.map(y => (
+                  <option key={y} value={y}>{y}</option>
+                ))
+              )}
+            </select>
+          </div>
+        </div>
+
+        {yearStats && (
+          <div className="mt-3 text-xs text-gray-600 dark:text-gray-400">
+            <span className="mr-4">{t('analytics.workdays')}: <span className="font-semibold text-gray-900 dark:text-gray-200">{yearStats.workdays}</span></span>
+            <span>{t('analytics.weekends')}: <span className="font-semibold text-gray-900 dark:text-gray-200">{yearStats.weekends}</span></span>
+          </div>
+        )}
+      </div>
+
+      {yearLoading && (
+        <div className="flex items-center justify-center py-8">
+          <div className="text-center">
+            <div className="w-6 h-6 border-2 border-gray-400 border-t-transparent rounded-full animate-spin mx-auto mb-2"></div>
+            <p className="text-sm text-gray-600 dark:text-gray-400">Loading...</p>
+          </div>
+        </div>
+      )}
+
+      {!yearLoading && yearStats && (
+        <>
+          {/* Team totals */}
+          <div className="bg-gray-50 dark:bg-gray-900 rounded-lg p-3">
+            <h4 className="text-sm font-medium text-gray-900 dark:text-white mb-2">{t('analytics.statusTotals')}</h4>
+            <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-7 gap-2">
+              {statusOrder.map(status => (
+                <div key={status} className="bg-white dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700 p-2 text-center">
+                  <div className="text-xs text-gray-600 dark:text-gray-400 mb-1 flex items-center justify-center gap-1">
+                    <div className={`w-2 h-2 rounded-full ${getStatusColor(status)}`} />
+                    <span className="truncate">{getStatusLabel(status)}</span>
+                  </div>
+                  <div className="text-base font-bold text-gray-900 dark:text-white">{yearStats.teamTotals[status] || 0}</div>
+                </div>
+              ))}
+            </div>
+          </div>
+
+          {/* Per-member breakdown */}
+          <div className="bg-gray-50 dark:bg-gray-900 rounded-lg p-3">
+            <h4 className="text-sm font-medium text-gray-900 dark:text-white mb-3">{t('analytics.memberYearBreakdown')}</h4>
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+              {members.map(m => {
+                const b = yearStats.memberBreakdown[m.id]
+                if (!b) return (
+                  <div key={m.id} className="bg-white dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700 p-3 opacity-70">
+                    <div className="text-sm text-gray-600 dark:text-gray-400">No data</div>
+                  </div>
+                )
+                // By default, weekends count as filled for the percentage; when weekendsAsWeekdays is true, they're fully counted in denominator too
+                const countedDays = weekendsAsWeekdays && yearStats ? (yearStats.workdays + yearStats.weekends) : b.workdays
+                const filled = countedDays - b.unfilled
+                const fillPct = countedDays > 0 ? Math.round((filled / countedDays) * 100) : 0
+                return (
+                  <div key={m.id} className="bg-white dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700 p-3">
+                    <div className="flex items-center gap-2 mb-2">
+                      <MemberAvatar firstName={m.first_name} lastName={m.last_name} profileImage={m.profile_image} size="sm" />
+                      <div className="flex-1 min-w-0">
+                        <p className="text-sm font-semibold text-gray-900 dark:text-white truncate">{m.first_name} {m.last_name}</p>
+                        <p className="text-xs text-gray-500 dark:text-gray-400">{t('analytics.workdays')}: {b.workdays}{yearStats ? ` • ${t('analytics.weekends')}: ${yearStats.weekends}` : ''} • {t('analytics.unfilled')}: {b.unfilled} • {fillPct}% filled</p>
+                      </div>
+                    </div>
+                    <div className="grid grid-cols-2 gap-2 text-xs">
+                      {statusOrder.map(status => (
+                        <div key={status} className="flex items-center gap-1">
+                          <div className={`w-2 h-2 rounded-full ${getStatusColor(status)}`} />
+                          <span className="truncate">{(b as any)[status] || 0} {getStatusLabel(status)}</span>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                )
+              })}
+            </div>
+          </div>
+        </>
+      )}
+    </div>
   )
 }
 
@@ -1549,7 +1966,7 @@ export function BulkUpdateDialog({ members, locale, onUpdate, onRangeSelectionCh
       }
 
       // Log bulk activities (in background, don't block success)
-      if (user?.email && team?.id) {
+      if (user?.email) {
         try {
           // Log each activity separately to track individual member changes
           const activityPromises = updateData.map(update => 
@@ -1557,7 +1974,7 @@ export function BulkUpdateDialog({ members, locale, onUpdate, onRangeSelectionCh
               method: 'POST',
               headers: { 'Content-Type': 'application/json' },
               body: JSON.stringify({
-                teamId: team.id,
+                // teamId intentionally omitted here because not available in this scope
                 memberId: update.member_id,
                 activityDate: update.date,
                 oldStatus: null, // Bulk updates don't track previous status
