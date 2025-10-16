@@ -1,0 +1,19 @@
+# Normalize text files to LF and UTF-8 on checkout in CI/Linux
+* text=auto eol=lf
+
+# Enforce LF for common code files
+*.ts text eol=lf
+*.tsx text eol=lf
+*.js text eol=lf
+*.jsx text eol=lf
+*.json text eol=lf
+*.css text eol=lf
+*.md text eol=lf
+*.sql text eol=lf
+
+# Keep binaries untouched
+*.png binary
+*.jpg binary
+*.jpeg binary
+*.gif binary
+*.svg text eol=lf
