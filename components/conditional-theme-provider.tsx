@@ -13,8 +13,8 @@ export function ConditionalThemeProvider({ children, teamSlug }: ConditionalThem
   const { theme } = useTheme()
   const pathname = usePathname()
   
-  // Only apply advanced themes on efficiency-team page
-  const shouldApplyAdvancedThemes = teamSlug === 'efficiency-team' || pathname.includes('/team/efficiency-team')
+  // Apply advanced themes on all team pages
+  const shouldApplyAdvancedThemes = pathname.includes('/team/')
   
   React.useEffect(() => {
     const htmlElement = document.documentElement
@@ -26,6 +26,10 @@ export function ConditionalThemeProvider({ children, teamSlug }: ConditionalThem
     // Only apply advanced themes if on efficiency-team page
     if (shouldApplyAdvancedThemes && theme && themeClasses.includes(theme)) {
       htmlElement.classList.add(theme)
+      // For testdev (Development), also add dark class for Tailwind dark: variants
+      if (theme === 'testdev') {
+        htmlElement.classList.add('dark')
+      }
     } else if (!shouldApplyAdvancedThemes && theme && themeClasses.includes(theme)) {
       // If not on efficiency-team page and an advanced theme is selected, 
       // fall back to system theme

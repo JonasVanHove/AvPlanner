@@ -7,10 +7,12 @@ import { UserDashboard } from '@/components/auth/user-dashboard'
 import { LoginForm } from '@/components/auth/login-form'
 import { Button } from '@/components/ui/button'
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
-import { DropdownMenu, DropdownMenuContent, DropdownMenuTrigger, DropdownMenuItem, DropdownMenuSeparator } from "@/components/ui/dropdown-menu"
+import { DropdownMenu, DropdownMenuContent, DropdownMenuTrigger, DropdownMenuItem, DropdownMenuSeparator, DropdownMenuSub, DropdownMenuSubTrigger, DropdownMenuSubContent } from "@/components/ui/dropdown-menu"
 import { LogOut, UserIcon, ChevronDown, Shield, Home } from "lucide-react"
 import { User } from '@supabase/supabase-js'
 import { useRouter } from 'next/navigation'
+import { useTheme } from "next-themes"
+import { HamburgerMenu, HamburgerMenuItem } from "@/components/ui/hamburger-menu"
 
 
 export default function MyTeamsPage() {
@@ -20,6 +22,7 @@ export default function MyTeamsPage() {
   const [isAdmin, setIsAdmin] = useState(false)
   const [userProfileImage, setUserProfileImage] = useState<string | null>(null)
   const router = useRouter()
+  const { setTheme } = useTheme()
 
   useEffect(() => {
     // Check current session
@@ -191,6 +194,21 @@ export default function MyTeamsPage() {
                       <Home className="h-4 w-4 mr-2 transition-colors duration-200" />
                       {t('myTeams.backToHome')}
                     </DropdownMenuItem>
+                    <DropdownMenuSub>
+                      <DropdownMenuSubTrigger>
+                        Theme
+                      </DropdownMenuSubTrigger>
+                      <DropdownMenuSubContent className="w-56">
+                        <DropdownMenuItem onClick={() => { setTheme('system'); setTimeout(() => window.location.reload(), 0) }}>System</DropdownMenuItem>
+                        <DropdownMenuItem onClick={() => { setTheme('light'); setTimeout(() => window.location.reload(), 0) }}>Light</DropdownMenuItem>
+                        <DropdownMenuItem onClick={() => { setTheme('dark'); setTimeout(() => window.location.reload(), 0) }}>Dark</DropdownMenuItem>
+                        <DropdownMenuSeparator />
+                        <DropdownMenuItem onClick={() => { setTheme('cozy'); setTimeout(() => window.location.reload(), 0) }}>Cozy</DropdownMenuItem>
+                        <DropdownMenuItem onClick={() => { setTheme('blackwhite'); setTimeout(() => window.location.reload(), 0) }}>Black & White</DropdownMenuItem>
+                        <DropdownMenuItem onClick={() => { setTheme('bythestove'); setTimeout(() => window.location.reload(), 0) }}>By the Stove</DropdownMenuItem>
+                        <DropdownMenuItem onClick={() => { setTheme('testdev'); setTimeout(() => window.location.reload(), 0) }}>Development</DropdownMenuItem>
+                      </DropdownMenuSubContent>
+                    </DropdownMenuSub>
                     {isAdmin && (
                       <DropdownMenuItem 
                         onClick={handleAdminNavigation}
@@ -214,6 +232,41 @@ export default function MyTeamsPage() {
               
 
             </div>
+              {/* Mobile Navigation */}
+              <HamburgerMenu
+                title="Menu"
+                triggerClassName="h-8 w-8 p-0 bg-white/15 hover:bg-white/25 border-white/25 text-white shadow-sm"
+                appName="My Teams"
+              >
+                <HamburgerMenuItem onClick={handleGoHome}>
+                  <div className="flex items-center justify-between w-full">
+                    <span>Back to Home</span>
+                  </div>
+                </HamburgerMenuItem>
+                {isAdmin && (
+                  <HamburgerMenuItem onClick={handleAdminNavigation}>
+                    <div className="flex items-center justify-between w-full">
+                      <span>Admin Panel</span>
+                    </div>
+                  </HamburgerMenuItem>
+                )}
+                <div className="px-3 pt-2 pb-1 text-xs font-semibold text-muted-foreground uppercase tracking-wide">Theme</div>
+                <div className="px-3 grid grid-cols-2 gap-2">
+                  <Button variant="outline" size="sm" onClick={() => { setTheme('system'); setTimeout(() => window.location.reload(), 0) }}>System</Button>
+                  <Button variant="outline" size="sm" onClick={() => { setTheme('light'); setTimeout(() => window.location.reload(), 0) }}>Light</Button>
+                  <Button variant="outline" size="sm" onClick={() => { setTheme('dark'); setTimeout(() => window.location.reload(), 0) }}>Dark</Button>
+                  <Button variant="outline" size="sm" onClick={() => { setTheme('cozy'); setTimeout(() => window.location.reload(), 0) }}>Cozy</Button>
+                  <Button variant="outline" size="sm" onClick={() => { setTheme('blackwhite'); setTimeout(() => window.location.reload(), 0) }}>Black & White</Button>
+                  <Button variant="outline" size="sm" onClick={() => { setTheme('bythestove'); setTimeout(() => window.location.reload(), 0) }}>By the Stove</Button>
+                  <Button variant="outline" size="sm" onClick={() => { setTheme('testdev'); setTimeout(() => window.location.reload(), 0) }}>Development</Button>
+                </div>
+                <div className="h-px bg-gray-200 my-2" />
+                <HamburgerMenuItem onClick={handleLogout}>
+                  <div className="flex items-center justify-between w-full">
+                    <span>Logout</span>
+                  </div>
+                </HamburgerMenuItem>
+              </HamburgerMenu>
           </div>
         </div>
       </header>

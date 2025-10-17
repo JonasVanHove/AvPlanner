@@ -29,6 +29,20 @@
     --chart-3: 197 37% 24%;
     --chart-4: 43 74% 66%;
     --chart-5: 27 87% 67%;
+    /* Default Sidebar (navigation) variables for light mode */
+    --sidebar-background: 0 0% 98%;
+    --sidebar-foreground: 240 5.3% 26.1%;
+    --sidebar-primary: 240 5.9% 10%;
+    --sidebar-primary-foreground: 0 0% 98%;
+    --sidebar-accent: 240 4.8% 95.9%;
+    --sidebar-accent-foreground: 240 5.9% 10%;
+    --sidebar-border: 220 13% 91%;
+    --sidebar-ring: 217.2 91.2% 59.8%;
+  }
+
+  /* Ensure all icons inside sidebar inherit text color across themes */
+  [data-sidebar] svg {
+    color: currentColor;
   }
 
   .dark {
@@ -60,6 +74,15 @@
     --chart-3: 30 60% 52%;
     --chart-4: 280 50% 56%;
     --chart-5: 340 55% 52%;
+    /* Default Sidebar (navigation) variables for dark mode */
+    --sidebar-background: 240 5.9% 10%;
+    --sidebar-foreground: 240 4.8% 95.9%;
+    --sidebar-primary: 224.3 76.3% 48%;
+    --sidebar-primary-foreground: 0 0% 100%;
+    --sidebar-accent: 240 3.7% 15.9%;
+    --sidebar-accent-foreground: 240 4.8% 95.9%;
+    --sidebar-border: 240 3.7% 15.9%;
+    --sidebar-ring: 217.2 91.2% 59.8%;
   }
 
   /* Autumn Theme - Warme herfstskleuren */
@@ -176,25 +199,25 @@
 
   /* Cozy Theme - modern warm minimal */
   .cozy {
-    --background: 30 20% 98%;
-    --foreground: 20 15% 20%;
+    --background: 30 22% 98%;
+    --foreground: 20 18% 16%; /* darker for contrast */
     --card: 30 16% 96%;
-    --card-foreground: 20 15% 22%;
+    --card-foreground: 20 18% 18%;
     --popover: 30 20% 99%;
-    --popover-foreground: 20 15% 20%;
-    --primary: 22 40% 45%;
-    --primary-foreground: 30 20% 98%;
-    --secondary: 28 18% 92%;
-    --secondary-foreground: 20 15% 22%;
-    --muted: 28 14% 90%;
-    --muted-foreground: 22 10% 40%;
-    --accent: 35 24% 88%;
-    --accent-foreground: 20 15% 22%;
-    --destructive: 5 70% 50%;
+    --popover-foreground: 20 18% 16%;
+    --primary: 22 55% 40%; /* stronger primary */
+    --primary-foreground: 0 0% 100%; /* white on primary */
+    --secondary: 28 22% 90%;
+    --secondary-foreground: 20 18% 18%;
+    --muted: 28 16% 90%;
+    --muted-foreground: 22 12% 34%;
+    --accent: 35 28% 86%;
+    --accent-foreground: 20 18% 18%;
+    --destructive: 5 72% 46%;
     --destructive-foreground: 0 0% 100%;
-    --border: 26 12% 85%;
-    --input: 26 12% 85%;
-    --ring: 22 40% 45%;
+    --border: 26 14% 80%; /* darker borders for clarity */
+    --input: 26 14% 80%;
+    --ring: 22 55% 40%;
     --radius: 0.75rem;
     --chart-1: 22 50% 45%;
     --chart-2: 28 40% 55%;
@@ -206,23 +229,23 @@
   /* Black & White Theme - modern minimal monochrome */
   .blackwhite {
     --background: 0 0% 99%;
-    --foreground: 0 0% 7%;
+    --foreground: 0 0% 5%; /* darker for stronger contrast */
     --card: 0 0% 98%;
-    --card-foreground: 0 0% 10%;
+    --card-foreground: 0 0% 7%;
     --popover: 0 0% 100%;
-    --popover-foreground: 0 0% 8%;
-    --primary: 0 0% 10%;
+    --popover-foreground: 0 0% 6%;
+    --primary: 0 0% 8%;
     --primary-foreground: 0 0% 100%;
-    --secondary: 0 0% 94%;
+    --secondary: 0 0% 93%;
     --secondary-foreground: 0 0% 12%;
     --muted: 0 0% 90%;
-    --muted-foreground: 0 0% 40%;
+    --muted-foreground: 0 0% 35%;
     --accent: 0 0% 92%;
     --accent-foreground: 0 0% 10%;
     --destructive: 0 70% 45%;
     --destructive-foreground: 0 0% 100%;
-    --border: 0 0% 86%;
-    --input: 0 0% 90%;
+    --border: 0 0% 80%; /* stronger borders */
+    --input: 0 0% 86%;
     --ring: 0 0% 10%;
     --radius: 0.5rem;
     --chart-1: 0 0% 10%;
@@ -230,29 +253,38 @@
     --chart-3: 0 0% 50%;
     --chart-4: 0 0% 70%;
     --chart-5: 0 0% 85%;
+    /* Sidebar (navigation) tuned for readability */
+    --sidebar-background: 0 0% 10%;
+    --sidebar-foreground: 0 0% 98%;
+    --sidebar-primary: 0 0% 98%;
+    --sidebar-primary-foreground: 0 0% 10%;
+    --sidebar-accent: 0 0% 20%;
+    --sidebar-accent-foreground: 0 0% 98%;
+    --sidebar-border: 0 0% 20%;
+    --sidebar-ring: 0 0% 100%;
   }
 
   /* By the Stove Theme - modern warm professional */
   .bythestove {
     --background: 25 18% 98%;
-    --foreground: 15 20% 20%;
+    --foreground: 15 22% 18%; /* slightly darker */
     --card: 25 14% 96%;
-    --card-foreground: 15 20% 22%;
+    --card-foreground: 15 22% 20%;
     --popover: 25 20% 99%;
-    --popover-foreground: 15 20% 20%;
-    --primary: 18 55% 42%;
+    --popover-foreground: 15 22% 18%;
+    --primary: 18 60% 38%; /* more contrast */
     --primary-foreground: 0 0% 100%;
-    --secondary: 30 20% 92%;
-    --secondary-foreground: 15 20% 22%;
+    --secondary: 30 22% 90%;
+    --secondary-foreground: 15 22% 20%;
     --muted: 28 16% 90%;
-    --muted-foreground: 15 14% 40%;
-    --accent: 35 22% 88%;
-    --accent-foreground: 15 20% 22%;
-    --destructive: 5 70% 48%;
+    --muted-foreground: 15 14% 36%;
+    --accent: 35 24% 86%;
+    --accent-foreground: 15 22% 20%;
+    --destructive: 5 72% 46%;
     --destructive-foreground: 0 0% 100%;
-    --border: 26 14% 86%;
-    --input: 26 14% 86%;
-    --ring: 18 55% 42%;
+    --border: 26 16% 80%;
+    --input: 26 16% 80%;
+    --ring: 18 60% 38%;
     --radius: 0.75rem;
     --chart-1: 18 60% 40%;
     --chart-2: 28 55% 48%;
@@ -261,33 +293,44 @@
     --chart-5: 10 65% 38%;
   }
 
-  /* Test & Development Theme - vibrant yet functional dev look */
+  /* Development Theme - identical to dark but with green text tints */
   .testdev {
-    --background: 240 10% 8%;
-    --foreground: 0 0% 98%;
-    --card: 240 9% 12%;
-    --card-foreground: 0 0% 98%;
-    --popover: 240 9% 12%;
-    --popover-foreground: 0 0% 98%;
-    --primary: 260 90% 60%; /* electric purple */
-    --primary-foreground: 0 0% 100%;
-    --secondary: 200 90% 50%; /* cyan accents */
-    --secondary-foreground: 0 0% 100%;
-    --muted: 240 8% 18%;
-    --muted-foreground: 240 5% 70%;
-    --accent: 160 85% 45%; /* green for success cues */
-    --accent-foreground: 0 0% 10%;
-    --destructive: 0 85% 55%;
-    --destructive-foreground: 0 0% 100%;
-    --border: 240 8% 22%;
-    --input: 240 8% 22%;
-    --ring: 260 90% 60%;
+    /* Exact copy of .dark base colors */
+    --background: 222 22% 12%;
+    --foreground: 140 75% 65%; /* hacker green instead of white */
+    --card: 222 22% 14%;
+    --card-foreground: 140 75% 65%;
+    --popover: 222 22% 14%;
+    --popover-foreground: 140 75% 65%;
+    --primary: 140 70% 55%; /* green primary */
+    --primary-foreground: 0 0% 10%; /* dark on green */
+    --secondary: 220 16% 18%;
+    --secondary-foreground: 140 75% 65%;
+    --muted: 220 16% 18%;
+    --muted-foreground: 140 40% 55%; /* muted green */
+    --accent: 220 16% 20%;
+    --accent-foreground: 140 75% 65%;
+    --destructive: 0 55% 36%;
+    --destructive-foreground: 140 75% 65%;
+    --border: 220 14% 26%;
+    --input: 220 14% 26%;
+    --ring: 140 70% 55%; /* green ring */
     --radius: 0.5rem;
-    --chart-1: 260 90% 60%;
-    --chart-2: 200 90% 50%;
-    --chart-3: 160 85% 45%;
-    --chart-4: 40 90% 55%;
-    --chart-5: 0 85% 55%;
+    /* Green chart colors */
+    --chart-1: 140 70% 50%;
+    --chart-2: 140 55% 45%;
+    --chart-3: 140 50% 40%;
+    --chart-4: 140 80% 55%;
+    --chart-5: 140 85% 60%;
+    /* Sidebar - dark background with green text */
+    --sidebar-background: 240 5.9% 10%;
+    --sidebar-foreground: 140 75% 65%;
+    --sidebar-primary: 140 70% 55%;
+    --sidebar-primary-foreground: 0 0% 10%;
+    --sidebar-accent: 240 3.7% 15.9%;
+    --sidebar-accent-foreground: 140 75% 65%;
+    --sidebar-border: 240 3.7% 15.9%;
+    --sidebar-ring: 140 70% 55%;
   }
 }
 
@@ -297,6 +340,8 @@
   }
   body {
     @apply bg-background text-foreground;
+    /* Unified font family across all themes */
+    font-family: Inter, ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto, "Helvetica Neue", Arial, "Noto Sans", "Liberation Sans", sans-serif;
     /* Ensure stable scrolling behavior */
     scroll-behavior: smooth;
   }
@@ -354,9 +399,43 @@
   }
 }
 
+/* Removed theme-specific font overrides; all themes inherit the global body font */
+
 .dark .bg-gray-750 {
   background-color: rgb(55 65 81);
 }
+
+/* Keyboard shortcut tags - theme-aware for light/dark */
+kbd {
+  background-color: hsl(var(--muted));
+  color: hsl(var(--foreground));
+  border: 1px solid hsl(var(--border));
+  border-radius: 0.375rem; /* rounded */
+  padding: 0.125rem 0.375rem; /* py-0.5 px-1.5 */
+  font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace;
+  font-size: 0.75rem; /* text-xs */
+  line-height: 1rem;
+}
+
+/* Contrast adjustments for specific components when using custom themes */
+html.cozy .text-gray-500 { color: hsl(20 10% 30%) !important; }
+html.cozy .text-gray-600 { color: hsl(20 10% 24%) !important; }
+html.blackwhite .text-gray-500 { color: hsl(0 0% 20%) !important; }
+html.blackwhite .text-gray-600 { color: hsl(0 0% 14%) !important; }
+html.bythestove .text-gray-500 { color: hsl(15 12% 32%) !important; }
+html.bythestove .text-gray-600 { color: hsl(15 12% 26%) !important; }
+html.testdev .text-gray-500 { color: hsl(140 30% 55%) !important; }
+html.testdev .text-gray-600 { color: hsl(140 40% 65%) !important; }
+
+/* Inputs and borders clarity */
+html.cozy .border-gray-200, html.cozy .border-gray-300 { border-color: hsl(var(--border)) !important; }
+html.blackwhite .border-gray-200, html.blackwhite .border-gray-300 { border-color: hsl(var(--border)) !important; }
+html.bythestove .border-gray-200, html.bythestove .border-gray-300 { border-color: hsl(var(--border)) !important; }
+html.testdev .border-gray-200, html.testdev .border-gray-300 { border-color: hsl(var(--border)) !important; }
+
+/* Buttons and inputs should respect theme colors */
+html.testdev .bg-white { background-color: hsl(var(--card)) !important; }
+html.testdev .text-gray-900 { color: hsl(var(--foreground)) !important; }
 
 /* Ensure sticky header stays properly positioned during scroll */
 .sticky {
@@ -464,7 +543,6 @@
 /* COZY THEME - Winter Living Room Styling */
 .cozy {
   /* Soft, readable typography for cozy reading */
-  font-family: 'Inter', 'Georgia', 'Times New Roman', serif;
   font-weight: 380;
   letter-spacing: 0.005em;
   line-height: 1.6;
@@ -555,7 +633,6 @@
 
 /* BLACK & WHITE THEME - Comprehensive Styling */
 .blackwhite {
-  font-family: 'Inter', 'SF Pro Display', 'Helvetica Neue', sans-serif;
   font-weight: 350;
   letter-spacing: -0.02em;
   line-height: 1.5;
@@ -630,7 +707,6 @@
 
 /* BY THE STOVE THEME - Comprehensive Styling */
 .bythestove {
-  font-family: 'Inter', 'Georgia', serif;
   font-weight: 400;
   letter-spacing: 0.02em;
 }

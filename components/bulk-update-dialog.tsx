@@ -25,6 +25,8 @@ import { useTranslation, type Locale } from "@/lib/i18n"
 import { MemberAvatar } from "./member-avatar"
 import { cn } from "@/lib/utils"
 import { useToast } from "@/hooks/use-toast"
+import { ChartContainer, ChartTooltip, ChartTooltipContent } from "@/components/ui/chart"
+import { BarChart as RBarChart, Bar, XAxis, YAxis, CartesianGrid, Cell } from 'recharts'
 
 interface Member {
   id: string
@@ -483,6 +485,8 @@ export function AnalyticsButton({ members, locale, weeksToShow, currentDate, tea
       default: return 'bg-gray-400'
     }
   }
+
+  // (removed: statusHex now lives inside YearOverviewSection)
 
   const getStatusIcon = (status: string) => {
     switch (status) {
@@ -1316,6 +1320,18 @@ function YearOverviewSection({
   weekendsAsWeekdays: boolean
   t: any
 }) {
+  // Hex colors aligned with Tailwind classes used for statuses (used in charts)
+  const statusHex: Record<string, string> = {
+    available: '#22c55e',      // green-500
+    remote: '#a855f7',         // purple-500
+    unavailable: '#ef4444',    // red-500
+    need_to_check: '#3b82f6',  // blue-500
+    absent: '#6b7280',         // gray-500
+    holiday: '#f59e0b',        // amber/yellow-500
+    unfilled: '#94a3b8',       // slate-400
+    // Weekend shown as a separate category; use holiday color for non-work-days for consistency
+    weekend: '#f59e0b',
+  }
   const statusOrder: Array<'available'|'remote'|'unavailable'|'need_to_check'|'absent'|'holiday'|'unfilled'> = [
     'available','remote','unavailable','need_to_check','absent','holiday','unfilled'
   ]
@@ -1420,19 +1436,92 @@ function YearOverviewSection({
                     <div className="text-sm text-gray-600 dark:text-gray-400">No data</div>
                   </div>
                 )
-                // By default, weekends count as filled for the percentage; when weekendsAsWeekdays is true, they're fully counted in denominator too
-                const countedDays = weekendsAsWeekdays && yearStats ? (yearStats.workdays + yearStats.weekends) : b.workdays
-                const filled = countedDays - b.unfilled
-                const fillPct = countedDays > 0 ? Math.round((filled / countedDays) * 100) : 0
+                // Percentage should be over the entire year; when weekends are NOT treated as weekdays,
+                // they are auto-counted as filled for percentage purposes.
+                const yearTotalDays = (yearStats.workdays + yearStats.weekends)
+                const filledWeekdays = b.workdays - b.unfilled
+                const weekendCount = yearStats?.weekends || 0
+                const filled = weekendsAsWeekdays ? filledWeekdays : (filledWeekdays + weekendCount)
+                const notFilled = b.unfilled
+                const fillPct = yearTotalDays > 0 ? Math.round((filled / yearTotalDays) * 100) : 0
                 return (
                   <div key={m.id} className="bg-white dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700 p-3">
                     <div className="flex items-center gap-2 mb-2">
                       <MemberAvatar firstName={m.first_name} lastName={m.last_name} profileImage={m.profile_image} size="sm" />
                       <div className="flex-1 min-w-0">
                         <p className="text-sm font-semibold text-gray-900 dark:text-white truncate">{m.first_name} {m.last_name}</p>
-                        <p className="text-xs text-gray-500 dark:text-gray-400">{t('analytics.workdays')}: {b.workdays}{yearStats ? ` • ${t('analytics.weekends')}: ${yearStats.weekends}` : ''} • {t('analytics.unfilled')}: {b.unfilled} • {fillPct}% filled</p>
+                        <p className="text-xs text-gray-500 dark:text-gray-400">{t('analytics.workdays')}: {yearStats.workdays}{yearStats ? ` • ${t('analytics.weekends')}: ${yearStats.weekends}` : ''} • {t('analytics.unfilled')}: {b.unfilled} • {fillPct}% filled</p>
                       </div>
                     </div>
+                    {/* Mini per-person bar chart: Filled vs Not filled vs Weekend */}
+                    <div className="h-28 w-full">
+                      <ChartContainer config={{}} className="aspect-auto h-full">
+                        <RBarChart data={[
+                          { name: t('analytics.filled') || 'Filled', count: Math.max(0, filled) },
+                          { name: t('analytics.unfilled'), count: Math.max(0, notFilled) },
+                          { name: t('analytics.weekends'), count: Math.max(0, weekendCount) },
+                        ]} margin={{ top: 4, right: 8, left: 0, bottom: 0 }}>
+                          <CartesianGrid strokeDasharray="3 3" />
+                          <XAxis dataKey="name" tick={{ fontSize: 10 }} tickLine={false} axisLine={false} interval={0} height={24} />
+                          <YAxis tick={{ fontSize: 10 }} tickLine={false} axisLine={false} width={24} allowDecimals={false} />
+                          <ChartTooltip content={<ChartTooltipContent hideIndicator />} />
+                          <Bar dataKey="count" radius={[4,4,0,0]}>
+                            {[
+                              statusHex.available, // Filled → treat as available color
+                              statusHex.unfilled,  // Not filled
+                              statusHex.weekend,   // Weekend
+                            ].map((c, idx) => (
+                              <Cell key={`cell-${idx}`} fill={c} />
+                            ))}
+                          </Bar>
+                        </RBarChart>
+                      </ChartContainer>
+                    </div>
+                    {/* Horizontal stacked 100% distribution over the year */}
+                    {yearStats && (
+                      <div className="mt-3">
+                        {(() => {
+                          const totalDays = (yearStats.workdays + yearStats.weekends) || 1
+                          const cats = {
+                            available: b.available || 0,
+                            remote: b.remote || 0,
+                            unavailable: b.unavailable || 0,
+                            need_to_check: b.need_to_check || 0,
+                            absent: b.absent || 0,
+                            holiday: b.holiday || 0,
+                            unfilled: b.unfilled || 0,
+                          }
+                          const usedDays = Object.values(cats).reduce((a, v) => a + v, 0)
+                          const weekendResidual = Math.max(0, totalDays - usedDays)
+                          const pct = (n: number) => (n / totalDays) * 100
+                          const distData = [{
+                            name: 'dist',
+                            available: pct(cats.available),
+                            remote: pct(cats.remote),
+                            unavailable: pct(cats.unavailable),
+                            need_to_check: pct(cats.need_to_check),
+                            absent: pct(cats.absent),
+                            holiday: pct(cats.holiday),
+                            unfilled: pct(cats.unfilled),
+                            weekend: pct(weekendResidual),
+                          }]
+                          const colorMap: Record<string, string> = statusHex
+                          const order: Array<keyof typeof distData[0]> = ['available','remote','unavailable','need_to_check','absent','holiday','unfilled','weekend']
+                          return (
+                            <ChartContainer config={{}} className="aspect-auto h-6">
+                              <RBarChart data={distData} layout="vertical" margin={{ top: 0, right: 8, left: 0, bottom: 0 }}>
+                                <XAxis type="number" domain={[0, 100]} hide />
+                                <YAxis type="category" dataKey="name" hide />
+                                <ChartTooltip content={<ChartTooltipContent hideIndicator formatter={(value: any, name: any) => [`${(value as number).toFixed(1)}%`, name]} />} />
+                                {order.map((key) => (
+                                  <Bar key={String(key)} dataKey={String(key)} stackId="a" fill={colorMap[String(key)]} radius={[4,4,4,4]} />
+                                ))}
+                              </RBarChart>
+                            </ChartContainer>
+                          )
+                        })()}
+                      </div>
+                    )}
                     <div className="grid grid-cols-2 gap-2 text-xs">
                       {statusOrder.map(status => (
                         <div key={status} className="flex items-center gap-1">
@@ -2872,11 +2961,20 @@ export function PlannerButton({ members, locale, teamId }: { members: Member[], 
     return scoredDays
   }
 
+  // Surface colors (background + border) tuned for both light and dark themes
   const getScoreColor = (score: number) => {
-    if (score >= 80) return 'text-green-600 bg-green-50 border-green-200'
-    if (score >= 60) return 'text-yellow-600 bg-yellow-50 border-yellow-200'
-    if (score >= 40) return 'text-orange-600 bg-orange-50 border-orange-200'
-    return 'text-red-600 bg-red-50 border-red-200'
+    if (score >= 80) return 'bg-green-50 dark:bg-green-900/20 border-green-200 dark:border-green-700'
+    if (score >= 60) return 'bg-yellow-50 dark:bg-yellow-900/20 border-yellow-200 dark:border-yellow-700'
+    if (score >= 40) return 'bg-orange-50 dark:bg-orange-900/20 border-orange-200 dark:border-orange-700'
+    return 'bg-red-50 dark:bg-red-900/20 border-red-200 dark:border-red-700'
+  }
+
+  // Text colors for badges (keep container text controlled by existing utility classes)
+  const getScoreTextColor = (score: number) => {
+    if (score >= 80) return 'text-green-700 dark:text-green-300'
+    if (score >= 60) return 'text-yellow-700 dark:text-yellow-300'
+    if (score >= 40) return 'text-orange-700 dark:text-orange-300'
+    return 'text-red-700 dark:text-red-300'
   }
 
   const getScoreLabel = (score: number) => {
@@ -3000,7 +3098,7 @@ export function PlannerButton({ members, locale, teamId }: { members: Member[], 
                           </div>
                         </div>
                         <div className="text-right">
-                          <Badge className={getScoreColor(day.score)} variant="secondary">
+                          <Badge className={`${getScoreColor(day.score)} ${getScoreTextColor(day.score)}`} variant="secondary">
                             {getScoreLabel(day.score)}
                           </Badge>
                         </div>

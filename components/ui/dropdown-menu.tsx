@@ -59,7 +59,7 @@ DropdownMenuSubContent.displayName =
 const DropdownMenuContent = React.forwardRef<
   React.ElementRef<typeof DropdownMenuPrimitive.Content>,
   React.ComponentPropsWithoutRef<typeof DropdownMenuPrimitive.Content>
->(({ className, sideOffset = 4, ...props }, ref) => (
+>(({ className, sideOffset = 4, onKeyDownCapture, onKeyUpCapture, onKeyPressCapture, onCloseAutoFocus, ...props }, ref) => (
   <DropdownMenuPrimitive.Portal>
     <DropdownMenuPrimitive.Content
       ref={ref}
@@ -68,6 +68,57 @@ const DropdownMenuContent = React.forwardRef<
         "z-50 min-w-[8rem] overflow-hidden rounded-md border bg-popover p-1 text-popover-foreground shadow-md data-[state=open]:animate-in data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=open]:fade-in-0 data-[state=closed]:zoom-out-95 data-[state=open]:zoom-in-95 data-[side=bottom]:slide-in-from-top-2 data-[side=left]:slide-in-from-right-2 data-[side=right]:slide-in-from-left-2 data-[side=top]:slide-in-from-bottom-2",
         className
       )}
+      // Prevent focus jumping back to trigger when content tries to close while user types
+      onCloseAutoFocus={(e) => { e.preventDefault(); onCloseAutoFocus?.(e as any) }}
+      onKeyDownCapture={(e) => {
+        // Prevent dropdown typeahead/focus changes while typing in inputs/textareas/selects/contenteditable
+        const t = e.target as HTMLElement | null
+        const isEditable = (el: HTMLElement | null) => {
+          if (!el) return false
+          const tag = el.tagName
+          if ((el as any).isContentEditable) return true
+          if (tag === 'INPUT' || tag === 'TEXTAREA' || tag === 'SELECT') return true
+          if (el.getAttribute('role') === 'textbox') return true
+          if (el.closest && el.closest('[contenteditable="true"]')) return true
+          return false
+        }
+        if (isEditable(t)) {
+          e.stopPropagation()
+        }
+        onKeyDownCapture?.(e as any)
+      }}
+      onKeyUpCapture={(e) => {
+        const t = e.target as HTMLElement | null
+        const isEditable = (el: HTMLElement | null) => {
+          if (!el) return false
+          const tag = el.tagName
+          if ((el as any).isContentEditable) return true
+          if (tag === 'INPUT' || tag === 'TEXTAREA' || tag === 'SELECT') return true
+          if (el.getAttribute('role') === 'textbox') return true
+          if (el.closest && el.closest('[contenteditable=\"true\"]')) return true
+          return false
+        }
+        if (isEditable(t)) {
+          e.stopPropagation()
+        }
+        onKeyUpCapture?.(e as any)
+      }}
+      onKeyPressCapture={(e) => {
+        const t = e.target as HTMLElement | null
+        const isEditable = (el: HTMLElement | null) => {
+          if (!el) return false
+          const tag = el.tagName
+          if ((el as any).isContentEditable) return true
+          if (tag === 'INPUT' || tag === 'TEXTAREA' || tag === 'SELECT') return true
+          if (el.getAttribute('role') === 'textbox') return true
+          if (el.closest && el.closest('[contenteditable=\"true\"]')) return true
+          return false
+        }
+        if (isEditable(t)) {
+          e.stopPropagation()
+        }
+        onKeyPressCapture?.(e as any)
+      }}
       {...props}
     />
   </DropdownMenuPrimitive.Portal>

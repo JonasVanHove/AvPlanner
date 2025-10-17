@@ -19,6 +19,7 @@ import {
   Keyboard,
   Settings,
 } from "lucide-react"
+import { Copy } from "lucide-react"
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu"
 import { Switch } from "@/components/ui/switch"
 import { Progress } from "@/components/ui/progress"
@@ -41,6 +42,7 @@ import { useIsMobile } from "@/hooks/use-mobile"
 import { useSwipe } from "@/hooks/use-swipe"
 import { format } from "date-fns"
 import { useTheme } from "next-themes"
+import { toast } from "@/hooks/use-toast"
 
 interface Member {
   id: string
@@ -132,6 +134,8 @@ const AvailabilityCalendarRedesigned = ({
   const [weekendsAsWeekdays, setWeekendsAsWeekdays] = useState<boolean>(false)
   const router = useRouter()
   const { t } = useTranslation(locale)
+  // Realtime channel for team notifications
+  const channelRef = useRef<any>(null)
 
   // Hook to get today's availability for all members (always shows today regardless of visible week)
   const memberIds = members.map(member => member.id)
@@ -269,6 +273,116 @@ const AvailabilityCalendarRedesigned = ({
   const handleRangeSelectionChange = useCallback((startDate?: Date, endDate?: Date, isActive?: boolean) => {
     setBulkSelectionRange({ startDate, endDate, isActive: !!isActive })
   }, [])
+
+  // Subscribe to team week-complete notifications via Supabase Realtime
+  useEffect(() => {
+    try {
+      const channel = supabase.channel(`team:${teamId}`)
+      channel
+        .on('broadcast', { event: 'week_complete' }, (payload: any) => {
+          try {
+            const data = payload?.payload || payload
+            if (!data || data.teamId !== teamId) return
+
+            // Optionally skip showing a notification to the same member who triggered it
+            const currentUserMember = members.find(m => m.email && userEmail && m.email.toLowerCase() === userEmail.toLowerCase())
+            if (currentUserMember && data.memberId === currentUserMember.id) {
+              return
+            }
+
+            // Only show if user enabled notifications
+            const enabled = typeof window !== 'undefined' && localStorage.getItem('notifications') !== 'false'
+            if (!enabled) return
+
+            if (!('Notification' in window)) return
+            const titleByLocale = locale === 'nl' ? 'AvPlanner' : locale === 'fr' ? 'AvPlanner' : 'AvPlanner'
+            const messageByLocale =
+              locale === 'nl'
+                ? `${data.memberName} heeft de volledige week ingevuld voor ${teamName} 🎉`
+                : locale === 'fr'
+                ? `${data.memberName} a complété toute la semaine pour ${teamName} 🎉`
+                : `${data.memberName} completed the full week for ${teamName} 🎉`
+
+            if (Notification.permission === 'granted') {
+              new Notification(titleByLocale, { body: messageByLocale })
+            } else if (Notification.permission !== 'denied') {
+              // Try requesting permission once in this context
+              Notification.requestPermission().then((permission) => {
+                if (permission === 'granted') {
+                  new Notification(titleByLocale, { body: messageByLocale })
+                }
+              }).catch(() => {})
+            }
+          } catch (e) {
+            console.warn('Failed to handle week_complete notification', e)
+          }
+        })
+        .on('broadcast', { event: 'team_notification' }, (payload: any) => {
+          try {
+            const data = payload?.payload || payload
+            if (!data || data.teamId !== teamId) return
+            const enabled = typeof window !== 'undefined' && localStorage.getItem('notifications') !== 'false'
+            if (!enabled) return
+            if (!('Notification' in window)) return
+            const title = data.teamName || 'AvPlanner'
+            const body = data.message
+            if (Notification.permission === 'granted') {
+              new Notification(title, { body })
+            } else if (Notification.permission !== 'denied') {
+              Notification.requestPermission().then((perm) => {
+                if (perm === 'granted') new Notification(title, { body })
+              }).catch(() => {})
+            }
+          } catch (e) {
+            console.warn('Failed to handle team_notification', e)
+          }
+        })
+        .subscribe()
+
+      channelRef.current = channel
+      return () => {
+        try { channel.unsubscribe() } catch {}
+        channelRef.current = null
+      }
+    } catch (e) {
+      console.warn('Realtime subscription failed', e)
+    }
+  }, [teamId, members, userEmail, locale, teamName])
+
+  // Listen for local UI requests to send a team notification (from SettingsDropdown) and broadcast them
+  useEffect(() => {
+    const handler = (e: Event) => {
+      const detail = (e as CustomEvent).detail as { teamId: string; teamName: string; message: string; senderId?: string; senderName?: string; locale?: string }
+      if (!detail || detail.teamId !== teamId) return
+      const payload = { ...detail }
+      try {
+        if (channelRef.current) {
+          channelRef.current.send({ type: 'broadcast', event: 'team_notification', payload })
+        } else {
+          supabase.channel(`team:${teamId}`).send({ type: 'broadcast', event: 'team_notification', payload })
+        }
+      } catch (err) {
+        console.warn('Broadcast team_notification failed', err)
+      }
+
+      // Provide immediate feedback to the sender if notifications are enabled
+      const enabled = typeof window !== 'undefined' && localStorage.getItem('notifications') !== 'false'
+      if (enabled && typeof window !== 'undefined' && 'Notification' in window) {
+        const title = detail.teamName || 'AvPlanner'
+        const body = detail.message
+        if (Notification.permission === 'granted') {
+          new Notification(title, { body })
+        } else if (Notification.permission !== 'denied') {
+          Notification.requestPermission().then((perm) => {
+            if (perm === 'granted') new Notification(title, { body })
+          }).catch(() => {})
+        }
+      }
+    }
+
+    window.addEventListener('teamNotificationSend', handler as EventListener)
+    return () => window.removeEventListener('teamNotificationSend', handler as EventListener)
+  }, [teamId])
 
   // Swipe controls for mobile week navigation
   const swipeRef = useSwipe({
@@ -418,8 +532,19 @@ const AvailabilityCalendarRedesigned = ({
   useEffect(() => {
     const handleKeyPress = (event: KeyboardEvent) => {
       // Only handle shortcuts when not typing in input fields
-      const target = event.target as HTMLElement
-      if (target.tagName === 'INPUT' || target.tagName === 'TEXTAREA' || target.isContentEditable) {
+      const target = event.target as HTMLElement | null
+      const active = (typeof document !== 'undefined' ? (document.activeElement as HTMLElement | null) : null)
+      const isEditable = (el: HTMLElement | null) => {
+        if (!el) return false
+        const tag = el.tagName
+        if (el.isContentEditable) return true
+        if (tag === 'INPUT' || tag === 'TEXTAREA' || tag === 'SELECT') return true
+        if (el.getAttribute('role') === 'textbox') return true
+        if (el.closest && el.closest('[contenteditable="true"]')) return true
+        return false
+      }
+
+      if (isEditable(target) || isEditable(active)) {
         return
       }
 
@@ -999,6 +1124,25 @@ const AvailabilityCalendarRedesigned = ({
       if (localStorage.getItem(key) === 'true') return
       // Lazy import local utility
       import('@/lib/confetti').then(mod => mod.createConfetti())
+      // Broadcast to teammates that this member completed the week
+      const payload = {
+        teamId,
+        teamName,
+        memberId: currentUserMember.id,
+        memberName: `${currentUserMember.first_name || ''} ${currentUserMember.last_name || ''}`.trim() || currentUserMember.email || 'Teamlid',
+        weekStartISO: getDateString(normalizedWeekStart),
+        locale
+      }
+      try {
+        if (channelRef.current) {
+          channelRef.current.send({ type: 'broadcast', event: 'week_complete', payload })
+        } else {
+          // Fire-and-forget in case channelRef isn't ready
+          supabase.channel(`team:${teamId}`).send({ type: 'broadcast', event: 'week_complete', payload })
+        }
+      } catch (e) {
+        console.warn('Broadcast failed', e)
+      }
       localStorage.setItem(key, 'true')
     } catch (e) {
       console.warn('Confetti trigger failed', e)
@@ -1390,6 +1534,21 @@ const AvailabilityCalendarRedesigned = ({
                                   <MessageSquare className="h-3 w-3" />
                                 </a>
                               )}
+                              {member.email && (
+                                <button
+                                  type="button"
+                                  className="text-gray-500 hover:text-gray-700 dark:text-gray-300 dark:hover:text-gray-100 transition-colors"
+                                  onClick={(e) => {
+                                    e.stopPropagation()
+                                    navigator.clipboard.writeText(member.email || '')
+                                    toast({ title: 'Gekopieerd', description: `${member.email} is naar het klembord gekopieerd.` })
+                                  }}
+                                  aria-label="Copy email"
+                                  title="Copy email"
+                                >
+                                  <Copy className="h-3 w-3" />
+                                </button>
+                              )}
                             </div>
                           </div>
                         </div>
@@ -1581,6 +1740,27 @@ const AvailabilityCalendarRedesigned = ({
                                 </TooltipTrigger>
                                 <TooltipContent>
                                   <p>Chat in Microsoft Teams</p>
+                                </TooltipContent>
+                              </Tooltip>
+                            )}
+                            {member.email && (
+                              <Tooltip>
+                                <TooltipTrigger asChild>
+                                  <button
+                                    type="button"
+                                    className="text-gray-500 hover:text-gray-700 dark:text-gray-300 dark:hover:text-gray-100 transition-colors"
+                                    onClick={(e) => {
+                                      e.stopPropagation()
+                                      navigator.clipboard.writeText(member.email || '')
+                                      toast({ title: 'Gekopieerd', description: `${member.email} is naar het klembord gekopieerd.` })
+                                    }}
+                                    aria-label="Copy email"
+                                  >
+                                    <Copy className="h-3 w-3" />
+                                  </button>
+                                </TooltipTrigger>
+                                <TooltipContent>
+                                  <p>Kopieer emailadres</p>
                                 </TooltipContent>
                               </Tooltip>
                             )}
@@ -1921,20 +2101,20 @@ const AvailabilityCalendarRedesigned = ({
                                 <div className="flex justify-between">
                                   <span>Next period:</span>
                                   <div className="flex gap-1">
-                                    <kbd className="px-2 py-1 text-xs bg-gray-100 rounded">J</kbd>
-                                    <kbd className="px-2 py-1 text-xs bg-gray-100 rounded">N</kbd>
+                                    <kbd className="px-2 py-1 text-xs rounded border border-border bg-muted text-foreground font-mono">J</kbd>
+                                    <kbd className="px-2 py-1 text-xs rounded border border-border bg-muted text-foreground font-mono">N</kbd>
                                   </div>
                                 </div>
                                 <div className="flex justify-between">
                                   <span>Previous period:</span>
                                   <div className="flex gap-1">
-                                    <kbd className="px-2 py-1 text-xs bg-gray-100 rounded">K</kbd>
-                                    <kbd className="px-2 py-1 text-xs bg-gray-100 rounded">P</kbd>
+                                    <kbd className="px-2 py-1 text-xs rounded border border-border bg-muted text-foreground font-mono">K</kbd>
+                                    <kbd className="px-2 py-1 text-xs rounded border border-border bg-muted text-foreground font-mono">P</kbd>
                                   </div>
                                 </div>
                                 <div className="flex justify-between">
                                   <span>Today:</span>
-                                  <kbd className="px-2 py-1 text-xs bg-gray-100 rounded">T</kbd>
+                                  <kbd className="px-2 py-1 text-xs rounded border border-border bg-muted text-foreground font-mono">T</kbd>
                                 </div>
                               </div>
                             </div>
@@ -1943,11 +2123,11 @@ const AvailabilityCalendarRedesigned = ({
                               <div className="space-y-2 text-sm">
                                 <div className="flex justify-between">
                                   <span>Go to date:</span>
-                                  <kbd className="px-2 py-1 text-xs bg-gray-100 rounded">G</kbd>
+                                  <kbd className="px-2 py-1 text-xs rounded border border-border bg-muted text-foreground font-mono">G</kbd>
                                 </div>
                                 <div className="flex justify-between">
                                   <span>Settings:</span>
-                                  <kbd className="px-2 py-1 text-xs bg-gray-100 rounded">S</kbd>
+                                  <kbd className="px-2 py-1 text-xs rounded border border-border bg-muted text-foreground font-mono">S</kbd>
                                 </div>
                               </div>
                             </div>
@@ -1957,7 +2137,7 @@ const AvailabilityCalendarRedesigned = ({
                             <div className="space-y-2 text-sm">
                               <div className="flex justify-between">
                                 <span>Quick toggle:</span>
-                                <kbd className="px-2 py-1 text-xs bg-gray-100 rounded">Ctrl+Click</kbd>
+                                <kbd className="px-2 py-1 text-xs rounded border border-border bg-muted text-foreground font-mono">Ctrl+Click</kbd>
                               </div>
                               <div className="text-xs text-gray-500">
                                 Ctrl+Click on availability cells to quickly toggle between available/unavailable

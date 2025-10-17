@@ -20,8 +20,9 @@ import {
 } from "@/components/ui/drawer"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { Input } from "@/components/ui/input"
-import { Settings, Download, Moon, Sun, Globe, Bell, ChevronDown, Monitor, Share2, Copy, QrCode, Eye, EyeOff, Leaf, Snowflake, Flower, Sun as SummerSun, Home, Square, Flame, Terminal } from "lucide-react"
+import { Settings, Download, Moon, Sun, Globe, Bell, ChevronDown, Monitor, Share2, Copy, QrCode, Eye, EyeOff, Leaf, Snowflake, Flower, Sun as SummerSun, Home, Contrast, Flame, Terminal } from "lucide-react"
 import { ExportDialog } from "./export-dialog"
+import { useAuth } from "@/hooks/useAuth"
 
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog"
 import { useTheme } from "next-themes"
@@ -54,186 +55,71 @@ interface SettingsDropdownProps {
   onOpenChange?: (open: boolean) => void
 }
 
-export function SettingsDropdown({ currentLocale, members, team, forceOpen, onOpenChange }: SettingsDropdownProps) {
-  const [exportDialogOpen, setExportDialogOpen] = useState(false)
+// Stable content component to avoid remounting on each parent render
+function SettingsPanelContent(props: {
+  currentLocale: Locale
+  team?: Team
+  theme: string | undefined
+  onThemeChange: (val: string) => void
+  simplifiedMode: boolean
+  onSimplifiedModeToggle: (enabled: boolean) => void
+  onOpenExport: () => void
+  isGeneratingQR: boolean
+  generateQR: (url?: string) => void | Promise<void>
+  downloadQR: () => void
+  qrDataUrl: string | null
+  showQR: boolean
+  hideQR: () => void
+  copyToClipboard: (text: string) => Promise<void>
+  shareUrl: string
+  notifications: boolean
+  onNotificationsToggle: (enabled: boolean) => void
+  testNotificationMessage: string
+  onChangeTestMessage: (val: string) => void
+  onSendTestNotification: () => void
+  version?: string | null
+  versionLoading: boolean
+  onLanguageChange: (locale: Locale) => void
+  onClose?: () => void
+  teamInviteUrl?: string
+  teamSlugUrl?: string
+}) {
+  const {
+    currentLocale,
+    team,
+    theme,
+    onThemeChange,
+    simplifiedMode,
+    onSimplifiedModeToggle,
+    onOpenExport,
+    isGeneratingQR,
+    generateQR,
+    downloadQR,
+    qrDataUrl,
+    showQR,
+    hideQR,
+    copyToClipboard,
+    shareUrl,
+    notifications,
+    onNotificationsToggle,
+    testNotificationMessage,
+    onChangeTestMessage,
+    onSendTestNotification,
+    version,
+    versionLoading,
+    onLanguageChange,
+    onClose,
+  } = props
 
-  const [drawerOpen, setDrawerOpen] = useState(false)
-  const [dropdownOpen, setDropdownOpen] = useState(false)
-  const [isGeneratingQR, setIsGeneratingQR] = useState(false)
-  const [qrDataUrl, setQrDataUrl] = useState<string | null>(null)
-  const [showQR, setShowQR] = useState(false)
-  const [notifications, setNotifications] = useState(false)
-  const [testNotificationMessage, setTestNotificationMessage] = useState("")
-  const [simplifiedMode, setSimplifiedMode] = useState(false)
-  const [shareUrl, setShareUrl] = useState("")
-  const { setTheme, theme } = useTheme()
   const { t } = useTranslation(currentLocale)
-  const isMobile = useIsMobile()
-  const { version, isLoading: versionLoading } = useVersion()
-  const router = useRouter()
 
-  // Handle forceOpen prop
-  useEffect(() => {
-    if (forceOpen) {
-      if (isMobile) {
-        setDrawerOpen(true)
-      } else {
-        setDropdownOpen(true)
-      }
-      // Reset the forceOpen state
-      onOpenChange?.(true)
-    }
-  }, [forceOpen, isMobile, onOpenChange])
-
-  // Load preferences on mount
-  useEffect(() => {
-    const savedNotifications = localStorage.getItem("notifications") !== "false"
-    const savedSimplifiedMode = localStorage.getItem("simplifiedMode") === "true"
-    setNotifications(savedNotifications)
-    setSimplifiedMode(savedSimplifiedMode)
-    
-    // Generate share URL
-    const currentUrl = window.location.href
-    const baseUrl = currentUrl.split('?')[0]
-    setShareUrl(`${baseUrl}?view=readonly`)
-  }, [])
-
-  const handleNotificationsToggle = (enabled: boolean) => {
-    setNotifications(enabled)
-    localStorage.setItem("notifications", enabled.toString())
-  }
-
-  const handleSimplifiedModeToggle = (enabled: boolean) => {
-    setSimplifiedMode(enabled)
-    localStorage.setItem("simplifiedMode", enabled.toString())
-    
-    // Dispatch event to notify other components
-    window.dispatchEvent(new CustomEvent('simplifiedModeChanged', { detail: enabled }))
-  }
-
-
-  const handleLanguageChange = (locale: Locale) => {
-    try {
-      const currentPath = window.location.pathname
-      const pathSegments = currentPath.split("/")
-
-      // Replace the locale in the URL
-      if (pathSegments[1] === "en" || pathSegments[1] === "nl" || pathSegments[1] === "fr") {
-        pathSegments[1] = locale
-      } else {
-        pathSegments.splice(1, 0, locale)
-      }
-
-      const newPath = pathSegments.join("/")
-      window.location.href = newPath
-    } catch (error) {
-      console.error("Error changing language:", error)
-      alert(t("common.error") || "Er is een fout opgetreden bij het wijzigen van de taal.")
-    }
-  }
-
-  const handleNotifications = async () => {
-    if (!notifications) return // Only show notifications if toggle is enabled
-    
-    try {
-      if (!("Notification" in window)) {
-        alert(currentLocale === "en" ? "This browser doesn't support notifications." : 
-              currentLocale === "nl" ? "Deze browser ondersteunt geen notificaties." :
-              "Ce navigateur ne prend pas en charge les notifications.")
-        return
-      }
-
-      const message = testNotificationMessage.trim() || 
-        (currentLocale === "en" ? "Test notification from AvPlanner!" :
-         currentLocale === "nl" ? "Test notificatie van AvPlanner!" :
-         "Notification de test d'AvPlanner!")
-
-      if (Notification.permission === "granted") {
-        new Notification("AvPlanner", {
-          body: message,
-          icon: "/placeholder-logo.png",
-        })
-      } else if (Notification.permission !== "denied") {
-        const permission = await Notification.requestPermission()
-        if (permission === "granted") {
-          new Notification("AvPlanner", {
-            body: message,
-            icon: "/placeholder-logo.png",
-          })
-        } else {
-          alert(currentLocale === "en" ? "Notifications are disabled." :
-                currentLocale === "nl" ? "Notificaties zijn uitgeschakeld." :
-                "Les notifications sont désactivées.")
-        }
-      } else {
-        alert(currentLocale === "en" ? "Notifications are blocked. Enable them via your browser settings." :
-              currentLocale === "nl" ? "Notificaties zijn geblokkeerd. Schakel ze in via je browserinstellingen." :
-              "Les notifications sont bloquées. Activez-les via les paramètres de votre navigateur.")
-      }
-    } catch (error) {
-      console.error("Error with notifications:", error)
-      alert(currentLocale === "en" ? "An error occurred while setting up notifications." :
-            currentLocale === "nl" ? "Er is een fout opgetreden bij het instellen van notificaties." :
-            "Une erreur s'est produite lors de la configuration des notifications.")
-    }
-  }
-
-  const copyToClipboard = async (text: string) => {
-    try {
-      await navigator.clipboard.writeText(text)
-      alert(currentLocale === "en" ? "Link copied to clipboard!" :
-            currentLocale === "nl" ? "Link gekopieerd naar klembord!" :
-            "Lien copié dans le presse-papiers!")
-    } catch (error) {
-      console.error("Failed to copy:", error)
-      alert(currentLocale === "en" ? "Failed to copy link" :
-            currentLocale === "nl" ? "Kopiëren mislukt" :
-            "Échec de la copie du lien")
-    }
-  }
-
-  const generateQR = async (url?: string) => {
-    setIsGeneratingQR(true)
-    try {
-      const QRCode = (await import("qrcode")).default
-      const qrDataUrl = await QRCode.toDataURL(url || shareUrl, {
-        width: 256,
-        margin: 1,
-        color: {
-          dark: "#000000",
-          light: "#FFFFFF"
-        }
-      })
-      setQrDataUrl(qrDataUrl)
-      setShowQR(true)
-    } catch (error) {
-      console.error("Error generating QR code:", error)
-      alert(currentLocale === "en" ? "Failed to generate QR code" :
-            currentLocale === "nl" ? "QR-code genereren mislukt" :
-            "Échec de la génération du code QR")
-    } finally {
-      setIsGeneratingQR(false)
-    }
-  }
-
-  const downloadQR = () => {
-    if (!qrDataUrl) return
-    
-    const link = document.createElement("a")
-    link.download = "availability-planner-qr.png"
-    link.href = qrDataUrl
-    link.click()
-  }
-
-  // Reusable settings content component
-  const SettingsContent = ({ onClose }: { onClose?: () => void }) => (
+  return (
     <div className="space-y-1">
-      {/* Team Management Section */}
       {team && (
         <>
           <DropdownMenuItem 
             onClick={() => {
-              router.push(`/team/${team.slug || team.invite_code}/settings`)
+              window.location.href = `/team/${team.slug || team.invite_code}/settings`
               onClose?.()
             }}
             className="cursor-pointer"
@@ -245,9 +131,7 @@ export function SettingsDropdown({ currentLocale, members, team, forceOpen, onOp
         </>
       )}
 
-
-
-      {/* Share Section - Most important for team management */}
+      {/* Share Section */}
       <div className="px-2 py-2">
         <div className="flex items-center justify-between mb-2">
           <div className="flex items-center">
@@ -274,8 +158,6 @@ export function SettingsDropdown({ currentLocale, members, team, forceOpen, onOp
             )}
           </div>
         </div>
-        
-        {/* Invite Code URL */}
         {team?.invite_code && (
           <div className="mb-3">
             <Label className="text-xs text-gray-600 dark:text-gray-400 mb-1 block">
@@ -299,7 +181,6 @@ export function SettingsDropdown({ currentLocale, members, team, forceOpen, onOp
           </div>
         )}
 
-        {/* Friendly URL (if available) */}
         {team?.slug && (
           <div className="mb-3">
             <Label className="text-xs text-gray-600 dark:text-gray-400 mb-1 block">
@@ -323,7 +204,6 @@ export function SettingsDropdown({ currentLocale, members, team, forceOpen, onOp
           </div>
         )}
 
-        {/* Security Info */}
         <div className={`${team?.is_password_protected ? 'bg-orange-50 dark:bg-orange-900/20 border-orange-200 dark:border-orange-700' : 'bg-green-50 dark:bg-green-900/20 border-green-200 dark:border-green-700'} border rounded p-2 mb-3`}>
           <p className={`text-xs ${team?.is_password_protected ? 'text-orange-800 dark:text-orange-200' : 'text-green-800 dark:text-green-200'}`}>
             {team?.is_password_protected 
@@ -333,7 +213,6 @@ export function SettingsDropdown({ currentLocale, members, team, forceOpen, onOp
           </p>
         </div>
 
-        {/* QR Code buttons */}
         <div className="flex gap-2">
           <Button
             variant="outline"
@@ -348,7 +227,6 @@ export function SettingsDropdown({ currentLocale, members, team, forceOpen, onOp
               (currentLocale === "en" ? "QR Code" : currentLocale === "nl" ? "QR-code" : "Code QR")
             }
           </Button>
-          
           {qrDataUrl && (
             <Button
               variant="outline"
@@ -361,7 +239,6 @@ export function SettingsDropdown({ currentLocale, members, team, forceOpen, onOp
           )}
         </div>
 
-        {/* QR Code display */}
         {showQR && qrDataUrl && (
           <div className="mt-3 flex flex-col items-center">
             <img 
@@ -372,7 +249,7 @@ export function SettingsDropdown({ currentLocale, members, team, forceOpen, onOp
             <Button
               variant="ghost"
               size="sm"
-              onClick={() => setShowQR(false)}
+              onClick={hideQR}
               className="mt-2 h-6 text-xs text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200"
             >
               {currentLocale === "en" ? "Hide" : currentLocale === "nl" ? "Verbergen" : "Masquer"}
@@ -383,10 +260,9 @@ export function SettingsDropdown({ currentLocale, members, team, forceOpen, onOp
 
       <div className="h-px bg-gray-200 dark:bg-gray-600 my-1" />
 
-      {/* Export - Data/Content related */}
       <div
         onClick={() => {
-          setExportDialogOpen(true)
+          onOpenExport()
           onClose?.()
         }}
         className="flex items-center px-2 py-2 cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-700 rounded-sm transition-colors"
@@ -397,7 +273,6 @@ export function SettingsDropdown({ currentLocale, members, team, forceOpen, onOp
 
       <div className="h-px bg-gray-200 dark:bg-gray-600 my-1" />
 
-      {/* View Settings - Display preferences */}
       <div className="px-2 py-2">
         <div className="flex items-center justify-between mb-2">
           <div className="flex items-center">
@@ -410,14 +285,12 @@ export function SettingsDropdown({ currentLocale, members, team, forceOpen, onOp
           </div>
           <Switch
             checked={simplifiedMode}
-            onCheckedChange={handleSimplifiedModeToggle}
+            onCheckedChange={onSimplifiedModeToggle}
             className="h-4 w-7"
           />
         </div>
-
       </div>
 
-      {/* Theme selector - only available for efficiency-team */}
       {(team?.slug === 'efficiency-team' || team?.invite_code === 'efficiency-team') && (
         <div className="px-2 py-2">
           <div className="flex items-center justify-between mb-2">
@@ -437,11 +310,11 @@ export function SettingsDropdown({ currentLocale, members, team, forceOpen, onOp
               ) : theme === "cozy" ? (
                 <Home className="mr-2 h-4 w-4 text-amber-600" />
               ) : theme === "blackwhite" ? (
-                <Square className="mr-2 h-4 w-4 text-gray-600" />
+                <Contrast className="mr-2 h-4 w-4" />
               ) : theme === "bythestove" ? (
                 <Flame className="mr-2 h-4 w-4 text-red-600" />
               ) : theme === "testdev" ? (
-                <Terminal className="mr-2 h-4 w-4 text-purple-600" />
+                <Terminal className="mr-2 h-4 w-4 text-green-500" />
               ) : (
                 <Monitor className="mr-2 h-4 w-4" />
               )}
@@ -450,7 +323,15 @@ export function SettingsDropdown({ currentLocale, members, team, forceOpen, onOp
               </Label>
             </div>
           </div>
-          <Select value={theme || "system"} onValueChange={setTheme}>
+          <Select
+            value={theme || "system"}
+            onValueChange={(val) => {
+              onThemeChange(val)
+              if (typeof window !== 'undefined') {
+                setTimeout(() => window.location.reload(), 0)
+              }
+            }}
+          >
             <SelectTrigger className="w-full h-8 text-sm bg-gray-50 dark:bg-gray-700 border-gray-200 dark:border-gray-600">
               <SelectValue />
             </SelectTrigger>
@@ -505,7 +386,7 @@ export function SettingsDropdown({ currentLocale, members, team, forceOpen, onOp
               </SelectItem>
               <SelectItem value="blackwhite" className="text-sm cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-700">
                 <div className="flex items-center">
-                  <Square className="mr-2 h-3 w-3 text-gray-600" />
+                  <Contrast className="mr-2 h-3 w-3" />
                   {currentLocale === "en" ? "Black & White" : currentLocale === "nl" ? "Zwart & Wit" : "Noir & Blanc"}
                 </div>
               </SelectItem>
@@ -517,8 +398,8 @@ export function SettingsDropdown({ currentLocale, members, team, forceOpen, onOp
               </SelectItem>
               <SelectItem value="testdev" className="text-sm cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-700">
                 <div className="flex items-center">
-                  <Terminal className="mr-2 h-3 w-3 text-purple-600" />
-                  {currentLocale === "en" ? "Test & Development" : currentLocale === "nl" ? "Test & Ontwikkeling" : "Test & Développement"}
+                  <Terminal className="mr-2 h-3 w-3 text-green-500" />
+                  {currentLocale === "en" ? "Development" : currentLocale === "nl" ? "Ontwikkeling" : "Développement"}
                 </div>
               </SelectItem>
             </SelectContent>
@@ -528,7 +409,6 @@ export function SettingsDropdown({ currentLocale, members, team, forceOpen, onOp
 
       <div className="h-px bg-gray-200 dark:bg-gray-600 my-1" />
 
-      {/* Language - Localization */}
       <div className="px-2 py-2">
         <div className="flex items-center justify-between mb-2">
           <div className="flex items-center">
@@ -536,7 +416,7 @@ export function SettingsDropdown({ currentLocale, members, team, forceOpen, onOp
             <Label className="text-sm font-medium">{t("settings.language")}</Label>
           </div>
         </div>
-        <Select value={currentLocale} onValueChange={handleLanguageChange}>
+        <Select value={currentLocale} onValueChange={onLanguageChange}>
           <SelectTrigger className="w-full h-8 text-sm bg-gray-50 dark:bg-gray-700 border-gray-200 dark:border-gray-600">
             <SelectValue />
           </SelectTrigger>
@@ -556,7 +436,6 @@ export function SettingsDropdown({ currentLocale, members, team, forceOpen, onOp
 
       <div className="h-px bg-gray-200 dark:bg-gray-600 my-1" />
 
-      {/* Notifications - System behavior */}
       <div className="px-2 py-2">
         <div className="flex items-center justify-between mb-2">
           <div className="flex items-center">
@@ -565,18 +444,25 @@ export function SettingsDropdown({ currentLocale, members, team, forceOpen, onOp
           </div>
           <Switch
             checked={notifications}
-            onCheckedChange={handleNotificationsToggle}
+            onCheckedChange={onNotificationsToggle}
             className="h-4 w-7"
           />
         </div>
-        
-        {/* Test notification section (only visible when notifications are enabled) */}
+
         {notifications && (
-          <div className="mt-3 space-y-2">
+          <div
+            className="mt-3 space-y-2"
+            onKeyDownCapture={(e) => { e.stopPropagation() }}
+            onKeyUpCapture={(e) => { e.stopPropagation() }}
+            onKeyPressCapture={(e) => { e.stopPropagation() }}
+          >
             <div className="flex items-center gap-2">
               <Input
                 value={testNotificationMessage}
-                onChange={(e) => setTestNotificationMessage(e.target.value)}
+                onChange={(e) => onChangeTestMessage(e.target.value)}
+                onKeyDownCapture={(e) => { e.stopPropagation() }}
+                onKeyUpCapture={(e) => { e.stopPropagation() }}
+                onKeyPressCapture={(e) => { e.stopPropagation() }}
                 placeholder={currentLocale === "en" ? "Enter test message..." : 
                             currentLocale === "nl" ? "Voer testbericht in..." : 
                             "Entrez un message de test..."}
@@ -585,7 +471,7 @@ export function SettingsDropdown({ currentLocale, members, team, forceOpen, onOp
               <Button
                 variant="outline"
                 size="sm"
-                onClick={handleNotifications}
+                onClick={onSendTestNotification}
                 className="h-8 text-xs border-gray-200 dark:border-gray-600"
               >
                 {currentLocale === "en" ? "Test" : currentLocale === "nl" ? "Test" : "Test"}
@@ -599,10 +485,9 @@ export function SettingsDropdown({ currentLocale, members, team, forceOpen, onOp
           </div>
         )}
       </div>
-      
-      {/* Version Info - Subtle display at bottom */}
+
       <div className="h-px bg-gray-200 dark:bg-gray-600 my-1" />
-      
+
       <div className="px-2 py-2">
         <div className="flex items-center justify-center">
           <span className="text-xs text-gray-400 dark:text-gray-500">
@@ -611,6 +496,169 @@ export function SettingsDropdown({ currentLocale, members, team, forceOpen, onOp
         </div>
       </div>
     </div>
+  )
+}
+
+export function SettingsDropdown({ currentLocale, members, team, forceOpen, onOpenChange }: SettingsDropdownProps) {
+  const [exportDialogOpen, setExportDialogOpen] = useState(false)
+
+  const [drawerOpen, setDrawerOpen] = useState(false)
+  const [dropdownOpen, setDropdownOpen] = useState(false)
+  const [isGeneratingQR, setIsGeneratingQR] = useState(false)
+  const [qrDataUrl, setQrDataUrl] = useState<string | null>(null)
+  const [showQR, setShowQR] = useState(false)
+  const [notifications, setNotifications] = useState(false)
+  const [testNotificationMessage, setTestNotificationMessage] = useState("")
+  const [simplifiedMode, setSimplifiedMode] = useState(false)
+  const [shareUrl, setShareUrl] = useState("")
+  const { setTheme, theme } = useTheme()
+  const { t } = useTranslation(currentLocale)
+  const isMobile = useIsMobile()
+  const { version, isLoading: versionLoading } = useVersion()
+  const router = useRouter()
+  const { user } = useAuth()
+
+  // Handle forceOpen prop
+  useEffect(() => {
+    if (forceOpen) {
+      if (isMobile) {
+        setDrawerOpen(true)
+      } else {
+        setDropdownOpen(true)
+      }
+      // Reset the forceOpen state
+      onOpenChange?.(true)
+    }
+  }, [forceOpen, isMobile, onOpenChange])
+
+  // Load preferences on mount
+  useEffect(() => {
+    const savedNotifications = localStorage.getItem("notifications") !== "false"
+    const savedSimplifiedMode = localStorage.getItem("simplifiedMode") === "true"
+    setNotifications(savedNotifications)
+    setSimplifiedMode(savedSimplifiedMode)
+    
+    // Generate share URL
+    const currentUrl = window.location.href
+    const baseUrl = currentUrl.split('?')[0]
+    setShareUrl(`${baseUrl}?view=readonly`)
+  }, [])
+
+  const handleNotificationsToggle = (enabled: boolean) => {
+    setNotifications(enabled)
+    localStorage.setItem("notifications", enabled.toString())
+  }
+
+  const handleSimplifiedModeToggle = (enabled: boolean) => {
+    setSimplifiedMode(enabled)
+    localStorage.setItem("simplifiedMode", enabled.toString())
+    
+    // Dispatch event to notify other components
+    window.dispatchEvent(new CustomEvent('simplifiedModeChanged', { detail: enabled }))
+  }
+  const handleLanguageChange = (locale: Locale) => {
+    try {
+      const currentPath = window.location.pathname
+      const pathSegments = currentPath.split("/")
+      if (pathSegments[1] === "en" || pathSegments[1] === "nl" || pathSegments[1] === "fr") {
+        pathSegments[1] = locale
+      } else {
+        pathSegments.splice(1, 0, locale)
+      }
+      const newPath = pathSegments.join("/")
+      window.location.href = newPath
+    } catch (error) {
+      console.error("Error changing language:", error)
+      alert(t("common.error") || "Er is een fout opgetreden bij het wijzigen van de taal.")
+    }
+  }
+
+  // Clipboard helper used by SettingsPanelContent
+  const copyToClipboard = async (text: string) => {
+    try {
+      await navigator.clipboard.writeText(text)
+      alert(currentLocale === "en" ? "Link copied to clipboard!" :
+            currentLocale === "nl" ? "Link gekopieerd naar klembord!" :
+            "Lien copié dans le presse-papiers!")
+    } catch (error) {
+      console.error("Failed to copy:", error)
+      alert(currentLocale === "en" ? "Failed to copy link" :
+            currentLocale === "nl" ? "Kopiëren mislukt" :
+            "Échec de la copie du lien")
+    }
+  }
+
+  // Generate and download QR helpers
+  const generateQR = async (url?: string) => {
+    setIsGeneratingQR(true)
+    try {
+      const QRCode = (await import("qrcode")).default
+      const qrDataUrl = await QRCode.toDataURL(url || shareUrl, {
+        width: 256,
+        margin: 1,
+        color: { dark: "#000000", light: "#FFFFFF" },
+      })
+      setQrDataUrl(qrDataUrl)
+      setShowQR(true)
+    } catch (error) {
+      console.error("Error generating QR code:", error)
+      alert(currentLocale === "en" ? "Failed to generate QR code" :
+            currentLocale === "nl" ? "QR-code genereren mislukt" :
+            "Échec de la génération du code QR")
+    } finally {
+      setIsGeneratingQR(false)
+    }
+  }
+
+  const downloadQR = () => {
+    if (!qrDataUrl) return
+    const link = document.createElement("a")
+    link.download = "availability-planner-qr.png"
+    link.href = qrDataUrl
+    link.click()
+  }
+
+  // Send team-wide test notification via app-level event; calendar relays via Realtime
+  const handleNotifications = async () => {
+    if (!team?.id) return
+    const message = testNotificationMessage.trim() || 
+      (currentLocale === "en" ? "Test notification from AvPlanner!" :
+       currentLocale === "nl" ? "Test notificatie van AvPlanner!" :
+       "Notification de test d'AvPlanner!")
+
+    const sender = members.find(m => m.email && m.email.toLowerCase() === (user?.email || '').toLowerCase())
+    const senderName = `${sender?.first_name || ''} ${sender?.last_name || ''}`.trim() || sender?.email || 'User'
+    const detail = { teamId: team.id, teamName: team.name, message, senderId: sender?.id, senderName, locale: currentLocale }
+    window.dispatchEvent(new CustomEvent('teamNotificationSend', { detail }))
+  }
+
+  // Stable settings panel to avoid remounts on each keystroke
+  const settingsPanel = (
+    <SettingsPanelContent
+      currentLocale={currentLocale}
+      team={team}
+      theme={theme}
+      onThemeChange={setTheme}
+      simplifiedMode={simplifiedMode}
+      onSimplifiedModeToggle={handleSimplifiedModeToggle}
+      onOpenExport={() => setExportDialogOpen(true)}
+      isGeneratingQR={isGeneratingQR}
+      generateQR={generateQR}
+      downloadQR={downloadQR}
+      qrDataUrl={qrDataUrl}
+      showQR={showQR}
+      hideQR={() => setShowQR(false)}
+      copyToClipboard={copyToClipboard}
+      shareUrl={shareUrl}
+      notifications={notifications}
+      onNotificationsToggle={handleNotificationsToggle}
+      testNotificationMessage={testNotificationMessage}
+      onChangeTestMessage={setTestNotificationMessage}
+      onSendTestNotification={handleNotifications}
+      version={version}
+      versionLoading={versionLoading}
+      onLanguageChange={handleLanguageChange}
+    />
   )
 
   return (
@@ -635,7 +683,7 @@ export function SettingsDropdown({ currentLocale, members, team, forceOpen, onOp
               </DrawerTitle>
             </DrawerHeader>
             <div className="px-4 pb-6 max-h-[80vh] overflow-y-auto">
-              <SettingsContent onClose={() => setDrawerOpen(false)} />
+              {settingsPanel}
             </div>
           </DrawerContent>
         </Drawer>
@@ -656,7 +704,7 @@ export function SettingsDropdown({ currentLocale, members, team, forceOpen, onOp
             align="end"
             className="w-56 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 max-h-[80vh] overflow-y-auto"
           >
-            <SettingsContent />
+            {settingsPanel}
           </DropdownMenuContent>
         </DropdownMenu>
       )}
