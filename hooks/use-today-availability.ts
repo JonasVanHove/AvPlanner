@@ -12,11 +12,19 @@ export function useTodayAvailability(memberIds: string[] = []) {
   const [isLoading, setIsLoading] = useState(false)
   const [lastFetch, setLastFetch] = useState<string>('')
 
+  // Helper to get local date string (YYYY-MM-DD) without timezone shifts
+  const getLocalDateString = (date: Date = new Date()) => {
+    const year = date.getFullYear()
+    const month = String(date.getMonth() + 1).padStart(2, '0')
+    const day = String(date.getDate()).padStart(2, '0')
+    return `${year}-${month}-${day}`
+  }
+
   useEffect(() => {
     if (memberIds.length === 0) return
 
     // Only refetch if memberIds changed significantly or it's a new day
-    const today = new Date().toISOString().split('T')[0]
+    const today = getLocalDateString()
     if (lastFetch !== today || Object.keys(todayAvailability).length === 0) {
       fetchTodayAvailability()
       setLastFetch(today)
@@ -28,7 +36,7 @@ export function useTodayAvailability(memberIds: string[] = []) {
 
     setIsLoading(true)
     try {
-      const today = new Date().toISOString().split('T')[0]
+      const today = getLocalDateString()
       
       const { data, error } = await supabase
         .from('availability')

@@ -444,17 +444,23 @@ const AvailabilityCalendarRedesigned = ({
   // 3. Active members (status=active): Always show
   // 4. Inactive members (status=inactive): Only show if they have availability records for this visible period
   const getVisibleMembers = () => {
+    // Precompute string range for current visible period to avoid timezone issues
+    const periodStart = getDateString(getWeekStart(currentDate))
+    const end = new Date(getWeekStart(currentDate))
+    end.setDate(end.getDate() + (weeksToShow * 7) - 1)
+    const periodEnd = getDateString(end)
+
     return members.filter(member => {
       // Check if member has availability records for current visible period (supports multiple weeks)
       const hasRecordsThisPeriod = availability.some(record => 
         record.member_id === member.id && 
-        isDateInCurrentPeriod(new Date(record.date))
+        record.date >= periodStart && record.date <= periodEnd
       )
       
-      // Check if member has NON-HOLIDAY records for current visible period
+      // Check if member has NON-HOLIDAY records for this visible period
       const hasNonHolidayRecordsThisPeriod = availability.some(record => 
         record.member_id === member.id && 
-        isDateInCurrentPeriod(new Date(record.date)) &&
+        record.date >= periodStart && record.date <= periodEnd &&
         record.status !== 'holiday'
       )
       
@@ -627,7 +633,8 @@ const AvailabilityCalendarRedesigned = ({
 
   // Helper function to check if two dates are the same day
   const isSameDay = (date1: Date, date2: Date) => {
-    return date1.toISOString().split('T')[0] === date2.toISOString().split('T')[0]
+    // Compare using local calendar components to avoid timezone-related day shifts
+    return getDateString(date1) === getDateString(date2)
   }
 
   const getStatusConfig = (status: string) => {
@@ -1584,7 +1591,7 @@ const AvailabilityCalendarRedesigned = ({
                       <div className="grid grid-cols-7 gap-1">
                         {week.days.map((date, dayIndex) => {
                           const record = availability.find(
-                            (r) => r.member_id === member.id && isSameDay(new Date(r.date), date)
+                            (r) => r.member_id === member.id && r.date === getDateString(date)
                           )
                           const isWeekendDay = isWeekend(date)
 
@@ -1622,7 +1629,7 @@ const AvailabilityCalendarRedesigned = ({
                                 </div>
                               ) : (
                                 <div className="text-xl">
-                                  {getStatusConfig(record?.status || "").icon}
+                                  {record ? getStatusConfig(record.status).icon : ""}
                                 </div>
                               )}
                             </div>
@@ -2172,7 +2179,7 @@ const AvailabilityCalendarRedesigned = ({
                             <Input
                               id="date-input"
                               type="date"
-                              defaultValue={currentDate.toISOString().split('T')[0]}
+                              defaultValue={getDateString(currentDate)}
                               onChange={(e) => goToSpecificDate(e.target.value)}
                               className="mt-1"
                             />

@@ -12,12 +12,40 @@ interface AvailabilityDropdownProps {
 }
 
 const statusConfig = {
-  available: { icon: "🟢", color: "text-green-600" },
-  remote: { icon: "🟣", color: "text-purple-600" },
-  unavailable: { icon: "🔴", color: "text-red-600" },
-  need_to_check: { icon: "🟠", color: "text-orange-600" },
-  absent: { icon: "⚫", color: "text-gray-600" },
-  holiday: { icon: "🟡", color: "text-yellow-600" },
+  available: { color: "text-green-600" },
+  remote: { color: "text-purple-600" },
+  unavailable: { color: "text-red-600" },
+  need_to_check: { color: "text-blue-600" },
+  absent: { color: "text-gray-600" },
+  holiday: { color: "text-yellow-600" },
+}
+
+function renderStatusIcon(
+  status: "available" | "unavailable" | "need_to_check" | "absent" | "holiday" | "remote",
+  size: "sm" | "md" | "lg"
+) {
+  const sizeClass = size === "sm" ? "text-xs" : ""
+  // const dotSize = size === "sm" ? "w-2.5 h-2.5" : size === "md" ? "w-3 h-3" : "w-3.5 h-3.5"
+
+  // if (status === "need_to_check") {
+  //   // Use a CSS dot to avoid emoji font support issues on some mobile devices
+  //   return (
+  //     <span
+  //       aria-hidden="true"
+  //       className={`inline-block rounded-full bg-blue-500 ${dotSize}`}
+  //     />
+  //   )
+  // }
+
+  const emojiMap: Record<string, string> = {
+    available: "🟢",
+    remote: "🟣",
+    unavailable: "🔴",
+    need_to_check: "🔵",
+    absent: "⚫",
+    holiday: "🟡",
+  }
+  return <span className={sizeClass}>{emojiMap[status] || ""}</span>
 }
 
 export function AvailabilityDropdown({ value, onValueChange, locale, disabled, size = "md" }: AvailabilityDropdownProps) {
@@ -60,7 +88,7 @@ export function AvailabilityDropdown({ value, onValueChange, locale, disabled, s
         <SelectValue placeholder="Status">
           {value && (
             <div className="flex items-center gap-1">
-              <span className={size === "sm" ? "text-xs" : ""}>{statusConfig[value].icon}</span>
+              {renderStatusIcon(value, size)}
               {size !== "sm" && (
                 <span className={statusConfig[value].color}>{t(`status.${value}` as any)}</span>
               )}
@@ -71,37 +99,37 @@ export function AvailabilityDropdown({ value, onValueChange, locale, disabled, s
       <SelectContent>
         <SelectItem value="available">
           <div className="flex items-center gap-2">
-            <span>{statusConfig.available.icon}</span>
+            {renderStatusIcon("available", size)}
             <span>{t("status.available")}</span>
           </div>
         </SelectItem>
         <SelectItem value="remote">
           <div className="flex items-center gap-2">
-            <span>{statusConfig.remote.icon}</span>
+            {renderStatusIcon("remote", size)}
             <span>{t("status.remote")}</span>
           </div>
         </SelectItem>
         <SelectItem value="unavailable">
           <div className="flex items-center gap-2">
-            <span>{statusConfig.unavailable.icon}</span>
+            {renderStatusIcon("unavailable", size)}
             <span>{t("status.unavailable")}</span>
           </div>
         </SelectItem>
         <SelectItem value="need_to_check">
           <div className="flex items-center gap-2">
-            <span>{statusConfig.need_to_check.icon}</span>
+            {renderStatusIcon("need_to_check", size)}
             <span>{t("status.need_to_check")}</span>
           </div>
         </SelectItem>
         <SelectItem value="absent">
           <div className="flex items-center gap-2">
-            <span>{statusConfig.absent.icon}</span>
+            {renderStatusIcon("absent", size)}
             <span>{t("status.absent")}</span>
           </div>
         </SelectItem>
         <SelectItem value="holiday">
           <div className="flex items-center gap-2">
-            <span>{statusConfig.holiday.icon}</span>
+            {renderStatusIcon("holiday", size)}
             <span>{t("status.holiday")}</span>
           </div>
         </SelectItem>
