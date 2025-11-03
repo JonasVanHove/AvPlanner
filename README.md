@@ -1,5 +1,5 @@
 <div align="center">
-  <img src="public/web-app-manifest-512x512.png" alt="AvPlanner Logo" width="120" height="120" />
+  <img src="public/favicon.svg" alt="AvPlanner Logo" width="120" height="120" />
 
   <h1>AvPlanner</h1>
   <p><strong>Plan availability. Align teams. Ship faster.</strong></p>
@@ -12,6 +12,8 @@
     <img src="https://img.shields.io/badge/Supabase-3ECF8E?style=for-the-badge&logo=supabase&logoColor=white" alt="Supabase" />
   </p>
 </div>
+
+English | [Nederlands](./README_NL.md) | [Français](./README_FR.md)
 
 ## Why AvPlanner?
 
@@ -39,7 +41,7 @@ AvPlanner is the fast, friendly way to track team availability. Built for high-v
 
 ## Quick Start
 
-Prerequisites: Node.js 18+, pnpm (or npm), Supabase project.
+Prerequisites: Node.js 20+, pnpm (or npm), Supabase project.
 
 1) Clone & install
 ```bash
@@ -50,12 +52,15 @@ pnpm install
 
 2) Env vars
 ```bash
-cp .env.example .env.local
+# create .env.local and fill in your values
+# (see documentation for required variables)
+echo SUPABASE_URL=... >> .env.local
+echo SUPABASE_ANON_KEY=... >> .env.local
 ```
 Fill in Supabase keys and app settings.
 
 3) Database (Supabase)
-Run the SQL scripts in `scripts/` (or your chosen migration flow).
+Run the SQL scripts in `database/scripts/` (or use your own migration flow).
 
 4) Dev server
 ```bash
@@ -65,7 +70,7 @@ Open http://localhost:3000
 
 ## Tech Stack
 
-- Next.js 14, React, TypeScript
+- Next.js 15, React 19, TypeScript
 - Tailwind CSS + shadcn/ui
 - Supabase (Postgres, Auth, Realtime)
 - Deployed on Vercel
@@ -73,13 +78,14 @@ Open http://localhost:3000
 ## Project Structure
 
 ```
-app/                # Next.js App Router
-components/         # UI + feature components
-hooks/              # Custom hooks
-lib/                # Utilities, providers
-public/             # Static assets
-scripts/            # Database scripts
-styles/             # Tailwind and global styles
+app/                 # Next.js App Router
+components/          # UI + feature components
+hooks/               # Custom hooks
+lib/                 # Utilities, providers
+public/              # Static assets
+database/scripts/    # SQL scripts (migrations + helpers)
+documentation/       # Guides, how-tos, and archive
+styles/              # Tailwind and global styles
 ```
 
 ## Contributing
@@ -100,3 +106,8 @@ MIT — see [LICENSE](LICENSE).
 - UI components by [shadcn/ui](https://ui.shadcn.com/)
 - Icons by [Lucide](https://lucide.dev/)
 - Backend by [Supabase](https://supabase.com/)
+
+## Maintenance
+
+- Dead code check: `pnpm deadcode`
+- Type check: `pnpm exec tsc --noEmit`

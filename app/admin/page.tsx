@@ -76,9 +76,9 @@ export default function AdminPage() {
   }
 
   return (
-    <div className="min-h-screen bg-gray-50">
+  <div className="min-h-screen bg-gradient-to-br from-gray-900 via-gray-800 to-gray-950 text-white">
       {/* Header */}
-      <div className="bg-white shadow-sm border-b">
+  <div className="bg-gray-950 shadow-sm border-b border-gray-800">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="flex justify-between items-center h-16">
             <div className="flex items-center gap-4">
@@ -90,23 +90,21 @@ export default function AdminPage() {
                   </div>
                 </div>
                 <div className="flex flex-col">
-                  <h1 className="text-xl font-bold text-gray-900 leading-none">Admin Panel</h1>
-                  <p className="text-sm text-gray-600 leading-none mt-0.5">System Administration</p>
+                  <h1 className="text-xl font-bold text-white leading-none drop-shadow">Admin Panel</h1>
+                  <p className="text-sm text-gray-300 leading-none mt-0.5">System Administration</p>
                 </div>
               </div>
-              <Badge variant="destructive" className="ml-2 shadow-md">
-                Admin Access
-              </Badge>
+              <Badge variant="outline" className="ml-2 shadow-md bg-gradient-to-r from-purple-700 to-blue-700 text-white border-none">Admin Access</Badge>
             </div>
             
             {/* Navigation */}
             <div className="flex items-center gap-2">
               {activeView !== 'overview' && (
                 <Button
-                  variant="outline"
+                  variant="ghost"
                   size="sm"
                   onClick={() => setActiveView('overview')}
-                  className="flex items-center gap-2"
+                  className="flex items-center gap-2 text-white hover:bg-gray-800"
                 >
                   <ArrowLeft className="h-4 w-4" />
                   Back to Overview
@@ -114,20 +112,20 @@ export default function AdminPage() {
               )}
               
               <Button
-                variant="outline"
+                variant="ghost"
                 size="sm"
                 onClick={handleGoHome}
-                className="flex items-center gap-2"
+                className="flex items-center gap-2 text-white hover:bg-gray-800"
               >
                 <Home className="h-4 w-4" />
                 Home
               </Button>
               
               <Button
-                variant="outline"
+                variant="ghost"
                 size="sm"
                 onClick={handleLogout}
-                className="flex items-center gap-2 hover:bg-red-50 hover:text-red-600 hover:border-red-300"
+                className="flex items-center gap-2 text-white hover:bg-red-700"
               >
                 <svg className="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1" />
@@ -140,16 +138,16 @@ export default function AdminPage() {
       </div>
 
       {/* Main Content */}
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+  <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
         {activeView === 'overview' && (
           <div className="space-y-6">
             {/* Welcome Card */}
-            <Card className="bg-gradient-to-r from-blue-50 to-purple-50 border-blue-200">
+            <Card className="bg-gradient-to-r from-gray-900 via-gray-800 to-gray-950 border-blue-900 text-white shadow-xl">
               <CardHeader>
-                <CardTitle className="text-2xl text-blue-800">
+                <CardTitle className="text-2xl text-blue-300 drop-shadow">
                   Welcome to Admin Panel
                 </CardTitle>
-                <p className="text-blue-600">
+                <p className="text-blue-200">
                   Manage your application's teams, users, and system settings
                 </p>
               </CardHeader>
@@ -158,25 +156,25 @@ export default function AdminPage() {
             {/* Admin Tools Grid */}
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
               {/* Teams Management */}
-              <Card className="cursor-pointer hover:shadow-lg transition-shadow border-2 hover:border-blue-300">
+              <Card className="cursor-pointer hover:shadow-2xl transition-shadow border-2 border-gray-800 hover:border-blue-500 bg-gray-900 text-white">
                 <CardHeader>
                   <div className="flex items-center gap-3">
-                    <div className="p-3 bg-green-100 rounded-lg">
-                      <Users className="h-6 w-6 text-green-600" />
+                    <div className="p-3 bg-green-900 rounded-lg">
+                      <Users className="h-6 w-6 text-green-300" />
                     </div>
                     <div>
-                      <CardTitle className="text-lg">Teams Management</CardTitle>
-                      <p className="text-sm text-gray-600">View and manage all teams</p>
+                      <CardTitle className="text-lg text-green-200">Teams Management</CardTitle>
+                      <p className="text-sm text-gray-400">View and manage all teams</p>
                     </div>
                   </div>
                 </CardHeader>
                 <CardContent>
-                  <p className="text-gray-600 mb-4">
+                  <p className="text-gray-300 mb-4">
                     Access the original admin dashboard to manage teams, view admin users, and handle team operations.
                   </p>
                   <Button
                     onClick={() => setActiveView('dashboard')}
-                    className="w-full"
+                    className="w-full bg-gradient-to-r from-green-700 to-blue-700 text-white font-bold shadow-lg border-none"
                   >
                     Open Teams Dashboard
                   </Button>
@@ -184,25 +182,25 @@ export default function AdminPage() {
               </Card>
 
               {/* Database Overview */}
-              <Card className="cursor-pointer hover:shadow-lg transition-shadow border-2 hover:border-blue-300">
+              <Card className="cursor-pointer hover:shadow-2xl transition-shadow border-2 border-gray-800 hover:border-blue-500 bg-gray-900 text-white">
                 <CardHeader>
                   <div className="flex items-center gap-3">
-                    <div className="p-3 bg-blue-100 rounded-lg">
-                      <Database className="h-6 w-6 text-blue-600" />
+                    <div className="p-3 bg-blue-900 rounded-lg">
+                      <Database className="h-6 w-6 text-blue-300" />
                     </div>
                     <div>
-                      <CardTitle className="text-lg">Database Overview</CardTitle>
-                      <p className="text-sm text-gray-600">Complete system monitoring</p>
+                      <CardTitle className="text-lg text-blue-200">Database Overview</CardTitle>
+                      <p className="text-sm text-gray-400">Complete system monitoring</p>
                     </div>
                   </div>
                 </CardHeader>
                 <CardContent>
-                  <p className="text-gray-600 mb-4">
+                  <p className="text-gray-300 mb-4">
                     Comprehensive database overview with statistics, user management, team status controls, and activity monitoring.
                   </p>
                   <Button
                     onClick={() => setActiveView('database')}
-                    className="w-full"
+                    className="w-full bg-gradient-to-r from-blue-700 to-purple-700 text-white font-bold shadow-lg border-none"
                     variant="outline"
                   >
                     Open Database Overview
@@ -213,43 +211,43 @@ export default function AdminPage() {
 
             {/* Feature Highlights */}
             <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-              <Card>
+              <Card className="bg-gray-900 text-yellow-200 border-gray-800 shadow-lg">
                 <CardContent className="p-4">
                   <div className="flex items-center gap-3">
-                    <div className="p-2 bg-yellow-100 rounded-lg">
-                      <Settings className="h-5 w-5 text-yellow-600" />
+                    <div className="p-2 bg-yellow-900 rounded-lg">
+                      <Settings className="h-5 w-5 text-yellow-400" />
                     </div>
                     <div>
                       <p className="font-medium">Team Status Control</p>
-                      <p className="text-sm text-gray-600">Active, Inactive, Archived</p>
+                      <p className="text-sm text-yellow-300">Active, Inactive, Archived</p>
                     </div>
                   </div>
                 </CardContent>
               </Card>
 
-              <Card>
+              <Card className="bg-gray-900 text-purple-200 border-gray-800 shadow-lg">
                 <CardContent className="p-4">
                   <div className="flex items-center gap-3">
-                    <div className="p-2 bg-purple-100 rounded-lg">
-                      <Users className="h-5 w-5 text-purple-600" />
+                    <div className="p-2 bg-purple-900 rounded-lg">
+                      <Users className="h-5 w-5 text-purple-400" />
                     </div>
                     <div>
                       <p className="font-medium">User Management</p>
-                      <p className="text-sm text-gray-600">Profiles, Admin Access</p>
+                      <p className="text-sm text-purple-300">Profiles, Admin Access</p>
                     </div>
                   </div>
                 </CardContent>
               </Card>
 
-              <Card>
+              <Card className="bg-gray-900 text-red-200 border-gray-800 shadow-lg">
                 <CardContent className="p-4">
                   <div className="flex items-center gap-3">
-                    <div className="p-2 bg-red-100 rounded-lg">
-                      <Database className="h-5 w-5 text-red-600" />
+                    <div className="p-2 bg-red-900 rounded-lg">
+                      <Database className="h-5 w-5 text-red-400" />
                     </div>
                     <div>
                       <p className="font-medium">System Statistics</p>
-                      <p className="text-sm text-gray-600">Real-time Monitoring</p>
+                      <p className="text-sm text-red-300">Real-time Monitoring</p>
                     </div>
                   </div>
                 </CardContent>

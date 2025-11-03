@@ -125,6 +125,21 @@ export default function TeamPage({ params }: TeamPageProps) {
       }
 
       if (teamError) throw teamError
+
+      // Canonicalize URL to invite_code if a friendly slug was used
+      try {
+        const invite = teamData?.invite_code
+        if (invite && resolvedParams.slug !== invite) {
+          const currentPath = typeof window !== 'undefined' ? window.location.pathname : ''
+          const prefix = `/team/${resolvedParams.slug}`
+          const suffix = currentPath.startsWith(prefix) ? currentPath.slice(prefix.length) : ''
+          router.replace(`/team/${invite}${suffix || ''}`)
+          // After replace, stop further processing; next render will reload with canonical URL
+          return
+        }
+      } catch (e) {
+        // Non-fatal if canonicalization fails
+      }
       setTeam(teamData)
 
       // Check if team is password protected

@@ -88,18 +88,26 @@ export function AdminDashboard({ user }: AdminDashboardProps) {
 
   const checkAdminStatus = async () => {
     try {
-      const { data, error } = await supabase.rpc('is_user_admin', {
-        admin_email: user.email
-      })
+      // Use members table: check role field for 'admin'
+      const { data, error } = await supabase
+        .from('members')
+        .select('email, role, status')
+        .eq('email', user.email)
+        .eq('role', 'admin')
+        .eq('status', 'active')
+        .limit(1)
+        .single()
 
-      if (error) {
-        console.error('Error checking admin status:', error)
-        setError('Failed to verify admin status')
+      if (error || !data) {
+        setIsAdmin(false)
+        setError('Access denied: You are not an admin')
         return
       }
 
-      setIsAdmin(data)
-      if (!data) {
+      if (data.role === 'admin') {
+        setIsAdmin(true)
+      } else {
+        setIsAdmin(false)
         setError('Access denied: You are not an admin')
       }
     } catch (error) {
@@ -113,9 +121,12 @@ export function AdminDashboard({ user }: AdminDashboardProps) {
   const fetchAllTeams = async () => {
     try {
       setLoading(true)
-      const { data, error } = await supabase.rpc('get_all_teams_admin', {
-        admin_email: user.email
-      })
+      // Haal alle teams op waar user admin is
+      // Gebruik de juiste kolom, bijvoorbeeld creator_email
+      const { data, error } = await supabase
+        .from('teams')
+        .select('*')
+        .eq('creator_email', user.email)
 
       if (error) {
         throw error
@@ -132,9 +143,12 @@ export function AdminDashboard({ user }: AdminDashboardProps) {
 
   const fetchAdminUsers = async () => {
     try {
-      const { data, error } = await supabase.rpc('get_admin_users', {
-        admin_email: user.email
-      })
+      // Haal alle users op met role 'admin'
+      const { data, error } = await supabase
+        .from('members')
+        .select('*')
+        .eq('role', 'admin')
+        .eq('status', 'active')
 
       if (error) {
         throw error
@@ -200,17 +214,17 @@ export function AdminDashboard({ user }: AdminDashboardProps) {
 
   // Filter teams based on search term
   const filteredTeams = teams.filter(team => 
-    team.team_name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    team.team_invite_code.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    team.creator_email.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    team.creator_name.toLowerCase().includes(searchTerm.toLowerCase())
+    (team.team_name ?? '').toLowerCase().includes(searchTerm.toLowerCase()) ||
+    (team.team_invite_code ?? '').toLowerCase().includes(searchTerm.toLowerCase()) ||
+    (team.creator_email ?? '').toLowerCase().includes(searchTerm.toLowerCase()) ||
+    (team.creator_name ?? '').toLowerCase().includes(searchTerm.toLowerCase())
   )
 
   // Filter admin users based on search term
   const filteredAdminUsers = adminUsers.filter(admin =>
-    admin.admin_email.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    admin.admin_name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    (admin.granted_by && admin.granted_by.toLowerCase().includes(searchTerm.toLowerCase()))
+    (admin.admin_email ?? '').toLowerCase().includes(searchTerm.toLowerCase()) ||
+    (admin.admin_name ?? '').toLowerCase().includes(searchTerm.toLowerCase()) ||
+    (admin.granted_by ?? '').toLowerCase().includes(searchTerm.toLowerCase())
   )
 
   const exportTeamsData = () => {

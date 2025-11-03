@@ -139,10 +139,11 @@ export default function HomePage() {
   }
 
   const handleAdminNavigation = (e?: React.MouseEvent) => {
+    const adminUrl = '/admin'
     if (e && (e.ctrlKey || e.metaKey)) {
-      window.open('/admin', '_blank')
+      window.open(adminUrl, '_blank', 'noopener,noreferrer')
     } else {
-      router.push('/admin')
+      window.location.href = adminUrl
     }
   }
 

@@ -58,6 +58,7 @@ interface TeamSettingsPageProps {
 
 export default function TeamSettingsPage({ params }: TeamSettingsPageProps) {
   const resolvedParams = use(params)
+  const router = useRouter()
   const [teamSettings, setTeamSettings] = useState<TeamSettings | null>(null)
   const [members, setMembers] = useState<TeamMember[]>([])
   const [isLoading, setIsLoading] = useState(true)
@@ -175,7 +176,7 @@ export default function TeamSettingsPage({ params }: TeamSettingsPageProps) {
   
   const { user } = useAuth()
   const { version, buildInfo, commitMessage } = useVersion()
-  const router = useRouter()
+  
 
   // Get member IDs for today's availability
   const memberIds = members.map(member => member.member_id)
@@ -219,6 +220,24 @@ export default function TeamSettingsPage({ params }: TeamSettingsPageProps) {
       }
 
       if (teamError || !teamData) throw teamError || new Error("Team niet gevonden")
+
+      // Canonicalize URL: if the current slug is a friendly slug, redirect to invite_code
+      try {
+        const { data: canonicalTeam } = await supabase
+          .from('teams')
+          .select('invite_code')
+          .eq('id', teamData.id)
+          .single()
+
+        const invite = canonicalTeam?.invite_code
+        if (invite && resolvedParams.slug !== invite) {
+          router.replace(`/team/${invite}/settings`)
+          // Stop further processing on this render; next render will be on the canonical URL
+          return
+        }
+      } catch (e) {
+        // Non-fatal: if canonical lookup fails, continue without redirect
+      }
 
       // Build team settings without RPC (compute from tables)
       const { data: teamRow, error: teamRowError } = await supabase
