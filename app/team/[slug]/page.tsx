@@ -33,6 +33,7 @@ interface Member {
   created_at: string
   last_active?: string
   order_index?: number
+  birth_date?: string | null
 }
 
 interface TeamPageProps {
@@ -180,7 +181,8 @@ export default function TeamPage({ params }: TeamPageProps) {
         profile_image: member.profile_image || member.profile_image_url,
         created_at: member.created_at,
         last_active: member.last_active,
-        order_index: member.order_index || 0
+        order_index: member.order_index || 0,
+        birth_date: member.birth_date || null
       }))
       
       setMembers(allMembers)

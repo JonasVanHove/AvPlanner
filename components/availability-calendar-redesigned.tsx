@@ -57,6 +57,7 @@ interface Member {
   created_at?: string
   last_active?: string
   order_index?: number
+  birth_date?: string | null
 }
 
 interface Availability {
@@ -1386,6 +1387,19 @@ const AvailabilityCalendarRedesigned = ({
                                     <div className="min-w-0 flex-1">
                                       <div className="text-sm font-medium text-gray-900 dark:text-white truncate">
                                         {member.first_name} {member.last_name}
+                                        {member.birth_date && (
+                                          <span className="ml-2 text-xs text-muted-foreground whitespace-nowrap">
+                                            {(() => {
+                                              const d = new Date(member.birth_date as string)
+                                              if (!isNaN(d.getTime())) {
+                                                const today = new Date()
+                                                const isToday = d.getMonth() === today.getMonth() && d.getDate() === today.getDate()
+                                                return isToday ? '🎂 Today' : `🎂 ${d.toLocaleDateString(undefined, { month: 'short', day: '2-digit' })}`
+                                              }
+                                              return null
+                                            })()}
+                                          </span>
+                                        )}
                                       </div>
                                       <div className="flex items-center gap-1 text-xs text-gray-500 dark:text-gray-400">
                                         {memberStats.available > 0 && (
@@ -1519,6 +1533,19 @@ const AvailabilityCalendarRedesigned = ({
                           <div className="min-w-0 flex-1">
                             <div className="text-sm font-semibold text-gray-900 dark:text-white truncate">
                               {member.first_name} {member.last_name}
+                              {member.birth_date && (
+                                <span className="ml-2 text-xs text-muted-foreground whitespace-nowrap">
+                                  {(() => {
+                                    const d = new Date(member.birth_date as string)
+                                    if (!isNaN(d.getTime())) {
+                                      const today = new Date()
+                                      const isToday = d.getMonth() === today.getMonth() && d.getDate() === today.getDate()
+                                      return isToday ? '🎂 Today' : `🎂 ${d.toLocaleDateString(undefined, { month: 'short', day: '2-digit' })}`
+                                    }
+                                    return null
+                                  })()}
+                                </span>
+                              )}
                             </div>
                             <div className="flex items-center gap-2 mt-1">
                               {member.email && (
@@ -1714,6 +1741,19 @@ const AvailabilityCalendarRedesigned = ({
                         <div className="min-w-0 flex-1">
                           <div className="text-sm font-medium text-gray-900 dark:text-white truncate">
                             {member.first_name} {member.last_name}
+                            {member.birth_date && (
+                              <span className="ml-2 text-xs text-muted-foreground whitespace-nowrap">
+                                {(() => {
+                                  const d = new Date(member.birth_date as string)
+                                  if (!isNaN(d.getTime())) {
+                                    const today = new Date()
+                                    const isToday = d.getMonth() === today.getMonth() && d.getDate() === today.getDate()
+                                    return isToday ? '🎂 Today' : `🎂 ${d.toLocaleDateString(undefined, { month: 'short', day: '2-digit' })}`
+                                  }
+                                  return null
+                                })()}
+                              </span>
+                            )}
                           </div>
                           <div className="flex items-center gap-2 mt-1">
                             {member.email && (

@@ -7,7 +7,7 @@ export const translations = {
     "nav.teams": "Teams",
 
     // My Teams page
-    "myTeams.title": "My Teams",
+  "myTeams.title": "Me & My Teams",
     "myTeams.loading": "Loading...",
     "myTeams.pleaseLogin": "Please log in to view your teams",
     "myTeams.backToHome": "Back to Home",
@@ -537,7 +537,7 @@ export const translations = {
     "nav.teams": "Teams",
 
     // My Teams page
-    "myTeams.title": "Mijn Teams",
+  "myTeams.title": "Ik & Mijn Teams",
     "myTeams.loading": "Laden...",
     "myTeams.pleaseLogin": "Log in om je teams te bekijken",
     "myTeams.backToHome": "Terug naar Home",
@@ -1067,7 +1067,7 @@ export const translations = {
     "nav.teams": "Équipes",
 
     // My Teams page
-    "myTeams.title": "Mes Équipes",
+  "myTeams.title": "Moi & Mes Équipes",
     "myTeams.loading": "Chargement...",
     "myTeams.pleaseLogin": "Connectez-vous pour voir vos équipes",
     "myTeams.backToHome": "Retour à l'accueil",

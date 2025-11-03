@@ -13,6 +13,7 @@ import { User } from '@supabase/supabase-js'
 import { useRouter } from 'next/navigation'
 import { useTheme } from "next-themes"
 import { HamburgerMenu, HamburgerMenuItem } from "@/components/ui/hamburger-menu"
+import { UserProfileForm } from "@/components/user-profile-form"
 
 
 export default function MyTeamsPage() {
@@ -237,7 +238,7 @@ export default function MyTeamsPage() {
               <HamburgerMenu
                 title="Menu"
                 triggerClassName="h-8 w-8 p-0 bg-white/15 hover:bg-white/25 border-white/25 text-white shadow-sm"
-                appName="My Teams"
+                appName={t('myTeams.title')}
               >
                 <HamburgerMenuItem onClick={handleGoHome}>
                   <div className="flex items-center justify-between w-full">
@@ -280,6 +281,9 @@ export default function MyTeamsPage() {
             onLogout={handleLogout}
             onGoHome={handleGoHome}
           />
+        </div>
+        <div className="mt-6">
+          <UserProfileForm user={user} />
         </div>
       </div>
     </div>

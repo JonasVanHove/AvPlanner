@@ -1,6 +1,6 @@
 "use client"
 
-import { useState, useRef } from "react"
+import { useEffect, useState, useRef } from "react"
 import { supabase } from "@/lib/supabase"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
@@ -27,6 +27,40 @@ export function UserProfileForm({ user, onProfileUpdate }: UserProfileFormProps)
   const [firstName, setFirstName] = useState("")
   const [lastName, setLastName] = useState("")
   const [profileImageUrl, setProfileImageUrl] = useState("")
+  const [birthDate, setBirthDate] = useState<string>("")
+  // Prefill from members table if available
+  useEffect(() => {
+    const init = async () => {
+      try {
+        const { data, error } = await supabase
+          .from('members')
+          .select('first_name, last_name, profile_image, profile_image_url, birth_date')
+          .eq('email', user.email)
+          .eq('status', 'active')
+          .limit(1)
+          .single()
+
+        if (!error && data) {
+          setFirstName(data.first_name || "")
+          setLastName(data.last_name || "")
+          setProfileImageUrl(data.profile_image_url || data.profile_image || "")
+          if (data.birth_date) {
+            // ensure YYYY-MM-DD
+            const d = new Date(data.birth_date)
+            if (!isNaN(d.getTime())) {
+              const yyyy = d.getFullYear()
+              const mm = String(d.getMonth() + 1).padStart(2, '0')
+              const dd = String(d.getDate()).padStart(2, '0')
+              setBirthDate(`${yyyy}-${mm}-${dd}`)
+            }
+          }
+        }
+      } catch (e) {
+        // no-op
+      }
+    }
+    init()
+  }, [user.email])
   const [loading, setLoading] = useState(false)
   const [uploading, setUploading] = useState(false)
   const [error, setError] = useState("")
@@ -93,11 +127,12 @@ export function UserProfileForm({ user, onProfileUpdate }: UserProfileFormProps)
       setLoading(true)
       setError('')
 
-      const { error } = await supabase.rpc('update_user_profile', {
+      const { error } = await supabase.rpc('update_user_profile_v2', {
         user_email: user.email,
-        profile_image_url: profileImageUrl || null,
-        first_name: firstName.trim(),
-        last_name: lastName.trim()
+        new_first_name: firstName.trim() || null,
+        new_last_name: lastName.trim() || null,
+        new_profile_image: profileImageUrl || null,
+        new_birth_date: birthDate ? new Date(birthDate).toISOString().slice(0,10) : null
       })
 
       if (error) {
@@ -204,6 +239,20 @@ export function UserProfileForm({ user, onProfileUpdate }: UserProfileFormProps)
                 required
               />
             </div>
+          </div>
+
+          {/* Birth Date */}
+          <div>
+            <Label htmlFor="birthDate">Birth Date</Label>
+            <Input
+              id="birthDate"
+              type="date"
+              value={birthDate}
+              onChange={(e) => setBirthDate(e.target.value)}
+            />
+            <p className="text-sm text-gray-500 mt-1">
+              Optional. Used to show a birthday badge in your teams.
+            </p>
           </div>
 
           {/* Email (readonly) */}
