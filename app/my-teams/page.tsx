@@ -5,6 +5,8 @@ import { supabase } from '@/lib/supabase'
 import { useTranslation, type Locale } from "@/lib/i18n"
 import { UserDashboard } from '@/components/auth/user-dashboard'
 import { LoginForm } from '@/components/auth/login-form'
+import { RegisterForm } from '@/components/auth/register-form'
+import { ForgotPasswordForm } from '@/components/auth/forgot-password-form'
 import { Button } from '@/components/ui/button'
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
 import { DropdownMenu, DropdownMenuContent, DropdownMenuTrigger, DropdownMenuItem, DropdownMenuSeparator, DropdownMenuSub, DropdownMenuSubTrigger, DropdownMenuSubContent } from "@/components/ui/dropdown-menu"
@@ -21,6 +23,7 @@ export default function MyTeamsPage() {
   const [loading, setLoading] = useState(true)
   const [isAdmin, setIsAdmin] = useState(false)
   const [userProfileImage, setUserProfileImage] = useState<string | null>(null)
+  const [authMode, setAuthMode] = useState<'login' | 'register' | 'forgot-password'>('login')
   const router = useRouter()
   const { setTheme } = useTheme()
 
@@ -143,7 +146,22 @@ export default function MyTeamsPage() {
             <h1 className="text-3xl font-bold">{t('myTeams.title')}</h1>
             <p className="text-muted-foreground mt-2">{t('myTeams.pleaseLogin')}</p>
           </div>
-          <LoginForm />
+          {authMode === 'login' && (
+            <LoginForm 
+              onSwitchToRegister={() => setAuthMode('register')}
+              onSwitchToForgotPassword={() => setAuthMode('forgot-password')}
+            />
+          )}
+          {authMode === 'register' && (
+            <RegisterForm 
+              onSwitchToLogin={() => setAuthMode('login')}
+            />
+          )}
+          {authMode === 'forgot-password' && (
+            <ForgotPasswordForm 
+              onSwitchToLogin={() => setAuthMode('login')}
+            />
+          )}
         </div>
       </div>
     )
