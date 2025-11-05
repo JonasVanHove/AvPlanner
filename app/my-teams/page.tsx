@@ -116,10 +116,11 @@ export default function MyTeamsPage() {
   }
 
   const handleAdminNavigation = (e?: React.MouseEvent) => {
+    const adminUrl = '/admin'
     if (e && (e.ctrlKey || e.metaKey)) {
-      window.open('/admin', '_blank')
+      window.open(adminUrl, '_blank', 'noopener,noreferrer')
     } else {
-      router.push('/admin')
+      window.location.href = adminUrl
     }
   }
 
@@ -236,7 +237,7 @@ export default function MyTeamsPage() {
               <HamburgerMenu
                 title="Menu"
                 triggerClassName="h-8 w-8 p-0 bg-white/15 hover:bg-white/25 border-white/25 text-white shadow-sm"
-                appName="My Teams"
+                appName={t('myTeams.title')}
               >
                 <HamburgerMenuItem onClick={handleGoHome}>
                   <div className="flex items-center justify-between w-full">
@@ -280,6 +281,7 @@ export default function MyTeamsPage() {
             onGoHome={handleGoHome}
           />
         </div>
+        {/** The profile form is now accessible via the Edit -> Update Profile menu in the header card */}
       </div>
     </div>
   )

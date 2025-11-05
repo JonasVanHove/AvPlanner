@@ -108,7 +108,7 @@ export default function DateTeamPage({ params }: DateTeamPageProps) {
         // First try invite_code
         const { data: inviteTeamData, error: inviteError } = await supabase
           .from('teams')
-          .select('*')
+          .select('id,name,slug,invite_code,is_password_protected,password_hash')
           .eq('invite_code', resolvedParams.slug)
           .single()
 
@@ -118,7 +118,7 @@ export default function DateTeamPage({ params }: DateTeamPageProps) {
           // If not found by invite_code, try by slug
           const { data: slugTeamData, error: slugError } = await supabase
             .from('teams')
-            .select('*')
+            .select('id,name,slug,invite_code,is_password_protected,password_hash')
             .eq('slug', resolvedParams.slug)
             .single()
 
@@ -161,7 +161,7 @@ export default function DateTeamPage({ params }: DateTeamPageProps) {
     try {
       const { data: allMembersData, error: membersError } = await supabase
         .from("members")
-        .select("*")
+        .select("id, first_name, last_name, email, role, status, is_hidden, profile_image, profile_image_url, created_at, last_active, order_index, birth_date")
         .eq("team_id", teamId)
         .order("order_index", { ascending: true })
         .order("created_at", { ascending: true })
@@ -170,6 +170,13 @@ export default function DateTeamPage({ params }: DateTeamPageProps) {
         console.error('Error fetching members:', membersError)
         return
       }
+      
+      // Debug raw Supabase data
+      console.log("🎂 Raw members (date route):", (allMembersData || []).map((m: any) => ({
+        id: m.id,
+        name: `${m.first_name} ${m.last_name}`,
+        birth_date: m.birth_date ?? '<missing>'
+      })))
       
       // Transform to consistent format
       const allMembers: Member[] = (allMembersData || []).map((member: any) => ({
@@ -184,7 +191,8 @@ export default function DateTeamPage({ params }: DateTeamPageProps) {
         profile_image: member.profile_image || member.profile_image_url,
         created_at: member.created_at,
         last_active: member.last_active,
-        order_index: member.order_index || 0
+        order_index: member.order_index || 0,
+        birth_date: member.birth_date || null
       }))
       
       setMembers(allMembers)

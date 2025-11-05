@@ -33,6 +33,7 @@ interface Member {
   created_at: string
   last_active?: string
   order_index?: number
+  birth_date?: string | null
 }
 
 interface LocaleTeamPageProps {
@@ -82,7 +83,7 @@ export default function LocaleTeamPage({ params }: LocaleTeamPageProps) {
       // First try to fetch team by invite_code, then by slug (friendly URL)
       let { data: teamData, error: teamError } = await supabase
         .from("teams")
-        .select("*")
+        .select("id,name,slug,invite_code,is_password_protected,password_hash")
         .eq("invite_code", params.slug)
         .single()
 
@@ -90,7 +91,7 @@ export default function LocaleTeamPage({ params }: LocaleTeamPageProps) {
       if (teamError && teamError.code === 'PGRST116') {
         const { data: teamBySlug, error: slugError } = await supabase
           .from("teams")
-          .select("*")
+          .select("id,name,slug,invite_code,is_password_protected,password_hash")
           .eq("slug", params.slug)
           .single()
 
@@ -98,7 +99,8 @@ export default function LocaleTeamPage({ params }: LocaleTeamPageProps) {
         teamError = slugError
       }
 
-      if (teamError) throw teamError
+  if (teamError) throw teamError
+  if (!teamData) throw new Error('Team not found')
       setTeam(teamData)
 
       // Check if team is password protected
@@ -119,13 +121,22 @@ export default function LocaleTeamPage({ params }: LocaleTeamPageProps) {
       // Fetch all members for this team (including inactive ones)
       const { data: allMembersData, error: membersError } = await supabase
         .from("members")
-        .select("*")
+        .select("id, first_name, last_name, email, role, status, is_hidden, profile_image, profile_image_url, created_at, last_active, order_index, birth_date")
         .eq("team_id", teamData.id)
         .order("order_index", { ascending: true })
         .order("created_at", { ascending: true })
 
       if (membersError) throw membersError
       
+      // Debug raw members to verify birth_date presence (locale route)
+      try {
+        console.log("🎂 Raw members (locale normal fetch):", (allMembersData || []).map((m: any) => ({
+          id: m.id,
+          name: `${m.first_name} ${m.last_name}`,
+          birth_date: m.birth_date ?? '<missing>'
+        })))
+      } catch {}
+
       // Transform to consistent format
       const allMembers: Member[] = (allMembersData || []).map((member: any) => ({
         id: member.id,
@@ -139,7 +150,8 @@ export default function LocaleTeamPage({ params }: LocaleTeamPageProps) {
         profile_image: member.profile_image || member.profile_image_url,
         created_at: member.created_at,
         last_active: member.last_active,
-        order_index: member.order_index || 0
+        order_index: member.order_index || 0,
+        birth_date: member.birth_date || null
       }))
       
       setMembers(allMembers)

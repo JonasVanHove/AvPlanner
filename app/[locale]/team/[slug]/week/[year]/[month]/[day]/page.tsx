@@ -32,6 +32,7 @@ interface Member {
   created_at: string
   last_active?: string
   order_index?: number
+  birth_date?: string | null
 }
 
 interface DateTeamPageProps {
@@ -90,7 +91,7 @@ export default function DateTeamPage({ params }: DateTeamPageProps) {
       try {
         const { data: teamData, error: teamError } = await supabase
           .from('teams')
-          .select('*')
+          .select('id,name,slug,invite_code,is_password_protected,password_hash')
           .eq('invite_code', params.slug)
           .single()
 
@@ -126,7 +127,7 @@ export default function DateTeamPage({ params }: DateTeamPageProps) {
     try {
       const { data: allMembersData, error: membersError } = await supabase
         .from("members")
-        .select("*")
+        .select("id, first_name, last_name, email, role, status, is_hidden, profile_image, profile_image_url, created_at, last_active, order_index, birth_date")
         .eq("team_id", teamId)
         .order("order_index", { ascending: true })
         .order("created_at", { ascending: true })
@@ -136,6 +137,15 @@ export default function DateTeamPage({ params }: DateTeamPageProps) {
         return
       }
       
+      // Debug raw members to verify birth_date presence (locale date route)
+      try {
+        console.log("🎂 Raw members (locale date fetch):", (allMembersData || []).map((m: any) => ({
+          id: m.id,
+          name: `${m.first_name} ${m.last_name}`,
+          birth_date: m.birth_date ?? '<missing>'
+        })))
+      } catch {}
+
       // Transform to consistent format
       const allMembers: Member[] = (allMembersData || []).map((member: any) => ({
         id: member.id,
@@ -149,7 +159,8 @@ export default function DateTeamPage({ params }: DateTeamPageProps) {
         profile_image: member.profile_image || member.profile_image_url,
         created_at: member.created_at,
         last_active: member.last_active,
-        order_index: member.order_index || 0
+        order_index: member.order_index || 0,
+        birth_date: member.birth_date || null
       }))
       
       setMembers(allMembers)

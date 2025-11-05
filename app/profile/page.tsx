@@ -66,7 +66,7 @@ export default function ProfilePage() {
           <TabsList className="grid w-full grid-cols-2 max-w-md">
             <TabsTrigger value="teams" className="flex items-center gap-2">
               <Users className="h-4 w-4" />
-              My Teams
+              My Teams & Me
             </TabsTrigger>
             <TabsTrigger value="profile" className="flex items-center gap-2">
               <User className="h-4 w-4" />

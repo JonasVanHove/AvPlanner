@@ -158,18 +158,26 @@ export function AdminDatabaseOverview({ user }: AdminDatabaseOverviewProps) {
 
   const checkAdminStatus = async () => {
     try {
-      const { data, error } = await supabase.rpc('is_user_admin', {
-        admin_email: user.email
-      })
+      // Gebruik members tabel: check role en status
+      const { data, error } = await supabase
+        .from('members')
+        .select('email, role, status')
+        .eq('email', user.email)
+        .eq('role', 'admin')
+        .eq('status', 'active')
+        .limit(1)
+        .single()
 
-      if (error) {
-        console.error('Error checking admin status:', error)
-        setError('Failed to verify admin status')
+      if (error || !data) {
+        setIsAdmin(false)
+        setError('Access denied: You are not an admin')
         return
       }
 
-      setIsAdmin(data)
-      if (!data) {
+      if (data.role === 'admin') {
+        setIsAdmin(true)
+      } else {
+        setIsAdmin(false)
         setError('Access denied: You are not an admin')
       }
     } catch (error) {
@@ -183,36 +191,76 @@ export function AdminDatabaseOverview({ user }: AdminDatabaseOverviewProps) {
   const fetchAllData = async () => {
     try {
       setLoading(true)
-      
-      // Fetch database statistics
-      const { data: statsData, error: statsError } = await supabase.rpc('get_database_statistics', {
-        admin_email: user.email
-      })
+      // Fetch database statistics directly from tables
+      let statsError = null;
+      let stats: DatabaseStats = {
+        total_users: 0,
+        total_teams: 0,
+        active_teams: 0,
+        inactive_teams: 0,
+        archived_teams: 0,
+        total_members: 0,
+        active_members: 0,
+        inactive_members: 0,
+        left_members: 0,
+        total_admins: 0,
+        recent_signups: 0,
+        recent_teams: 0,
+        password_protected_teams: 0,
+        teams_with_availability: 0,
+      };
+      try {
+        // Count teams
+        const { count: teamCount, error: teamCountError } = await supabase
+          .from('teams')
+          .select('*', { count: 'exact', head: true });
+        // Count members
+        const { count: memberCount, error: memberCountError } = await supabase
+          .from('members')
+          .select('*', { count: 'exact', head: true });
+        // Count activities
+        const { count: activityCount, error: activityCountError } = await supabase
+          .from('activity')
+          .select('*', { count: 'exact', head: true });
+        stats.total_teams = teamCount ?? 0;
+        stats.total_members = memberCount ?? 0;
+        // Optionally, you can add more queries to fill other fields
+        statsError = teamCountError || memberCountError || activityCountError;
+        if (statsError) {
+          console.error('Error fetching database statistics:', statsError);
+        }
+      } catch (err) {
+        statsError = err;
+        console.error('Error fetching database statistics:', err);
+      }
+      setStats(stats)
 
-      if (statsError) throw statsError
-      setStats(statsData?.[0] || null)
+      // Fetch detailed teams: alle teams waar user admin is
+        // Fetch teams where the current user is the creator
+        const { data: teamsData, error: teamsError } = await supabase
+          .from('teams')
+          .select('*')
+          .eq('created_by', user.id)
 
-      // Fetch detailed teams
-      const { data: teamsData, error: teamsError } = await supabase.rpc('get_all_teams_detailed', {
-        admin_email: user.email
-      })
+        if (teamsError) throw teamsError
+        setTeams(teamsData || [])
 
-      if (teamsError) throw teamsError
-      setTeams(teamsData || [])
-
-      // Fetch all users
-      const { data: usersData, error: usersError } = await supabase.rpc('get_all_users_admin', {
-        admin_email: user.email
-      })
+      // Fetch all users: alle members met role 'admin' en status 'active'
+      const { data: usersData, error: usersError } = await supabase
+        .from('members')
+        .select('*')
+        .eq('role', 'admin')
+        .eq('status', 'active')
 
       if (usersError) throw usersError
       setUsers(usersData || [])
 
-      // Fetch recent activity
-      const { data: activityData, error: activityError } = await supabase.rpc('get_recent_activity', {
-        admin_email: user.email,
-        limit_count: 50
-      })
+      // Fetch recent activity: voorbeeld, haal laatste 50 rows uit activity tabel
+      const { data: activityData, error: activityError } = await supabase
+        .from('activity')
+        .select('*')
+        .order('created_at', { ascending: false })
+        .limit(50)
 
       if (activityError) throw activityError
       setActivity(activityData || [])
@@ -321,18 +369,15 @@ export function AdminDatabaseOverview({ user }: AdminDatabaseOverviewProps) {
   }
 
   const filteredTeams = teams.filter(team => {
-    const matchesSearch = team.team_name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-                         team.team_invite_code.toLowerCase().includes(searchTerm.toLowerCase()) ||
-                         team.creator_email.toLowerCase().includes(searchTerm.toLowerCase())
-    
-    const matchesStatus = teamStatusFilter === 'all' || team.team_status === teamStatusFilter
-    
-    return matchesSearch && matchesStatus
+  const matchesSearch = (team.team_name ?? '').toLowerCase().includes(searchTerm.toLowerCase()) ||
+             (team.team_invite_code ?? '').toLowerCase().includes(searchTerm.toLowerCase())
+  const matchesStatus = teamStatusFilter === 'all' || team.team_status === teamStatusFilter
+  return matchesSearch && matchesStatus
   })
 
   const filteredUsers = users.filter(user => 
-    user.user_email.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    user.user_name.toLowerCase().includes(searchTerm.toLowerCase())
+  (user.user_email ?? '').toLowerCase().includes(searchTerm.toLowerCase()) ||
+  (user.user_name ?? '').toLowerCase().includes(searchTerm.toLowerCase())
   )
 
   const refreshData = () => {

@@ -119,7 +119,8 @@ function SettingsPanelContent(props: {
         <>
           <DropdownMenuItem 
             onClick={() => {
-              window.location.href = `/team/${team.slug || team.invite_code}/settings`
+              // Redirect Manage Team to the My Teams overview
+              window.location.href = `/my-teams`
               onClose?.()
             }}
             className="cursor-pointer"

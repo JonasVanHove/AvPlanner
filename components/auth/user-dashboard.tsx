@@ -6,6 +6,7 @@ import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog"
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu"
 import { TeamForm } from "@/components/team-form"
 import { JoinTeamForm } from "@/components/join-team-form"
 import { Loader2, Users, Calendar, Settings, LogOut, Crown, Shield, Home, Plus, UserPlus, RefreshCw, Eye, EyeOff, MapPin } from "lucide-react"
@@ -18,6 +19,7 @@ import { TeamActivities } from "@/components/team-activities"
 import { HolidayManagement } from "@/components/holiday-management-simple"
 import type { User } from "@supabase/supabase-js"
 import { Badge } from "@/components/ui/badge"
+import { UserProfileForm } from "@/components/user-profile-form"
 
 interface Team {
   id: string
@@ -81,6 +83,7 @@ export function UserDashboard({ user, onLogout, onGoHome }: UserDashboardProps) 
   const [refreshKey, setRefreshKey] = useState(0)
   const [isRefreshing, setIsRefreshing] = useState(false)
   const [userProfileImage, setUserProfileImage] = useState<string | null>(null)
+  const [profileDialogOpen, setProfileDialogOpen] = useState(false)
   const router = useRouter()
 
   // Get all member IDs from all teams for today's availability
@@ -327,6 +330,23 @@ export function UserDashboard({ user, onLogout, onGoHome }: UserDashboardProps) 
               </div>
             </div>
             <div className="flex items-center gap-2 sm:gap-3 self-start sm:self-auto">
+              {/* Small Edit menu to open Update Profile */}
+              <DropdownMenu>
+                <DropdownMenuTrigger asChild>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    className="flex items-center gap-1 sm:gap-2 text-xs sm:text-sm"
+                  >
+                    Edit
+                  </Button>
+                </DropdownMenuTrigger>
+                <DropdownMenuContent align="end" className="w-48">
+                  <DropdownMenuItem className="cursor-pointer" onClick={() => setProfileDialogOpen(true)}>
+                    Update Profile
+                  </DropdownMenuItem>
+                </DropdownMenuContent>
+              </DropdownMenu>
               {onGoHome && (
                 <Button
                   onClick={onGoHome}
@@ -353,6 +373,16 @@ export function UserDashboard({ user, onLogout, onGoHome }: UserDashboardProps) 
           </div>
         </CardHeader>
       </Card>
+
+      {/* Update Profile Dialog */}
+      <Dialog open={profileDialogOpen} onOpenChange={setProfileDialogOpen}>
+        <DialogContent className="max-w-2xl">
+          <DialogHeader>
+            <DialogTitle>Update Profile</DialogTitle>
+          </DialogHeader>
+          <UserProfileForm user={user} onProfileUpdate={() => setProfileDialogOpen(false)} />
+        </DialogContent>
+      </Dialog>
 
       {/* Team Actions */}
   <Card className="bg-card border border-border dark:border-fuchsia-500/30 dark:shadow-[0_0_22px_-10px_rgba(217,70,239,0.45)]">
@@ -407,7 +437,7 @@ export function UserDashboard({ user, onLogout, onGoHome }: UserDashboardProps) 
                 <Users className="h-5 w-5 sm:h-6 sm:w-6 text-foreground/70" />
               </div>
               <div className="min-w-0 flex-1">
-                <CardTitle className="text-lg sm:text-xl">My Teams ({teams.length})</CardTitle>
+                <CardTitle className="text-lg sm:text-xl">My Teams & Me ({teams.length})</CardTitle>
                 <p className="text-xs sm:text-sm text-muted-foreground mt-1">
                   {teams.length === 0 ? 'No teams yet' : `You're a member of ${teams.length} team${teams.length !== 1 ? 's' : ''}`}
                 </p>

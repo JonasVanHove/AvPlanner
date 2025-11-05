@@ -319,7 +319,7 @@ export function UserTeamsOverview({ user }: UserTeamsOverviewProps) {
         <CardHeader>
           <CardTitle className="flex items-center gap-2">
             <Users className="h-5 w-5" />
-            My Teams ({teams.length})
+            My Teams & Me ({teams.length})
           </CardTitle>
         </CardHeader>
         <CardContent>

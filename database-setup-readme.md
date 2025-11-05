@@ -64,8 +64,10 @@ Je krijgt deze fout op /my-teams omdat essentiële database tabellen ontbreken.
 
 ### Stap 5: Configureer Row Level Security (Optioneel maar Aanbevolen)
 1. In dezelfde SQL Editor
-2. Kopieer en plak de inhoud van `database-rls-policies.sql` 
-3. Voer het script uit
+2. Kopieer en plak de inhoud van `database-rls-policies.sql`  (als aanwezig)
+3. Als je 500-fouten krijgt door RLS recursion ("infinite recursion detected"), voer tijdelijk
+   `database/fixes/2025-11-05-rls-emergency-fix.sql` uit om policies te resetten naar veilige, niet-recursieve basis
+4. Voer het gekozen script uit
 
 ### Stap 6: Admin Gebruikers Configureren
 In het bestand `database-missing-functions.sql` staan enkele hardcoded admin emails:

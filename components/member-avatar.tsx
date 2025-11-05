@@ -10,6 +10,7 @@ interface MemberAvatarProps {
   profileImage?: string
   size?: "sm" | "md" | "lg"
   className?: string
+  isBirthdayToday?: boolean
   statusIndicator?: {
     show: boolean
     status?: "available" | "unavailable" | "need_to_check" | "absent" | "holiday" | "remote"
@@ -17,7 +18,7 @@ interface MemberAvatarProps {
   }
 }
 
-export function MemberAvatar({ firstName, lastName, profileImage, size = "md", className, statusIndicator }: MemberAvatarProps) {
+export function MemberAvatar({ firstName, lastName, profileImage, size = "md", className, statusIndicator, isBirthdayToday }: MemberAvatarProps) {
   const { theme } = useTheme()
   const sizeClasses = {
     sm: "h-6 w-6 text-xs",
@@ -43,13 +44,6 @@ export function MemberAvatar({ firstName, lastName, profileImage, size = "md", c
 
   // Debug: Log profile image processing
   const hasImage = profileImage && profileImage.length > 0
-  console.log(`🖼️ MemberAvatar for ${firstName} ${lastName}:`, {
-    hasImage,
-    imageType: profileImage?.startsWith('data:') ? 'base64' : profileImage?.startsWith('http') ? 'url' : 'unknown',
-    imageLength: profileImage?.length,
-    imagePreview: profileImage?.substring(0, 50) + '...',
-    initials: getInitials()
-  })
 
   const getStatusLabel = (status: string | undefined) => {
     switch (status) {
@@ -100,8 +94,6 @@ export function MemberAvatar({ firstName, lastName, profileImage, size = "md", c
             <AvatarImage 
               src={profileImage} 
               alt={`${firstName} ${lastName}`}
-              onLoad={() => console.log(`✅ Profile image loaded for ${firstName} ${lastName}`)}
-              onError={() => console.log(`❌ Profile image failed for ${firstName} ${lastName}:`, profileImage)}
             />
           )}
           <AvatarFallback className={getThemeFallbackClass()}>{initials}</AvatarFallback>
@@ -121,6 +113,9 @@ export function MemberAvatar({ firstName, lastName, profileImage, size = "md", c
               </p>
             </TooltipContent>
           </Tooltip>
+        )}
+        {isBirthdayToday && (
+          <div className="absolute -bottom-0.5 -right-3.5 text-[10px] select-none" title="Birthday">🎂</div>
         )}
       </div>
     </TooltipProvider>
