@@ -1,8 +1,9 @@
 "use client"
 
 import { useState } from "react"
-import { Dialog, DialogContent, DialogTrigger } from "@/components/ui/dialog"
+import { Dialog, DialogContent, DialogTrigger, DialogTitle, DialogDescription } from "@/components/ui/dialog"
 import { Button } from "@/components/ui/button"
+import { VisuallyHidden } from "@/components/ui/visually-hidden"
 import { LoginForm } from "./login-form"
 import { RegisterForm } from "./register-form"
 import { ForgotPasswordForm } from "./forgot-password-form"
@@ -28,6 +29,19 @@ export function AuthDialog({ mode = "login", trigger, children }: AuthDialogProp
   const handleClose = () => {
     setOpen(false)
     setCurrentMode(mode) // Reset to initial mode when closing
+  }
+
+  const getDialogTitle = () => {
+    switch (currentMode) {
+      case "login":
+        return "Login"
+      case "register":
+        return "Sign Up"
+      case "forgot-password":
+        return "Reset Password"
+      default:
+        return "Authentication"
+    }
   }
 
   const renderForm = () => {
@@ -76,6 +90,14 @@ export function AuthDialog({ mode = "login", trigger, children }: AuthDialogProp
         )}
       </DialogTrigger>
       <DialogContent className="sm:max-w-md p-0 border-0 bg-transparent shadow-none">
+        <VisuallyHidden>
+          <DialogTitle>{getDialogTitle()}</DialogTitle>
+          <DialogDescription>
+            {currentMode === "login" && "Log in to your account"}
+            {currentMode === "register" && "Create a new account"}
+            {currentMode === "forgot-password" && "Reset your password"}
+          </DialogDescription>
+        </VisuallyHidden>
         {renderForm()}
       </DialogContent>
     </Dialog>
