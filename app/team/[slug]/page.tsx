@@ -109,7 +109,7 @@ export default function TeamPage({ params }: TeamPageProps) {
       // First try to fetch team by invite_code, then by slug (friendly URL)
       let { data: teamData, error: teamError } = await supabase
         .from("teams")
-        .select("*")
+        .select("id,name,slug,invite_code,is_password_protected,password_hash")
         .eq("invite_code", resolvedParams.slug)
         .single()
 
@@ -117,7 +117,7 @@ export default function TeamPage({ params }: TeamPageProps) {
       if (teamError && teamError.code === 'PGRST116') {
         const { data: teamBySlug, error: slugError } = await supabase
           .from("teams")
-          .select("*")
+          .select("id,name,slug,invite_code,is_password_protected,password_hash")
           .eq("slug", resolvedParams.slug)
           .single()
 
@@ -125,7 +125,8 @@ export default function TeamPage({ params }: TeamPageProps) {
         teamError = slugError
       }
 
-      if (teamError) throw teamError
+  if (teamError) throw teamError
+  if (!teamData) throw new Error('Team not found')
 
       // Canonicalize URL to invite_code if a friendly slug was used
       try {
@@ -161,13 +162,22 @@ export default function TeamPage({ params }: TeamPageProps) {
       // Fetch all members for this team (including inactive ones)
       const { data: allMembersData, error: membersError } = await supabase
         .from("members")
-        .select("*")
+        .select("id, first_name, last_name, email, role, status, is_hidden, profile_image, profile_image_url, created_at, last_active, order_index, birth_date")
         .eq("team_id", teamData.id)
         .order("order_index", { ascending: true })
         .order("created_at", { ascending: true })
 
       if (membersError) throw membersError
       
+      // Debug raw data coming from Supabase (to verify birth_date is returned by API)
+      try {
+        console.log("🎂 Raw members (normal fetch):", (allMembersData || []).map((m: any) => ({
+          id: m.id,
+          name: `${m.first_name} ${m.last_name}`,
+          birth_date: m.birth_date ?? '<missing>'
+        })))
+      } catch {}
+
       // Transform to consistent format
       const allMembers: Member[] = (allMembersData || []).map((member: any) => ({
         id: member.id,
@@ -185,6 +195,15 @@ export default function TeamPage({ params }: TeamPageProps) {
         birth_date: member.birth_date || null
       }))
       
+      // Debug: verify birth_date presence coming from Supabase
+      try {
+        console.log("🎂 Members loaded (normal fetch):", allMembers.map(m => ({
+          id: m.id,
+          name: `${m.first_name} ${m.last_name}`,
+          birth_date: m.birth_date
+        })))
+      } catch {}
+
       setMembers(allMembers)
     } catch (error) {
       console.error("Error fetching team data:", error)
@@ -212,13 +231,22 @@ export default function TeamPage({ params }: TeamPageProps) {
         // Fetch members now
         const { data: membersData, error: membersError } = await supabase
           .from("members")
-          .select("*")
+          .select("id, first_name, last_name, email, role, status, is_hidden, profile_image, profile_image_url, created_at, last_active, order_index, birth_date")
           .eq("team_id", team.id)
           .order("order_index", { ascending: true })
           .order("created_at", { ascending: true })
 
         if (membersError) throw membersError
         
+        // Debug raw data coming from Supabase (after password)
+        try {
+          console.log("🎂 Raw members (after password):", (membersData || []).map((m: any) => ({
+            id: m.id,
+            name: `${m.first_name} ${m.last_name}`,
+            birth_date: m.birth_date ?? '<missing>'
+          })))
+        } catch {}
+
         // Transform to consistent format
         const transformedMembers: Member[] = (membersData || []).map((member: any) => ({
           id: member.id,
@@ -232,9 +260,19 @@ export default function TeamPage({ params }: TeamPageProps) {
           profile_image: member.profile_image || member.profile_image_url,
           created_at: member.created_at,
           last_active: member.last_active,
-          order_index: member.order_index || 0
+          order_index: member.order_index || 0,
+          birth_date: member.birth_date || null
         }))
         
+        // Debug: verify birth_date presence coming from Supabase (after password)
+        try {
+          console.log("🎂 Members loaded (after password):", transformedMembers.map(m => ({
+            id: m.id,
+            name: `${m.first_name} ${m.last_name}`,
+            birth_date: m.birth_date
+          })))
+        } catch {}
+
         setMembers(transformedMembers)
       } else {
         setPasswordError("Incorrect password. Please try again.")

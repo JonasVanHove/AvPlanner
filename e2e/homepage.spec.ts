@@ -28,8 +28,8 @@ test.describe('AvPlanner Homepage', () => {
   test('should navigate to my teams', async ({ page }) => {
     await page.goto('/')
     
-    // Look for the "My Teams" link or button
-    const myTeamsLink = page.locator('text=My Teams').first()
+  // Look for the "My Teams & Me" link or button
+  const myTeamsLink = page.locator('text=My Teams & Me').first()
     if (await myTeamsLink.isVisible()) {
       await myTeamsLink.click()
       await expect(page).toHaveURL(/.*my-teams/)

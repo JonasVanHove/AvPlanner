@@ -13,7 +13,6 @@ import { User } from '@supabase/supabase-js'
 import { useRouter } from 'next/navigation'
 import { useTheme } from "next-themes"
 import { HamburgerMenu, HamburgerMenuItem } from "@/components/ui/hamburger-menu"
-import { UserProfileForm } from "@/components/user-profile-form"
 
 
 export default function MyTeamsPage() {
@@ -282,9 +281,7 @@ export default function MyTeamsPage() {
             onGoHome={handleGoHome}
           />
         </div>
-        <div className="mt-6">
-          <UserProfileForm user={user} />
-        </div>
+        {/** The profile form is now accessible via the Edit -> Update Profile menu in the header card */}
       </div>
     </div>
   )

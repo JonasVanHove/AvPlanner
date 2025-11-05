@@ -103,6 +103,7 @@ const AvailabilityCalendarRedesigned = ({
   onDateNavigation,
 }: AvailabilityCalendarProps) => {
   const { theme } = useTheme()
+  // Note: members include birth_date when available; logs removed to reduce noise
   // Initialize currentDate to Monday of the week containing initialDate or current date
   const [currentDate, setCurrentDate] = useState(() => {
     const targetDate = initialDate || new Date()
@@ -472,7 +473,7 @@ const AvailabilityCalendarRedesigned = ({
       // Logic based on your requirements:
       if (isHidden) {
         // Hidden members: only show if they have NON-HOLIDAY records for this visible period
-        console.log(`🔍 Hidden member ${member.first_name} ${member.last_name}: hasNonHolidayRecords=${hasNonHolidayRecordsThisPeriod}`)
+  // Removed verbose hidden-member logging
         return hasNonHolidayRecordsThisPeriod
       }
       
@@ -604,7 +605,7 @@ const AvailabilityCalendarRedesigned = ({
       // Only update if we're not already showing the correct week
       if (mondayOfWeek.getTime() !== currentDate.getTime()) {
         setCurrentDate(mondayOfWeek)
-        console.log(`🗓️ Navigated to week of ${initialDate.toDateString()}, starting on Monday ${mondayOfWeek.toDateString()}`)
+  // Removed navigation debug log
         
         // Notify parent of date navigation (but only if not initial render)
         if (!isInitialRender.current && onDateNavigation) {
@@ -771,19 +772,14 @@ const AvailabilityCalendarRedesigned = ({
   const fetchAvailability = async (): Promise<Availability[]> => {
     if (members.length === 0) return []
 
-    setIsLoading(true)
-    console.log('🔄 Fetching availability data...')
+  setIsLoading(true)
+  // Fetching availability data
     try {
       const startDate = getMondayOfWeek(currentDate)
       const endDate = new Date(startDate)
       endDate.setDate(startDate.getDate() + weeksToShow * 7 - 1)
 
-      console.log(`📅 Calendar date range: ${getDateString(startDate)} to ${getDateString(endDate)}`)
-      console.log(`📅 Calendar readable range: ${startDate.toLocaleDateString('nl-NL')} to ${endDate.toLocaleDateString('nl-NL')}`)
-      console.log(`👥 Fetching for ${members.length} members`)
-      console.log(`📊 Current displayed date: ${currentDate.toLocaleDateString('nl-NL')}`)
-      console.log(`🗓️ Weeks to show: ${weeksToShow} (${weeksToShow * 7} days total)`)
-      console.log(`🔍 Period spans: ${Math.ceil((endDate.getTime() - startDate.getTime()) / (24 * 60 * 60 * 1000) + 1)} days`)
+  // Removed verbose calendar range/debug info
 
       // Fetch availability for ALL members to support proper filtering and analytics
       // This ensures we have data to determine who should be visible and analytics work correctly
@@ -799,14 +795,11 @@ const AvailabilityCalendarRedesigned = ({
 
       if (error) throw error
       
-      console.log(`✅ Fetched ${data?.length || 0} availability records for ${weeksToShow}-week period`)
-      console.log(`📊 Records per member average: ${((data?.length || 0) / members.length).toFixed(1)}`)
+  // Removed fetch summary logs
       
       // Log some sample records to help debug bulk update visibility
       if (data && data.length > 0) {
-        console.log(`📝 Sample records:`, data.slice(0, 3))
-        const uniqueDates = [...new Set(data.map(d => d.date))].sort()
-        console.log(`📅 Unique dates in fetched data: ${uniqueDates.slice(0, 5).join(', ')}${uniqueDates.length > 5 ? ` (+${uniqueDates.length - 5} more)` : ''}`)
+        // Debug samples removed
       }
       
       const fresh = data || []
@@ -872,7 +865,6 @@ const AvailabilityCalendarRedesigned = ({
     if (!editMode) return
 
     try {
-      console.log('Updating availability:', { memberId, date, status })
       
       // Get current status first for activity logging
       const { data: currentAvailability } = await supabase
@@ -905,9 +897,7 @@ const AvailabilityCalendarRedesigned = ({
       }
 
       // Activity logging is now handled automatically by database triggers
-
-    console.log('Availability updated successfully')
-    const fresh = await fetchAvailability()
+  const fresh = await fetchAvailability()
     // Evaluate completion for the current user in the current visible week using fresh data
     const weekStart = getMondayOfWeek(currentDate)
     triggerConfettiIfWeekComplete(weekStart, fresh)
@@ -956,19 +946,14 @@ const AvailabilityCalendarRedesigned = ({
     }
 
     try {
-      console.log('Moving member up:', { teamId, memberId, userEmail })
-      
       // Debug: show current member info
       const member = members.find(m => m.id === memberId)
-      console.log('Member to move:', member)
       
       const { data, error } = await supabase.rpc('move_member_up', {
         team_id_param: teamId,
         member_id_param: memberId,
         user_email: userEmail
       })
-      
-      console.log('Move member up result:', { data, error })
       
       if (error) {
         console.error('Supabase RPC error:', error)
@@ -979,8 +964,6 @@ const AvailabilityCalendarRedesigned = ({
         }
         throw error
       }
-      
-      console.log('Member moved up successfully')
       onMembersUpdate()
     } catch (error: any) {
       console.error("Error moving member up:", error)
@@ -996,19 +979,14 @@ const AvailabilityCalendarRedesigned = ({
     }
 
     try {
-      console.log('Moving member down:', { teamId, memberId, userEmail })
-      
       // Debug: show current member info
       const member = members.find(m => m.id === memberId)
-      console.log('Member to move:', member)
       
       const { data, error } = await supabase.rpc('move_member_down', {
         team_id_param: teamId,
         member_id_param: memberId,
         user_email: userEmail
       })
-      
-      console.log('Move member down result:', { data, error })
       
       if (error) {
         console.error('Supabase RPC error:', error)
@@ -1019,8 +997,6 @@ const AvailabilityCalendarRedesigned = ({
         }
         throw error
       }
-      
-      console.log('Member moved down successfully')
       onMembersUpdate()
     } catch (error: any) {
       console.error("Error moving member down:", error)
@@ -1081,6 +1057,66 @@ const AvailabilityCalendarRedesigned = ({
       date.getFullYear() === today.getFullYear()
     )
   }
+
+  // Helper: check if the given date matches member's birthday (month/day)
+  const isBirthdayDate = (birth?: string | null, date?: Date) => {
+    if (!birth || !date) {
+      return false
+    }
+    // Prefer parsing YYYY-MM-DD safely without timezone shifts
+    const m = /^\d{4}-\d{2}-\d{2}$/.test(birth)
+    let bMonth: number
+    let bDay: number
+    if (m) {
+      const [year, mm, dd] = birth.split('-')
+      bMonth = parseInt(mm, 10) - 1
+      bDay = parseInt(dd, 10)
+    } else {
+      const d = new Date(birth as string)
+      if (isNaN(d.getTime())) {
+        return false
+      }
+      bMonth = d.getMonth()
+      bDay = d.getDate()
+    }
+    return date.getMonth() === bMonth && date.getDate() === bDay
+  }
+
+  // Debug logging: per-member summary + today's birthdays
+  // Runs once per members/date range change to avoid noisy spam
+  useEffect(() => {
+    const today = new Date()
+    // Compute visible dates for the current grid period
+    const start = getMondayOfWeek(currentDate)
+    const totalDays = weeksToShow * 7
+    const visibleDates: Date[] = Array.from({ length: totalDays }, (_, i) => {
+      const d = new Date(start)
+      d.setDate(start.getDate() + i)
+      return d
+    })
+    const visibleDateStrings = visibleDates.map(d => getDateString(d))
+
+    // Per-member debug log
+    members.forEach(m => {
+      const name = `${m.first_name} ${m.last_name}`.trim()
+      const birth = m.birth_date || null
+      const isToday = isBirthdayDate(birth || undefined, today)
+      const weekMatches = visibleDates
+        .filter(d => isBirthdayDate(birth || undefined, d))
+        .map(d => getDateString(d))
+      console.info(
+        `👤 Member: ${name} | birth_date=${birth ?? 'null'} | isBirthdayToday=${isToday} | weekMatches=[${weekMatches.join(', ')}] | visible=[${visibleDateStrings.join(', ')}]`
+      )
+    })
+
+    // Summary of birthdays today
+    const birthdays = members
+      .filter(m => isBirthdayDate(m.birth_date || undefined, today))
+      .map(m => `${m.first_name} ${m.last_name}`.trim())
+    if (birthdays.length > 0) {
+      console.info(`🎂 Birthdays today: ${birthdays.join(", ")}`)
+    }
+  }, [members, currentDate, weeksToShow])
 
   // Determine if a given week for a member is fully filled according to the rules
   // Success criteria:
@@ -1379,6 +1415,7 @@ const AvailabilityCalendarRedesigned = ({
                                       lastName={member.last_name}
                                       profileImage={member.profile_image}
                                       size="sm"
+                                      isBirthdayToday={isBirthdayDate(member.birth_date, new Date())}
                                       statusIndicator={{
                                         show: true,
                                         status: getTodayAvailability(member.id)?.status
@@ -1390,11 +1427,21 @@ const AvailabilityCalendarRedesigned = ({
                                         {member.birth_date && (
                                           <span className="ml-2 text-xs text-muted-foreground whitespace-nowrap">
                                             {(() => {
-                                              const d = new Date(member.birth_date as string)
-                                              if (!isNaN(d.getTime())) {
-                                                const today = new Date()
-                                                const isToday = d.getMonth() === today.getMonth() && d.getDate() === today.getDate()
-                                                return isToday ? '🎂 Today' : `🎂 ${d.toLocaleDateString(undefined, { month: 'short', day: '2-digit' })}`
+                                              const birth = member.birth_date as string
+                                              const today = new Date()
+                                              if (isBirthdayDate(birth, today)) {
+                                                return `🎂 ${t("calendar.today")}`
+                                              }
+                                              if (/^\d{4}-\d{2}-\d{2}$/.test(birth)) {
+                                                const [, mm, dd] = birth.split('-')
+                                                const label = new Date(2000, parseInt(mm, 10) - 1, parseInt(dd, 10))
+                                                  .toLocaleDateString(undefined, { month: 'short', day: '2-digit' })
+                                                return `🎂 ${label}`
+                                              } else {
+                                                const d = new Date(birth)
+                                                if (!isNaN(d.getTime())) {
+                                                  return `🎂 ${d.toLocaleDateString(undefined, { month: 'short', day: '2-digit' })}`
+                                                }
                                               }
                                               return null
                                             })()}
@@ -1491,7 +1538,7 @@ const AvailabilityCalendarRedesigned = ({
                             "text-xs font-medium",
                             isToday(date) ? "text-blue-100 font-semibold" : "text-gray-500 dark:text-gray-400"
                           )}>
-                            {isToday(date) ? "Today" : shortDayName}
+                            {isToday(date) ? t("calendar.today") : shortDayName}
                           </div>
                           <div className={cn(
                             "text-sm font-bold mt-1",
@@ -1525,6 +1572,7 @@ const AvailabilityCalendarRedesigned = ({
                             profileImage={member.profile_image}
                             size="sm"
                             className="ring-1 ring-gray-200 dark:ring-gray-600"
+                            isBirthdayToday={isBirthdayDate(member.birth_date, new Date())}
                             statusIndicator={{
                               show: true,
                               status: getTodayAvailability(member.id)?.status
@@ -1540,7 +1588,7 @@ const AvailabilityCalendarRedesigned = ({
                                     if (!isNaN(d.getTime())) {
                                       const today = new Date()
                                       const isToday = d.getMonth() === today.getMonth() && d.getDate() === today.getDate()
-                                      return isToday ? '🎂 Today' : `🎂 ${d.toLocaleDateString(undefined, { month: 'short', day: '2-digit' })}`
+                                      return isToday ? `🎂 ${t("calendar.today")}` : `🎂 ${d.toLocaleDateString(undefined, { month: 'short', day: '2-digit' })}`
                                     }
                                     return null
                                   })()}
@@ -1633,6 +1681,11 @@ const AvailabilityCalendarRedesigned = ({
                                 isDateInBulkRange(date) && !isToday(date) && "ring-2 ring-orange-400/60 bg-orange-50/80 dark:bg-orange-900/20 border-orange-300 dark:border-orange-600"
                               )}
                             >
+                              {/* Birthday indicator - always show at top-right if it's their birthday */}
+                              {isBirthdayDate(member.birth_date, date) && (
+                                <span className="absolute top-0.5 right-0.5 text-sm leading-none z-10" title="Birthday">🎂</span>
+                              )}
+                              
                               {isWeekendDay ? (
                                 <span className="text-gray-400 dark:text-gray-500 text-2xl font-light">×</span>
                               ) : editMode ? (
@@ -1655,7 +1708,7 @@ const AvailabilityCalendarRedesigned = ({
                                   )}
                                 </div>
                               ) : (
-                                <div className="text-xl">
+                                <div className="text-xl relative w-full flex items-center justify-center">
                                   {record ? getStatusConfig(record.status).icon : ""}
                                 </div>
                               )}
@@ -1732,6 +1785,7 @@ const AvailabilityCalendarRedesigned = ({
                             profileImage={member.profile_image}
                             size="md"
                             className="ring-1 ring-gray-200 dark:ring-gray-600"
+                            isBirthdayToday={isBirthdayDate(member.birth_date, new Date())}
                             statusIndicator={{
                               show: true,
                               status: getTodayAvailability(member.id)?.status
@@ -1744,11 +1798,21 @@ const AvailabilityCalendarRedesigned = ({
                             {member.birth_date && (
                               <span className="ml-2 text-xs text-muted-foreground whitespace-nowrap">
                                 {(() => {
-                                  const d = new Date(member.birth_date as string)
-                                  if (!isNaN(d.getTime())) {
-                                    const today = new Date()
-                                    const isToday = d.getMonth() === today.getMonth() && d.getDate() === today.getDate()
-                                    return isToday ? '🎂 Today' : `🎂 ${d.toLocaleDateString(undefined, { month: 'short', day: '2-digit' })}`
+                                  const birth = member.birth_date as string
+                                  const today = new Date()
+                                  if (isBirthdayDate(birth, today)) {
+                                    return `🎂 ${t("calendar.today")}`
+                                  }
+                                  if (/^\d{4}-\d{2}-\d{2}$/.test(birth)) {
+                                    const [, mm, dd] = birth.split('-')
+                                    const label = new Date(2000, parseInt(mm, 10) - 1, parseInt(dd, 10))
+                                      .toLocaleDateString(undefined, { month: 'short', day: '2-digit' })
+                                    return `🎂 ${label}`
+                                  } else {
+                                    const d = new Date(birth)
+                                    if (!isNaN(d.getTime())) {
+                                      return `🎂 ${d.toLocaleDateString(undefined, { month: 'short', day: '2-digit' })}`
+                                    }
                                   }
                                   return null
                                 })()}
@@ -1897,7 +1961,11 @@ const AvailabilityCalendarRedesigned = ({
                           )}
                         >
                           {isWeekendDay ? (
-                            <div className="h-10 flex items-center justify-center">
+                            <div className="h-10 flex items-center justify-center relative">
+                              {/* Birthday indicator for weekend */}
+                              {isBirthdayDate(member.birth_date, date) && (
+                                <span className="absolute top-0 right-0 text-sm leading-none z-10" title="Birthday">🎂</span>
+                              )}
                               <div className="w-full h-full bg-gray-100 dark:bg-gray-600 rounded-lg flex items-center justify-center border border-gray-200 dark:border-gray-500">
                                 <span className="text-gray-400 dark:text-gray-500 text-sm font-medium">Weekend</span>
                               </div>
@@ -1939,10 +2007,18 @@ const AvailabilityCalendarRedesigned = ({
                                   updateAvailability(member.id, getDateString(date), nextStatus)
                                 }}
                               >
-                                <div className="flex items-center justify-center relative w-full">
+                                <div className="flex items-center justify-center relative w-full h-full">
+                                  {/* Birthday indicator - positioned at top-right, always visible */}
+                                  {isBirthdayDate(member.birth_date, date) && (
+                                    <div className="absolute top-0 right-0 text-sm leading-none z-10" title="Birthday">🎂</div>
+                                  )}
+                                  
+                                  {/* Status icon in center */}
                                   {availability ? getStatusConfig(availability.status).icon : ""}
+                                  
+                                  {/* Auto-holiday indicator at bottom-right */}
                                   {availability?.auto_holiday && availability?.status === 'holiday' && (
-                                    <div className="absolute -top-1 -right-1 w-2 h-2 bg-blue-400 rounded-full border border-white" 
+                                    <div className="absolute bottom-0 right-0 w-2 h-2 bg-blue-400 rounded-full border border-white" 
                                          title="Auto-applied holiday" />
                                   )}
                                 </div>
@@ -2365,13 +2441,13 @@ const AvailabilityCalendarRedesigned = ({
                     <Calendar className="h-2.5 w-2.5 xl:h-3 xl:w-3 text-white" />
                   </div>
                   <span className="font-semibold text-xs xl:text-sm text-white xl:text-white">{formatDateRange()}</span>
-                  <Button
+                    <Button
                     variant="outline"
                     size="sm"
                     onClick={goToToday}
                     className={`text-xs font-semibold rounded-full px-2 xl:px-2 py-0.5 xl:py-1 h-5 xl:h-6 shadow-sm ${themeClasses.button}`}
                   >
-                    Today
+                    {t("calendar.today")}
                   </Button>
                 </div>
 

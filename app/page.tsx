@@ -219,7 +219,7 @@ export default function HomePage() {
                         className="cursor-pointer transition-all duration-200 hover:bg-blue-50 hover:text-blue-700 focus:bg-blue-50 focus:text-blue-700"
                       >
                         <UserIcon className="h-4 w-4 mr-2 transition-colors duration-200" />
-                        My Teams
+                        My Teams & Me
                       </DropdownMenuItem>
                       {isAdmin && (
                         <DropdownMenuItem 
@@ -242,14 +242,14 @@ export default function HomePage() {
                     </DropdownMenuContent>
                   </DropdownMenu>
                 ) : (
-                  // If not logged in, only show My Teams link in header menu
+                  // If not logged in, only show My Teams & Me link in header menu
                   <Button 
                     variant="outline"
                     onClick={handleViewDashboard}
                     className="flex items-center gap-2 px-3"
                   >
                     <UserIcon className="h-4 w-4" />
-                    My Teams
+                    My Teams & Me
                   </Button>
                 )}
               </div>
@@ -266,7 +266,7 @@ export default function HomePage() {
                     className="w-full justify-start text-left h-auto py-3 px-3"
                   >
                     <UserIcon className="h-4 w-4 mr-3" />
-                    <span>My Teams</span>
+                    <span>My Teams & Me</span>
                   </Button>
                   {isAdmin && (
                     <Button
