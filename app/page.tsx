@@ -26,6 +26,11 @@ export default function HomePage() {
   const [userProfileImage, setUserProfileImage] = useState<string | null>(null)
   const [userTeams, setUserTeams] = useState<any[]>([])
 
+  // Debug: Log when userTeams changes
+  useEffect(() => {
+    console.log('🔄 UserTeams state updated:', userTeams.length, userTeams)
+  }, [userTeams])
+
   useEffect(() => {
     // Get initial session
     const getInitialSession = async () => {
@@ -113,20 +118,50 @@ export default function HomePage() {
 
   const fetchUserTeams = async (email: string) => {
     try {
-      const { data, error } = await supabase.rpc('get_user_teams_with_status', {
-        user_email: email
-      })
+      console.log('🔍 Fetching teams for user:', email)
+      
+      // Fetch teams directly from members table joined with teams
+      const { data: membersData, error: membersError } = await supabase
+        .from('members')
+        .select(`
+          id,
+          email,
+          status,
+          role,
+          team_id,
+          teams (
+            id,
+            name,
+            slug,
+            invite_code
+          )
+        `)
+        .eq('email', email)
+        .eq('status', 'active')
 
-      if (error) {
-        console.log('Error fetching user teams:', error.message)
+      if (membersError) {
+        console.error('❌ Error fetching user teams:', membersError)
         return
       }
 
-      // Filter only active teams
-      const activeTeams = (data || []).filter((team: any) => team.user_status === 'active')
-      setUserTeams(activeTeams)
+      console.log('📊 Raw members data:', membersData)
+      
+      // Transform to team objects
+      const teams = (membersData || [])
+        .filter((member: any) => member.teams) // Only include if team exists
+        .map((member: any) => ({
+          team_id: member.teams.id,
+          team_name: member.teams.name,
+          team_slug: member.teams.slug,
+          team_invite_code: member.teams.invite_code,
+          user_role: member.role,
+          user_status: member.status
+        }))
+      
+      console.log('✅ Transformed teams:', teams.length, teams)
+      setUserTeams(teams)
     } catch (error) {
-      console.log('Error fetching user teams:', error)
+      console.error('❌ Exception fetching user teams:', error)
     }
   }
 
@@ -246,11 +281,11 @@ export default function HomePage() {
                         My Teams & Me
                       </DropdownMenuItem>
                       
-                      {userTeams.length > 0 && (
+                      {userTeams.length > 0 ? (
                         <>
                           <DropdownMenuSeparator className="bg-gray-800" />
                           <div className="px-2 py-1.5 text-xs font-semibold text-gray-400">
-                            My Teams
+                            My Teams ({userTeams.length})
                           </div>
                           {userTeams.map((team: any) => (
                             <DropdownMenuItem 
@@ -265,6 +300,13 @@ export default function HomePage() {
                               <span className="truncate">{team.team_name}</span>
                             </DropdownMenuItem>
                           ))}
+                        </>
+                      ) : (
+                        <>
+                          <DropdownMenuSeparator className="bg-gray-800" />
+                          <div className="px-2 py-1.5 text-xs text-gray-500 italic">
+                            No teams yet
+                          </div>
                         </>
                       )}
                       

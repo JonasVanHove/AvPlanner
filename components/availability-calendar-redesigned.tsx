@@ -1482,7 +1482,7 @@ const AvailabilityCalendarRedesigned = ({
                                       profileImage={member.profile_image}
                                       size="sm"
                                       locale={locale}
-                                      isBirthdayToday={isBirthdayDate(member.birth_date, new Date())}
+                                      isBirthdayToday={!editMode && isBirthdayDate(member.birth_date, new Date())}
                                       statusIndicator={{
                                         show: true,
                                         status: getTodayAvailability(member.id)?.status
@@ -1523,7 +1523,7 @@ const AvailabilityCalendarRedesigned = ({
                                             🟡 {memberStats.holiday}
                                           </span>
                                         )}
-                                        {member.birth_date && (
+                                        {!editMode && member.birth_date && (
                                           <span className="ml-2 flex items-center gap-1 text-xs text-muted-foreground whitespace-nowrap">
                                             {(() => {
                                               const birth = member.birth_date as string
@@ -1625,8 +1625,9 @@ const AvailabilityCalendarRedesigned = ({
                   >
                     {/* Member Header */}
                     <div className="bg-gray-50 dark:bg-gray-700/50 p-3 border-b border-gray-200 dark:border-gray-600">
-                      <div className="flex items-center justify-between">
-                        <div className="flex items-center gap-3 min-w-0 flex-1">
+                      <div className="flex items-center gap-3">
+                        {/* Avatar - Left aligned and vertically centered */}
+                        <div className="flex-shrink-0">
                           <MemberAvatar
                             firstName={member.first_name}
                             lastName={member.last_name}
@@ -1634,126 +1635,135 @@ const AvailabilityCalendarRedesigned = ({
                             size="sm"
                             className="ring-1 ring-gray-200 dark:ring-gray-600"
                             locale={locale}
-                            isBirthdayToday={isBirthdayDate(member.birth_date, new Date())}
+                            isBirthdayToday={!editMode && isBirthdayDate(member.birth_date, new Date())}
                             statusIndicator={{
                               show: true,
                               status: getTodayAvailability(member.id)?.status
                             }}
                           />
-                          <div className="min-w-0 flex-1">
-                            <div className="text-sm font-semibold text-gray-900 dark:text-white whitespace-nowrap">
-                              {member.first_name} {member.last_name}
-                            </div>
-                            <div className="flex items-center gap-2 mt-1">
-                              {member.email && (
-                                <a
-                                  href={`mailto:${member.email}`}
-                                  className="text-blue-500 hover:text-blue-600 dark:text-blue-400 dark:hover:text-blue-300 transition-colors"
-                                  onClick={(e) => e.stopPropagation()}
-                                >
-                                  <Mail className="h-3 w-3" />
-                                </a>
-                              )}
-                              {member.email && (
-                                <a
-                                  href={`https://teams.microsoft.com/l/chat/0/0?users=${member.email}`}
-                                  target="_blank"
-                                  rel="noopener noreferrer"
-                                  className="text-purple-500 hover:text-purple-600 dark:text-purple-400 dark:hover:text-purple-300 transition-colors"
-                                  onClick={(e) => e.stopPropagation()}
-                                >
-                                  <MessageSquare className="h-3 w-3" />
-                                </a>
-                              )}
-                              {member.email && (
-                                <button
-                                  type="button"
-                                  className="text-gray-500 hover:text-gray-700 dark:text-gray-300 dark:hover:text-gray-100 transition-colors"
-                                  onClick={(e) => {
-                                    e.stopPropagation()
-                                    navigator.clipboard.writeText(member.email || '')
-                                    toast({ title: 'Gekopieerd', description: `${member.email} is naar het klembord gekopieerd.` })
-                                  }}
-                                  aria-label="Copy email"
-                                  title="Copy email"
-                                >
-                                  <Copy className="h-3 w-3" />
-                                </button>
-                              )}
-                              {member.birth_date && (
-                                <span className="ml-1 text-xs text-muted-foreground whitespace-nowrap flex items-center gap-1">
-                                  {(() => {
-                                    const d = new Date(member.birth_date as string)
-                                    if (!isNaN(d.getTime())) {
-                                      const today = new Date()
-                                      const isToday = d.getMonth() === today.getMonth() && d.getDate() === today.getDate()
-                                      return isToday ? `🎂 ${t("calendar.today")}` : `🎂 ${d.toLocaleDateString(undefined, { month: 'short', day: '2-digit' })}`
-                                    }
-                                    return null
-                                  })()}
-                                </span>
-                              )}
-                            </div>
+                        </div>
+                        
+                        {/* Name and Controls Column */}
+                        <div className="flex-1 min-w-0">
+                          {/* Member Name - Full width at top */}
+                          <div className="text-sm font-semibold text-gray-900 dark:text-white mb-1">
+                            {member.first_name} {member.last_name}
+                          </div>
+                          
+                          {/* Controls/Icons Row */}
+                          <div className="flex items-center gap-2">
+                            {!editMode && (
+                              <>
+                                {member.email && (
+                                  <a
+                                    href={`mailto:${member.email}`}
+                                    className="text-blue-500 hover:text-blue-600 dark:text-blue-400 dark:hover:text-blue-300 transition-colors"
+                                    onClick={(e) => e.stopPropagation()}
+                                  >
+                                    <Mail className="h-3 w-3" />
+                                  </a>
+                                )}
+                                {member.email && (
+                                  <a
+                                    href={`https://teams.microsoft.com/l/chat/0/0?users=${member.email}`}
+                                    target="_blank"
+                                    rel="noopener noreferrer"
+                                    className="text-purple-500 hover:text-purple-600 dark:text-purple-400 dark:hover:text-purple-300 transition-colors"
+                                    onClick={(e) => e.stopPropagation()}
+                                  >
+                                    <MessageSquare className="h-3 w-3" />
+                                  </a>
+                                )}
+                                {member.email && (
+                                  <button
+                                    type="button"
+                                    className="text-gray-500 hover:text-gray-700 dark:text-gray-300 dark:hover:text-gray-100 transition-colors"
+                                    onClick={(e) => {
+                                      e.stopPropagation()
+                                      navigator.clipboard.writeText(member.email || '')
+                                      toast({ title: 'Gekopieerd', description: `${member.email} is naar het klembord gekopieerd.` })
+                                    }}
+                                    aria-label="Copy email"
+                                    title="Copy email"
+                                  >
+                                    <Copy className="h-3 w-3" />
+                                  </button>
+                                )}
+                                {member.birth_date && (
+                                  <span className="ml-1 text-xs text-muted-foreground whitespace-nowrap flex items-center gap-1">
+                                    {(() => {
+                                      const d = new Date(member.birth_date as string)
+                                      if (!isNaN(d.getTime())) {
+                                        const today = new Date()
+                                        const isToday = d.getMonth() === today.getMonth() && d.getDate() === today.getDate()
+                                        return isToday ? `🎂 ${t("calendar.today")}` : `🎂 ${d.toLocaleDateString(undefined, { month: 'short', day: '2-digit' })}`
+                                      }
+                                      return null
+                                    })()}
+                                  </span>
+                                )}
+                              </>
+                            )}
+                            {editMode && userEmail && (
+                              <>
+                                <Tooltip>
+                                  <TooltipTrigger asChild>
+                                    <Button
+                                      variant="ghost"
+                                      size="sm"
+                                      className="h-7 w-7 p-0 hover:bg-gray-100 dark:hover:bg-gray-600"
+                                      onClick={() => moveMemberUp(member.id)}
+                                      disabled={memberIndex === 0}
+                                    >
+                                      <ChevronUp className="h-3 w-3" />
+                                    </Button>
+                                  </TooltipTrigger>
+                                  <TooltipContent>
+                                    <p>Omhoog verplaatsen</p>
+                                  </TooltipContent>
+                                </Tooltip>
+                                <Tooltip>
+                                  <TooltipTrigger asChild>
+                                    <Button
+                                      variant="ghost"
+                                      size="sm"
+                                      className="h-7 w-7 p-0 hover:bg-gray-100 dark:hover:bg-gray-600"
+                                      onClick={() => moveMemberDown(member.id)}
+                                      disabled={memberIndex === members.length - 1}
+                                    >
+                                      <ChevronDown className="h-3 w-3" />
+                                    </Button>
+                                  </TooltipTrigger>
+                                  <TooltipContent>
+                                    <p>Omlaag verplaatsen</p>
+                                  </TooltipContent>
+                                </Tooltip>
+                                <DropdownMenu>
+                                  <DropdownMenuTrigger asChild>
+                                    <Button
+                                      variant="ghost"
+                                      size="sm"
+                                      className={`h-7 w-7 p-0 rounded-full flex-shrink-0 ${themeClasses.button}`}
+                                    >
+                                      <MoreHorizontal className="h-4 w-4" />
+                                    </Button>
+                                  </DropdownMenuTrigger>
+                                  <DropdownMenuContent align="end">
+                                    <DropdownMenuItem onClick={() => moveMemberUp(member.id)} disabled={memberIndex === 0}>
+                                      Move Up
+                                    </DropdownMenuItem>
+                                    <DropdownMenuItem onClick={() => moveMemberDown(member.id)} disabled={memberIndex === members.length - 1}>
+                                      Move Down
+                                    </DropdownMenuItem>
+                                    <DropdownMenuItem onClick={() => deleteMember(member.id)}>
+                                      Delete Member
+                                    </DropdownMenuItem>
+                                  </DropdownMenuContent>
+                                </DropdownMenu>
+                              </>
+                            )}
                           </div>
                         </div>
-                        {editMode && userEmail && (
-                          <div className="flex items-center gap-1">
-                            <Tooltip>
-                              <TooltipTrigger asChild>
-                                <Button
-                                  variant="ghost"
-                                  size="sm"
-                                  className="h-7 w-7 p-0 hover:bg-gray-100 dark:hover:bg-gray-600"
-                                  onClick={() => moveMemberUp(member.id)}
-                                  disabled={memberIndex === 0}
-                                >
-                                  <ChevronUp className="h-3 w-3" />
-                                </Button>
-                              </TooltipTrigger>
-                              <TooltipContent>
-                                <p>Omhoog verplaatsen</p>
-                              </TooltipContent>
-                            </Tooltip>
-                            <Tooltip>
-                              <TooltipTrigger asChild>
-                                <Button
-                                  variant="ghost"
-                                  size="sm"
-                                  className="h-7 w-7 p-0 hover:bg-gray-100 dark:hover:bg-gray-600"
-                                  onClick={() => moveMemberDown(member.id)}
-                                  disabled={memberIndex === members.length - 1}
-                                >
-                                  <ChevronDown className="h-3 w-3" />
-                                </Button>
-                              </TooltipTrigger>
-                              <TooltipContent>
-                                <p>Omlaag verplaatsen</p>
-                              </TooltipContent>
-                            </Tooltip>
-                            <DropdownMenu>
-                              <DropdownMenuTrigger asChild>
-                                <Button
-                                  variant="ghost"
-                                  size="sm"
-                                  className={`h-7 w-7 p-0 rounded-full flex-shrink-0 ${themeClasses.button}`}
-                                >
-                                  <MoreHorizontal className="h-4 w-4" />
-                                </Button>
-                              </DropdownMenuTrigger>
-                              <DropdownMenuContent align="end">
-                                <DropdownMenuItem onClick={() => moveMemberUp(member.id)} disabled={memberIndex === 0}>
-                                  Move Up
-                                </DropdownMenuItem>
-                                <DropdownMenuItem onClick={() => moveMemberDown(member.id)} disabled={memberIndex === members.length - 1}>
-                                  Move Down
-                                </DropdownMenuItem>
-                                <DropdownMenuItem onClick={() => deleteMember(member.id)}>
-                                  Delete Member
-                                </DropdownMenuItem>
-                              </DropdownMenuContent>
-                            </DropdownMenu>
-                          </div>
-                        )}
                       </div>
                     </div>
 
@@ -1872,8 +1882,9 @@ const AvailabilityCalendarRedesigned = ({
                       gridTemplateColumns: `${nameColumnWidth} repeat(7, minmax(100px, 1fr))`,
                     }}
                   >
-                    <div className="p-3 border-r border-gray-200 dark:border-gray-600 flex items-center justify-between">
-                      <div className="flex items-center gap-3 min-w-0 flex-1">
+                    <div className="p-3 border-r border-gray-200 dark:border-gray-600">
+                      <div className="flex items-center gap-3">
+                        {/* Avatar - Left aligned and vertically centered */}
                         <div className="flex-shrink-0">
                           <MemberAvatar
                             firstName={member.first_name}
@@ -1882,158 +1893,167 @@ const AvailabilityCalendarRedesigned = ({
                             size="md"
                             className="ring-1 ring-gray-200 dark:ring-gray-600"
                             locale={locale}
-                            isBirthdayToday={isBirthdayDate(member.birth_date, new Date())}
+                            isBirthdayToday={!editMode && isBirthdayDate(member.birth_date, new Date())}
                             statusIndicator={{
                               show: true,
                               status: getTodayAvailability(member.id)?.status
                             }}
                           />
                         </div>
-                        <div className="min-w-0 flex-1">
-                          <div className="text-sm font-medium text-gray-900 dark:text-white whitespace-nowrap">
+                        
+                        {/* Name and Controls Column */}
+                        <div className="flex-1 min-w-0">
+                          {/* Member Name - Full width at top */}
+                          <div className="text-sm font-medium text-gray-900 dark:text-white mb-1">
                             {member.first_name} {member.last_name}
                           </div>
-                          <div className="flex items-center gap-2 mt-1 flex-wrap">
-                            {member.email && (
-                              <Tooltip>
-                                <TooltipTrigger asChild>
-                                  <a
-                                    href={`mailto:${member.email}`}
-                                    className="text-blue-500 hover:text-blue-600 dark:text-blue-400 dark:hover:text-blue-300 transition-colors"
-                                    onClick={(e) => e.stopPropagation()}
-                                  >
-                                    <Mail className="h-3 w-3" />
-                                  </a>
-                                </TooltipTrigger>
-                                <TooltipContent>
-                                  <p>Email: {member.email}</p>
-                                </TooltipContent>
-                              </Tooltip>
+                          
+                          {/* Controls/Icons Row */}
+                          <div className="flex items-center gap-2 flex-wrap">
+                            {!editMode && (
+                              <>
+                                {member.email && (
+                                  <Tooltip>
+                                    <TooltipTrigger asChild>
+                                      <a
+                                        href={`mailto:${member.email}`}
+                                        className="text-blue-500 hover:text-blue-600 dark:text-blue-400 dark:hover:text-blue-300 transition-colors"
+                                        onClick={(e) => e.stopPropagation()}
+                                      >
+                                        <Mail className="h-3 w-3" />
+                                      </a>
+                                    </TooltipTrigger>
+                                    <TooltipContent>
+                                      <p>Email: {member.email}</p>
+                                    </TooltipContent>
+                                  </Tooltip>
+                                )}
+                                {member.email && (
+                                  <Tooltip>
+                                    <TooltipTrigger asChild>
+                                      <a
+                                        href={`https://teams.microsoft.com/l/chat/0/0?users=${member.email}`}
+                                        target="_blank"
+                                        rel="noopener noreferrer"
+                                        className="text-purple-500 hover:text-purple-600 dark:text-purple-400 dark:hover:text-purple-300 transition-colors"
+                                        onClick={(e) => e.stopPropagation()}
+                                      >
+                                        <MessageSquare className="h-3 w-3" />
+                                      </a>
+                                    </TooltipTrigger>
+                                    <TooltipContent>
+                                      <p>Chat in Microsoft Teams</p>
+                                    </TooltipContent>
+                                  </Tooltip>
+                                )}
+                                {member.email && (
+                                  <Tooltip>
+                                    <TooltipTrigger asChild>
+                                      <button
+                                        type="button"
+                                        className="text-gray-500 hover:text-gray-700 dark:text-gray-300 dark:hover:text-gray-100 transition-colors"
+                                        onClick={(e) => {
+                                          e.stopPropagation()
+                                          navigator.clipboard.writeText(member.email || '')
+                                          toast({ title: 'Gekopieerd', description: `${member.email} is naar het klembord gekopieerd.` })
+                                        }}
+                                        aria-label="Copy email"
+                                      >
+                                        <Copy className="h-3 w-3" />
+                                      </button>
+                                    </TooltipTrigger>
+                                    <TooltipContent>
+                                      <p>Kopieer emailadres</p>
+                                    </TooltipContent>
+                                  </Tooltip>
+                                )}
+                                {member.birth_date && (
+                                  <span className="text-xs text-muted-foreground whitespace-nowrap flex items-center gap-1 ml-1">
+                                    {(() => {
+                                      const birth = member.birth_date as string
+                                      const today = new Date()
+                                      if (isBirthdayDate(birth, today)) return `🎂 ${t("calendar.today")}`
+                                      if (/^\d{4}-\d{2}-\d{2}$/.test(birth)) {
+                                      const [, mm, dd] = birth.split('-')
+                                      const label = new Date(2000, parseInt(mm, 10) - 1, parseInt(dd, 10))
+                                        .toLocaleDateString(undefined, { month: 'short', day: '2-digit' })
+                                      return `🎂 ${label}`
+                                    }
+                                    const d = new Date(birth)
+                                    return !isNaN(d.getTime()) ? `🎂 ${d.toLocaleDateString(undefined, { month: 'short', day: '2-digit' })}` : null
+                                  })()}
+                                  </span>
+                                )}
+                              </>
                             )}
-                            {member.email && (
-                              <Tooltip>
-                                <TooltipTrigger asChild>
-                                  <a
-                                    href={`https://teams.microsoft.com/l/chat/0/0?users=${member.email}`}
-                                    target="_blank"
-                                    rel="noopener noreferrer"
-                                    className="text-purple-500 hover:text-purple-600 dark:text-purple-400 dark:hover:text-purple-300 transition-colors"
-                                    onClick={(e) => e.stopPropagation()}
+                            {editMode && userEmail && (
+                              <>
+                                <Tooltip>
+                                  <TooltipTrigger asChild>
+                                    <Button
+                                      variant="ghost"
+                                      size="sm"
+                                      className="h-6 w-6 p-0 hover:bg-gray-100 dark:hover:bg-gray-600"
+                                      onClick={() => moveMemberUp(member.id)}
+                                      disabled={memberIndex === 0}
+                                    >
+                                      <ChevronUp className="h-3 w-3" />
+                                    </Button>
+                                  </TooltipTrigger>
+                                  <TooltipContent>
+                                    <p>Omhoog verplaatsen</p>
+                                  </TooltipContent>
+                                </Tooltip>
+                                <Tooltip>
+                                  <TooltipTrigger asChild>
+                                    <Button
+                                      variant="ghost"
+                                      size="sm"
+                                      className="h-6 w-6 p-0 hover:bg-gray-100 dark:hover:bg-gray-600"
+                                      onClick={() => moveMemberDown(member.id)}
+                                      disabled={memberIndex === members.length - 1}
+                                    >
+                                      <ChevronDown className="h-3 w-3" />
+                                    </Button>
+                                  </TooltipTrigger>
+                                  <TooltipContent>
+                                    <p>Omlaag verplaatsen</p>
+                                  </TooltipContent>
+                                </Tooltip>
+                                <DropdownMenu>
+                                  <DropdownMenuTrigger asChild>
+                                    <Button
+                                      variant="ghost"
+                                      size="sm"
+                                      className="h-6 w-6 p-0 rounded-md hover:bg-gray-100 dark:hover:bg-gray-600 flex-shrink-0"
+                                    >
+                                      <MoreHorizontal className="h-4 w-4" />
+                                    </Button>
+                                  </DropdownMenuTrigger>
+                                  <DropdownMenuContent
+                                    align="end"
+                                    className="bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700"
                                   >
-                                    <MessageSquare className="h-3 w-3" />
-                                  </a>
-                                </TooltipTrigger>
-                                <TooltipContent>
-                                  <p>Chat in Microsoft Teams</p>
-                                </TooltipContent>
-                              </Tooltip>
-                            )}
-                            {member.email && (
-                              <Tooltip>
-                                <TooltipTrigger asChild>
-                                  <button
-                                    type="button"
-                                    className="text-gray-500 hover:text-gray-700 dark:text-gray-300 dark:hover:text-gray-100 transition-colors"
-                                    onClick={(e) => {
-                                      e.stopPropagation()
-                                      navigator.clipboard.writeText(member.email || '')
-                                      toast({ title: 'Gekopieerd', description: `${member.email} is naar het klembord gekopieerd.` })
-                                    }}
-                                    aria-label="Copy email"
-                                  >
-                                    <Copy className="h-3 w-3" />
-                                  </button>
-                                </TooltipTrigger>
-                                <TooltipContent>
-                                  <p>Kopieer emailadres</p>
-                                </TooltipContent>
-                              </Tooltip>
-                            )}
-                            {member.birth_date && (
-                              <span className="text-xs text-muted-foreground whitespace-nowrap flex items-center gap-1 ml-1">
-                                {(() => {
-                                  const birth = member.birth_date as string
-                                  const today = new Date()
-                                  if (isBirthdayDate(birth, today)) return `🎂 ${t("calendar.today")}`
-                                  if (/^\d{4}-\d{2}-\d{2}$/.test(birth)) {
-                                    const [, mm, dd] = birth.split('-')
-                                    const label = new Date(2000, parseInt(mm, 10) - 1, parseInt(dd, 10))
-                                      .toLocaleDateString(undefined, { month: 'short', day: '2-digit' })
-                                    return `🎂 ${label}`
-                                  }
-                                  const d = new Date(birth)
-                                  return !isNaN(d.getTime()) ? `🎂 ${d.toLocaleDateString(undefined, { month: 'short', day: '2-digit' })}` : null
-                                })()}
-                              </span>
+                                    <MemberForm
+                                      teamId={teamId}
+                                      locale={locale}
+                                      onMemberAdded={onMembersUpdate}
+                                      member={member}
+                                      mode="edit"
+                                    />
+                                    <DropdownMenuItem
+                                      onClick={() => deleteMember(member.id)}
+                                      className="text-red-600 hover:bg-red-50 dark:hover:bg-red-900/20"
+                                    >
+                                      Verwijderen
+                                    </DropdownMenuItem>
+                                  </DropdownMenuContent>
+                                </DropdownMenu>
+                              </>
                             )}
                           </div>
                         </div>
                       </div>
-                      {editMode && userEmail && (
-                        <div className="flex items-center gap-1">
-                          <Tooltip>
-                            <TooltipTrigger asChild>
-                              <Button
-                                variant="ghost"
-                                size="sm"
-                                className="h-6 w-6 p-0 hover:bg-gray-100 dark:hover:bg-gray-600"
-                                onClick={() => moveMemberUp(member.id)}
-                                disabled={memberIndex === 0}
-                              >
-                                <ChevronUp className="h-3 w-3" />
-                              </Button>
-                            </TooltipTrigger>
-                            <TooltipContent>
-                              <p>Omhoog verplaatsen</p>
-                            </TooltipContent>
-                          </Tooltip>
-                          <Tooltip>
-                            <TooltipTrigger asChild>
-                              <Button
-                                variant="ghost"
-                                size="sm"
-                                className="h-6 w-6 p-0 hover:bg-gray-100 dark:hover:bg-gray-600"
-                                onClick={() => moveMemberDown(member.id)}
-                                disabled={memberIndex === members.length - 1}
-                              >
-                                <ChevronDown className="h-3 w-3" />
-                              </Button>
-                            </TooltipTrigger>
-                            <TooltipContent>
-                              <p>Omlaag verplaatsen</p>
-                            </TooltipContent>
-                          </Tooltip>
-                          <DropdownMenu>
-                            <DropdownMenuTrigger asChild>
-                              <Button
-                                variant="ghost"
-                                size="sm"
-                                className="h-6 w-6 p-0 rounded-md hover:bg-gray-100 dark:hover:bg-gray-600 flex-shrink-0"
-                              >
-                                <MoreHorizontal className="h-4 w-4" />
-                              </Button>
-                            </DropdownMenuTrigger>
-                            <DropdownMenuContent
-                              align="end"
-                              className="bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700"
-                            >
-                              <MemberForm
-                                teamId={teamId}
-                                locale={locale}
-                                onMemberAdded={onMembersUpdate}
-                                member={member}
-                                mode="edit"
-                              />
-                              <DropdownMenuItem
-                                onClick={() => deleteMember(member.id)}
-                                className="text-red-600 hover:bg-red-50 dark:hover:bg-red-900/20"
-                              >
-                                Verwijderen
-                              </DropdownMenuItem>
-                            </DropdownMenuContent>
-                          </DropdownMenu>
-                        </div>
-                      )}
                     </div>
                     {week.days.map((date, dayIndex) => {
                       const availability = getAvailabilityForDate(member.id, date)

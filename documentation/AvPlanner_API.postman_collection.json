@@ -1,0 +1,432 @@
+{
+  "info": {
+    "name": "AvPlanner API",
+    "description": "Complete API collection for AvPlanner availability endpoints",
+    "version": "1.0.0",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "variable": [
+    {
+      "key": "base_url",
+      "value": "http://localhost:3000",
+      "type": "string"
+    },
+    {
+      "key": "team_code",
+      "value": "TEAM123",
+      "type": "string"
+    },
+    {
+      "key": "team_password",
+      "value": "",
+      "type": "string"
+    },
+    {
+      "key": "test_date",
+      "value": "2025-01-15",
+      "type": "string"
+    },
+    {
+      "key": "test_year",
+      "value": "2025",
+      "type": "string"
+    },
+    {
+      "key": "test_week",
+      "value": "3",
+      "type": "string"
+    }
+  ],
+  "item": [
+    {
+      "name": "General Availability",
+      "item": [
+        {
+          "name": "Get All Availability",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/api/availability/{{team_code}}",
+              "host": ["{{base_url}}"],
+              "path": ["api", "availability", "{{team_code}}"]
+            },
+            "description": "Get all availability data for a team without any filters"
+          }
+        },
+        {
+          "name": "Get Availability with Date Range",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/api/availability/{{team_code}}?startDate=2025-01-01&endDate=2025-01-31",
+              "host": ["{{base_url}}"],
+              "path": ["api", "availability", "{{team_code}}"],
+              "query": [
+                {
+                  "key": "startDate",
+                  "value": "2025-01-01"
+                },
+                {
+                  "key": "endDate",
+                  "value": "2025-01-31"
+                }
+              ]
+            },
+            "description": "Get availability for a specific date range"
+          }
+        },
+        {
+          "name": "Get Availability for Specific Date",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/api/availability/{{team_code}}?date={{test_date}}",
+              "host": ["{{base_url}}"],
+              "path": ["api", "availability", "{{team_code}}"],
+              "query": [
+                {
+                  "key": "date",
+                  "value": "{{test_date}}"
+                }
+              ]
+            },
+            "description": "Get availability for a single specific date"
+          }
+        },
+        {
+          "name": "Get Availability by Week",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/api/availability/{{team_code}}?week={{test_week}}&year={{test_year}}",
+              "host": ["{{base_url}}"],
+              "path": ["api", "availability", "{{team_code}}"],
+              "query": [
+                {
+                  "key": "week",
+                  "value": "{{test_week}}"
+                },
+                {
+                  "key": "year",
+                  "value": "{{test_year}}"
+                }
+              ]
+            },
+            "description": "Get availability for a specific ISO week"
+          }
+        },
+        {
+          "name": "Get Availability with Password",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/api/availability/{{team_code}}?password={{team_password}}",
+              "host": ["{{base_url}}"],
+              "path": ["api", "availability", "{{team_code}}"],
+              "query": [
+                {
+                  "key": "password",
+                  "value": "{{team_password}}"
+                }
+              ]
+            },
+            "description": "Get availability for a password-protected team"
+          }
+        },
+        {
+          "name": "Get Availability Including Hidden Members",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/api/availability/{{team_code}}?includeHidden=true",
+              "host": ["{{base_url}}"],
+              "path": ["api", "availability", "{{team_code}}"],
+              "query": [
+                {
+                  "key": "includeHidden",
+                  "value": "true"
+                }
+              ]
+            },
+            "description": "Get availability including hidden members"
+          }
+        }
+      ]
+    },
+    {
+      "name": "Summary",
+      "item": [
+        {
+          "name": "Get Team Summary",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/api/availability/{{team_code}}/summary",
+              "host": ["{{base_url}}"],
+              "path": ["api", "availability", "{{team_code}}", "summary"]
+            },
+            "description": "Get statistical summary of team availability"
+          }
+        },
+        {
+          "name": "Get Summary with Date Range",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/api/availability/{{team_code}}/summary?startDate=2025-01-01&endDate=2025-01-31",
+              "host": ["{{base_url}}"],
+              "path": ["api", "availability", "{{team_code}}", "summary"],
+              "query": [
+                {
+                  "key": "startDate",
+                  "value": "2025-01-01"
+                },
+                {
+                  "key": "endDate",
+                  "value": "2025-01-31"
+                }
+              ]
+            },
+            "description": "Get summary statistics for a specific date range"
+          }
+        },
+        {
+          "name": "Get Summary with Password",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/api/availability/{{team_code}}/summary?password={{team_password}}",
+              "host": ["{{base_url}}"],
+              "path": ["api", "availability", "{{team_code}}", "summary"],
+              "query": [
+                {
+                  "key": "password",
+                  "value": "{{team_password}}"
+                }
+              ]
+            },
+            "description": "Get summary for password-protected team"
+          }
+        }
+      ]
+    },
+    {
+      "name": "Day Availability",
+      "item": [
+        {
+          "name": "Get Day Availability",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/api/availability/{{team_code}}/day/{{test_date}}",
+              "host": ["{{base_url}}"],
+              "path": ["api", "availability", "{{team_code}}", "day", "{{test_date}}"]
+            },
+            "description": "Get detailed availability for a specific day"
+          }
+        },
+        {
+          "name": "Get Day Availability with Password",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/api/availability/{{team_code}}/day/{{test_date}}?password={{team_password}}",
+              "host": ["{{base_url}}"],
+              "path": ["api", "availability", "{{team_code}}", "day", "{{test_date}}"],
+              "query": [
+                {
+                  "key": "password",
+                  "value": "{{team_password}}"
+                }
+              ]
+            },
+            "description": "Get day availability for password-protected team"
+          }
+        },
+        {
+          "name": "Get Day Availability Including Hidden",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/api/availability/{{team_code}}/day/{{test_date}}?includeHidden=true",
+              "host": ["{{base_url}}"],
+              "path": ["api", "availability", "{{team_code}}", "day", "{{test_date}}"],
+              "query": [
+                {
+                  "key": "includeHidden",
+                  "value": "true"
+                }
+              ]
+            },
+            "description": "Get day availability including hidden members"
+          }
+        }
+      ]
+    },
+    {
+      "name": "Week Availability",
+      "item": [
+        {
+          "name": "Get Week Availability",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/api/availability/{{team_code}}/week/{{test_year}}/{{test_week}}",
+              "host": ["{{base_url}}"],
+              "path": [
+                "api",
+                "availability",
+                "{{team_code}}",
+                "week",
+                "{{test_year}}",
+                "{{test_week}}"
+              ]
+            },
+            "description": "Get availability for an entire week (ISO week, Monday-Sunday)"
+          }
+        },
+        {
+          "name": "Get Week Availability with Password",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/api/availability/{{team_code}}/week/{{test_year}}/{{test_week}}?password={{team_password}}",
+              "host": ["{{base_url}}"],
+              "path": [
+                "api",
+                "availability",
+                "{{team_code}}",
+                "week",
+                "{{test_year}}",
+                "{{test_week}}"
+              ],
+              "query": [
+                {
+                  "key": "password",
+                  "value": "{{team_password}}"
+                }
+              ]
+            },
+            "description": "Get week availability for password-protected team"
+          }
+        },
+        {
+          "name": "Get Week Availability Including Hidden",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/api/availability/{{team_code}}/week/{{test_year}}/{{test_week}}?includeHidden=true",
+              "host": ["{{base_url}}"],
+              "path": [
+                "api",
+                "availability",
+                "{{team_code}}",
+                "week",
+                "{{test_year}}",
+                "{{test_week}}"
+              ],
+              "query": [
+                {
+                  "key": "includeHidden",
+                  "value": "true"
+                }
+              ]
+            },
+            "description": "Get week availability including hidden members"
+          }
+        }
+      ]
+    },
+    {
+      "name": "Error Cases",
+      "item": [
+        {
+          "name": "Invalid Team Code (404)",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/api/availability/INVALID_TEAM_CODE",
+              "host": ["{{base_url}}"],
+              "path": ["api", "availability", "INVALID_TEAM_CODE"]
+            },
+            "description": "Test 404 error for non-existent team"
+          }
+        },
+        {
+          "name": "Password Required (401)",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/api/availability/{{team_code}}",
+              "host": ["{{base_url}}"],
+              "path": ["api", "availability", "{{team_code}}"]
+            },
+            "description": "Test 401 error when password is required but not provided (set team_code to a protected team)"
+          }
+        },
+        {
+          "name": "Invalid Password (401)",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/api/availability/{{team_code}}?password=wrong_password",
+              "host": ["{{base_url}}"],
+              "path": ["api", "availability", "{{team_code}}"],
+              "query": [
+                {
+                  "key": "password",
+                  "value": "wrong_password"
+                }
+              ]
+            },
+            "description": "Test 401 error for incorrect password"
+          }
+        },
+        {
+          "name": "Invalid Date Format (400)",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/api/availability/{{team_code}}/day/2025-13-45",
+              "host": ["{{base_url}}"],
+              "path": ["api", "availability", "{{team_code}}", "day", "2025-13-45"]
+            },
+            "description": "Test 400 error for invalid date format"
+          }
+        },
+        {
+          "name": "Invalid Week Number (400)",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/api/availability/{{team_code}}/week/2025/99",
+              "host": ["{{base_url}}"],
+              "path": ["api", "availability", "{{team_code}}", "week", "2025", "99"]
+            },
+            "description": "Test 400 error for invalid week number"
+          }
+        }
+      ]
+    }
+  ]
+}
