@@ -1711,7 +1711,7 @@ const AvailabilityCalendarRedesigned = ({
                                     <Button
                                       variant="ghost"
                                       size="sm"
-                                      className="h-7 w-7 p-0 hover:bg-gray-100 dark:hover:bg-gray-600"
+                                      className="h-7 w-7 p-0 hover:bg-gray-100 dark:hover:bg-gray-600 text-gray-700 dark:text-gray-200"
                                       onClick={() => moveMemberUp(member.id)}
                                       disabled={memberIndex === 0}
                                     >
@@ -1727,7 +1727,7 @@ const AvailabilityCalendarRedesigned = ({
                                     <Button
                                       variant="ghost"
                                       size="sm"
-                                      className="h-7 w-7 p-0 hover:bg-gray-100 dark:hover:bg-gray-600"
+                                      className="h-7 w-7 p-0 hover:bg-gray-100 dark:hover:bg-gray-600 text-gray-700 dark:text-gray-200"
                                       onClick={() => moveMemberDown(member.id)}
                                       disabled={memberIndex === members.length - 1}
                                     >
@@ -1743,7 +1743,7 @@ const AvailabilityCalendarRedesigned = ({
                                     <Button
                                       variant="ghost"
                                       size="sm"
-                                      className={`h-7 w-7 p-0 rounded-full flex-shrink-0 ${themeClasses.button}`}
+                                      className="h-7 w-7 p-0 rounded-full flex-shrink-0 text-gray-700 dark:text-gray-200 hover:bg-gray-100 dark:hover:bg-gray-600"
                                     >
                                       <MoreHorizontal className="h-4 w-4" />
                                     </Button>
@@ -1993,7 +1993,7 @@ const AvailabilityCalendarRedesigned = ({
                                     <Button
                                       variant="ghost"
                                       size="sm"
-                                      className="h-6 w-6 p-0 hover:bg-gray-100 dark:hover:bg-gray-600"
+                                      className="h-6 w-6 p-0 hover:bg-gray-100 dark:hover:bg-gray-600 text-gray-700 dark:text-gray-200"
                                       onClick={() => moveMemberUp(member.id)}
                                       disabled={memberIndex === 0}
                                     >
@@ -2009,7 +2009,7 @@ const AvailabilityCalendarRedesigned = ({
                                     <Button
                                       variant="ghost"
                                       size="sm"
-                                      className="h-6 w-6 p-0 hover:bg-gray-100 dark:hover:bg-gray-600"
+                                      className="h-6 w-6 p-0 hover:bg-gray-100 dark:hover:bg-gray-600 text-gray-700 dark:text-gray-200"
                                       onClick={() => moveMemberDown(member.id)}
                                       disabled={memberIndex === members.length - 1}
                                     >
@@ -2025,7 +2025,7 @@ const AvailabilityCalendarRedesigned = ({
                                     <Button
                                       variant="ghost"
                                       size="sm"
-                                      className="h-6 w-6 p-0 rounded-md hover:bg-gray-100 dark:hover:bg-gray-600 flex-shrink-0"
+                                      className="h-6 w-6 p-0 rounded-md hover:bg-gray-100 dark:hover:bg-gray-600 flex-shrink-0 text-gray-700 dark:text-gray-200"
                                     >
                                       <MoreHorizontal className="h-4 w-4" />
                                     </Button>
