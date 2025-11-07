@@ -43,6 +43,7 @@ import { useSwipe } from "@/hooks/use-swipe"
 import { format } from "date-fns"
 import { useTheme } from "next-themes"
 import { toast } from "@/hooks/use-toast"
+import { LoginButton } from "@/components/auth/auth-dialog"
 
 interface Member {
   id: string
@@ -103,6 +104,8 @@ const AvailabilityCalendarRedesigned = ({
   onDateNavigation,
 }: AvailabilityCalendarProps) => {
   const { theme } = useTheme()
+  // Cache whether RPC functions are available to avoid repeated 404/42P01 errors
+  const rpcAvailableRef = useRef<{ up: boolean; down: boolean }>({ up: true, down: true })
   // Note: members include birth_date when available; logs removed to reduce noise
   // Initialize currentDate to Monday of the week containing initialDate or current date
   const [currentDate, setCurrentDate] = useState(() => {
@@ -940,31 +943,60 @@ const AvailabilityCalendarRedesigned = ({
 
   const moveMemberUp = async (memberId: string) => {
     if (!editMode || !userEmail) {
-      console.error('Cannot move member:', { editMode, userEmail })
-      alert("Je moet ingelogd zijn en in edit mode om leden te verplaatsen.")
+      console.warn('Cannot move member:', { editMode, userEmail })
+      toast({
+        title: 'Login vereist',
+        description: 'Je moet ingelogd zijn en in edit mode om leden te verplaatsen.',
+        variant: 'destructive',
+      })
       return
     }
 
     try {
       // Debug: show current member info
       const member = members.find(m => m.id === memberId)
-      
-      const { data, error } = await supabase.rpc('move_member_up', {
-        team_id_param: teamId,
-        member_id_param: memberId,
-        user_email: userEmail
-      })
-      
-      if (error) {
-        console.error('Supabase RPC error:', error)
-        // Check if it's a function not found error
-        if (error.code === '42883') {
-          alert("De database functie 'move_member_up' bestaat niet. Voer eerst de migration script uit.")
+
+      if (rpcAvailableRef.current.up) {
+        const { data, error } = await supabase.rpc('move_member_up', {
+          team_id_param: teamId,
+          member_id_param: memberId,
+          user_email: userEmail
+        })
+        if (error) {
+          // Known bootstrap errors: function missing (42883) or relation missing (42P01)
+          if (error.code === '42883' || error.code === '42P01') {
+            rpcAvailableRef.current.up = false
+            // fall through to fallback below
+          } else {
+            throw error
+          }
+        } else {
+          onMembersUpdate()
           return
         }
-        throw error
       }
-      onMembersUpdate()
+
+      // Fallback: perform client-side swap on public.members (no RPC)
+      try {
+        const sorted = [...members].sort((a, b) => (a.order_index || 0) - (b.order_index || 0))
+        const idx = sorted.findIndex(m => m.id === memberId)
+        if (idx <= 0) return // already at top or not found
+        const current = sorted[idx]
+        const prev = sorted[idx - 1]
+        const curIdx = current.order_index || 0
+        const prevIdx = prev.order_index || Math.max(0, curIdx - 1)
+
+        // Swap
+        const upd1 = await supabase.from('members').update({ order_index: prevIdx }).eq('id', current.id)
+        if (upd1.error) throw upd1.error
+        const upd2 = await supabase.from('members').update({ order_index: curIdx }).eq('id', prev.id)
+        if (upd2.error) throw upd2.error
+        onMembersUpdate()
+        return
+      } catch (fallbackErr) {
+        console.error('Fallback move up failed:', fallbackErr)
+        throw fallbackErr
+      }
     } catch (error: any) {
       console.error("Error moving member up:", error)
       alert(`Er is een fout opgetreden bij het verplaatsen van het teamlid: ${error?.message || error}`)
@@ -973,31 +1005,59 @@ const AvailabilityCalendarRedesigned = ({
 
   const moveMemberDown = async (memberId: string) => {
     if (!editMode || !userEmail) {
-      console.error('Cannot move member:', { editMode, userEmail })
-      alert("Je moet ingelogd zijn en in edit mode om leden te verplaatsen.")
+      console.warn('Cannot move member:', { editMode, userEmail })
+      toast({
+        title: 'Login vereist',
+        description: 'Je moet ingelogd zijn en in edit mode om leden te verplaatsen.',
+        variant: 'destructive',
+      })
       return
     }
 
     try {
       // Debug: show current member info
       const member = members.find(m => m.id === memberId)
-      
-      const { data, error } = await supabase.rpc('move_member_down', {
-        team_id_param: teamId,
-        member_id_param: memberId,
-        user_email: userEmail
-      })
-      
-      if (error) {
-        console.error('Supabase RPC error:', error)
-        // Check if it's a function not found error
-        if (error.code === '42883') {
-          alert("De database functie 'move_member_down' bestaat niet. Voer eerst de migration script uit.")
+
+      if (rpcAvailableRef.current.down) {
+        const { data, error } = await supabase.rpc('move_member_down', {
+          team_id_param: teamId,
+          member_id_param: memberId,
+          user_email: userEmail
+        })
+        if (error) {
+          if (error.code === '42883' || error.code === '42P01') {
+            rpcAvailableRef.current.down = false
+            // fall through to fallback below
+          } else {
+            throw error
+          }
+        } else {
+          onMembersUpdate()
           return
         }
-        throw error
       }
-      onMembersUpdate()
+
+      // Fallback: perform client-side swap on public.members (no RPC)
+      try {
+        const sorted = [...members].sort((a, b) => (a.order_index || 0) - (b.order_index || 0))
+        const idx = sorted.findIndex(m => m.id === memberId)
+        if (idx === -1 || idx >= sorted.length - 1) return // already at bottom or not found
+        const current = sorted[idx]
+        const next = sorted[idx + 1]
+        const curIdx = current.order_index || 0
+        const nextIdx = next.order_index || curIdx + 1
+
+        // Swap
+        const upd1 = await supabase.from('members').update({ order_index: nextIdx }).eq('id', current.id)
+        if (upd1.error) throw upd1.error
+        const upd2 = await supabase.from('members').update({ order_index: curIdx }).eq('id', next.id)
+        if (upd2.error) throw upd2.error
+        onMembersUpdate()
+        return
+      } catch (fallbackErr) {
+        console.error('Fallback move down failed:', fallbackErr)
+        throw fallbackErr
+      }
     } catch (error: any) {
       console.error("Error moving member down:", error)
       alert(`Er is een fout opgetreden bij het verplaatsen van het teamlid: ${error?.message || error}`)
@@ -1096,18 +1156,24 @@ const AvailabilityCalendarRedesigned = ({
     })
     const visibleDateStrings = visibleDates.map(d => getDateString(d))
 
-    // Per-member debug log
-    members.forEach(m => {
-      const name = `${m.first_name} ${m.last_name}`.trim()
-      const birth = m.birth_date || null
-      const isToday = isBirthdayDate(birth || undefined, today)
-      const weekMatches = visibleDates
-        .filter(d => isBirthdayDate(birth || undefined, d))
-        .map(d => getDateString(d))
-      console.info(
-        `👤 Member: ${name} | birth_date=${birth ?? 'null'} | isBirthdayToday=${isToday} | weekMatches=[${weekMatches.join(', ')}] | visible=[${visibleDateStrings.join(', ')}]`
-      )
-    })
+    // Per-member debug log (guard against React StrictMode double invocation)
+    const g = window as any
+    if (!g.__AVP_MEMBER_DEBUG_ONCE__) {
+      g.__AVP_MEMBER_DEBUG_ONCE__ = true
+      members.forEach(m => {
+        const name = `${m.first_name} ${m.last_name}`.trim()
+        const birth = m.birth_date || null
+        const isToday = isBirthdayDate(birth || undefined, today)
+        const weekMatches = visibleDates
+          .filter(d => isBirthdayDate(birth || undefined, d))
+          .map(d => getDateString(d))
+        console.info(
+          `👤 Member: ${name} | birth_date=${birth ?? 'null'} | isBirthdayToday=${isToday} | weekMatches=[${weekMatches.join(', ')}] | visible=[${visibleDateStrings.join(', ')}]`
+        )
+      })
+      // Reset the flag after a short delay so navigating to a different week re-logs once
+      setTimeout(() => { g.__AVP_MEMBER_DEBUG_ONCE__ = false }, 2000)
+    }
 
     // Summary of birthdays today
     const birthdays = members
@@ -1415,6 +1481,7 @@ const AvailabilityCalendarRedesigned = ({
                                       lastName={member.last_name}
                                       profileImage={member.profile_image}
                                       size="sm"
+                                      locale={locale}
                                       isBirthdayToday={isBirthdayDate(member.birth_date, new Date())}
                                       statusIndicator={{
                                         show: true,
@@ -1422,31 +1489,8 @@ const AvailabilityCalendarRedesigned = ({
                                       }}
                                     />
                                     <div className="min-w-0 flex-1">
-                                      <div className="text-sm font-medium text-gray-900 dark:text-white truncate">
+                                      <div className="text-sm font-medium text-gray-900 dark:text-white whitespace-nowrap">
                                         {member.first_name} {member.last_name}
-                                        {member.birth_date && (
-                                          <span className="ml-2 text-xs text-muted-foreground whitespace-nowrap">
-                                            {(() => {
-                                              const birth = member.birth_date as string
-                                              const today = new Date()
-                                              if (isBirthdayDate(birth, today)) {
-                                                return `🎂 ${t("calendar.today")}`
-                                              }
-                                              if (/^\d{4}-\d{2}-\d{2}$/.test(birth)) {
-                                                const [, mm, dd] = birth.split('-')
-                                                const label = new Date(2000, parseInt(mm, 10) - 1, parseInt(dd, 10))
-                                                  .toLocaleDateString(undefined, { month: 'short', day: '2-digit' })
-                                                return `🎂 ${label}`
-                                              } else {
-                                                const d = new Date(birth)
-                                                if (!isNaN(d.getTime())) {
-                                                  return `🎂 ${d.toLocaleDateString(undefined, { month: 'short', day: '2-digit' })}`
-                                                }
-                                              }
-                                              return null
-                                            })()}
-                                          </span>
-                                        )}
                                       </div>
                                       <div className="flex items-center gap-1 text-xs text-gray-500 dark:text-gray-400">
                                         {memberStats.available > 0 && (
@@ -1477,6 +1521,23 @@ const AvailabilityCalendarRedesigned = ({
                                         {memberStats.holiday > 0 && (
                                           <span className="flex items-center gap-1">
                                             🟡 {memberStats.holiday}
+                                          </span>
+                                        )}
+                                        {member.birth_date && (
+                                          <span className="ml-2 flex items-center gap-1 text-xs text-muted-foreground whitespace-nowrap">
+                                            {(() => {
+                                              const birth = member.birth_date as string
+                                              const today = new Date()
+                                              if (isBirthdayDate(birth, today)) return `🎂 ${t("calendar.today")}`
+                                              if (/^\d{4}-\d{2}-\d{2}$/.test(birth)) {
+                                                const [, mm, dd] = birth.split('-')
+                                                const label = new Date(2000, parseInt(mm, 10) - 1, parseInt(dd, 10))
+                                                  .toLocaleDateString(undefined, { month: 'short', day: '2-digit' })
+                                                return `🎂 ${label}`
+                                              }
+                                              const d = new Date(birth)
+                                              return !isNaN(d.getTime()) ? `🎂 ${d.toLocaleDateString(undefined, { month: 'short', day: '2-digit' })}` : null
+                                            })()}
                                           </span>
                                         )}
                                       </div>
@@ -1572,6 +1633,7 @@ const AvailabilityCalendarRedesigned = ({
                             profileImage={member.profile_image}
                             size="sm"
                             className="ring-1 ring-gray-200 dark:ring-gray-600"
+                            locale={locale}
                             isBirthdayToday={isBirthdayDate(member.birth_date, new Date())}
                             statusIndicator={{
                               show: true,
@@ -1579,21 +1641,8 @@ const AvailabilityCalendarRedesigned = ({
                             }}
                           />
                           <div className="min-w-0 flex-1">
-                            <div className="text-sm font-semibold text-gray-900 dark:text-white truncate">
+                            <div className="text-sm font-semibold text-gray-900 dark:text-white whitespace-nowrap">
                               {member.first_name} {member.last_name}
-                              {member.birth_date && (
-                                <span className="ml-2 text-xs text-muted-foreground whitespace-nowrap">
-                                  {(() => {
-                                    const d = new Date(member.birth_date as string)
-                                    if (!isNaN(d.getTime())) {
-                                      const today = new Date()
-                                      const isToday = d.getMonth() === today.getMonth() && d.getDate() === today.getDate()
-                                      return isToday ? `🎂 ${t("calendar.today")}` : `🎂 ${d.toLocaleDateString(undefined, { month: 'short', day: '2-digit' })}`
-                                    }
-                                    return null
-                                  })()}
-                                </span>
-                              )}
                             </div>
                             <div className="flex items-center gap-2 mt-1">
                               {member.email && (
@@ -1631,32 +1680,79 @@ const AvailabilityCalendarRedesigned = ({
                                   <Copy className="h-3 w-3" />
                                 </button>
                               )}
+                              {member.birth_date && (
+                                <span className="ml-1 text-xs text-muted-foreground whitespace-nowrap flex items-center gap-1">
+                                  {(() => {
+                                    const d = new Date(member.birth_date as string)
+                                    if (!isNaN(d.getTime())) {
+                                      const today = new Date()
+                                      const isToday = d.getMonth() === today.getMonth() && d.getDate() === today.getDate()
+                                      return isToday ? `🎂 ${t("calendar.today")}` : `🎂 ${d.toLocaleDateString(undefined, { month: 'short', day: '2-digit' })}`
+                                    }
+                                    return null
+                                  })()}
+                                </span>
+                              )}
                             </div>
                           </div>
                         </div>
-                        {editMode && (
-                          <DropdownMenu>
-                            <DropdownMenuTrigger asChild>
-                              <Button
-                                variant="ghost"
-                                size="sm"
-                                className={`h-8 w-8 p-0 rounded-full flex-shrink-0 ${themeClasses.button}`}
-                              >
-                                <MoreHorizontal className="h-4 w-4" />
-                              </Button>
-                            </DropdownMenuTrigger>
-                            <DropdownMenuContent align="end">
-                              <DropdownMenuItem onClick={() => moveMemberUp(member.id)} disabled={memberIndex === 0}>
-                                Move Up
-                              </DropdownMenuItem>
-                              <DropdownMenuItem onClick={() => moveMemberDown(member.id)} disabled={memberIndex === members.length - 1}>
-                                Move Down
-                              </DropdownMenuItem>
-                              <DropdownMenuItem onClick={() => deleteMember(member.id)}>
-                                Delete Member
-                              </DropdownMenuItem>
-                            </DropdownMenuContent>
-                          </DropdownMenu>
+                        {editMode && userEmail && (
+                          <div className="flex items-center gap-1">
+                            <Tooltip>
+                              <TooltipTrigger asChild>
+                                <Button
+                                  variant="ghost"
+                                  size="sm"
+                                  className="h-7 w-7 p-0 hover:bg-gray-100 dark:hover:bg-gray-600"
+                                  onClick={() => moveMemberUp(member.id)}
+                                  disabled={memberIndex === 0}
+                                >
+                                  <ChevronUp className="h-3 w-3" />
+                                </Button>
+                              </TooltipTrigger>
+                              <TooltipContent>
+                                <p>Omhoog verplaatsen</p>
+                              </TooltipContent>
+                            </Tooltip>
+                            <Tooltip>
+                              <TooltipTrigger asChild>
+                                <Button
+                                  variant="ghost"
+                                  size="sm"
+                                  className="h-7 w-7 p-0 hover:bg-gray-100 dark:hover:bg-gray-600"
+                                  onClick={() => moveMemberDown(member.id)}
+                                  disabled={memberIndex === members.length - 1}
+                                >
+                                  <ChevronDown className="h-3 w-3" />
+                                </Button>
+                              </TooltipTrigger>
+                              <TooltipContent>
+                                <p>Omlaag verplaatsen</p>
+                              </TooltipContent>
+                            </Tooltip>
+                            <DropdownMenu>
+                              <DropdownMenuTrigger asChild>
+                                <Button
+                                  variant="ghost"
+                                  size="sm"
+                                  className={`h-7 w-7 p-0 rounded-full flex-shrink-0 ${themeClasses.button}`}
+                                >
+                                  <MoreHorizontal className="h-4 w-4" />
+                                </Button>
+                              </DropdownMenuTrigger>
+                              <DropdownMenuContent align="end">
+                                <DropdownMenuItem onClick={() => moveMemberUp(member.id)} disabled={memberIndex === 0}>
+                                  Move Up
+                                </DropdownMenuItem>
+                                <DropdownMenuItem onClick={() => moveMemberDown(member.id)} disabled={memberIndex === members.length - 1}>
+                                  Move Down
+                                </DropdownMenuItem>
+                                <DropdownMenuItem onClick={() => deleteMember(member.id)}>
+                                  Delete Member
+                                </DropdownMenuItem>
+                              </DropdownMenuContent>
+                            </DropdownMenu>
+                          </div>
                         )}
                       </div>
                     </div>
@@ -1785,6 +1881,7 @@ const AvailabilityCalendarRedesigned = ({
                             profileImage={member.profile_image}
                             size="md"
                             className="ring-1 ring-gray-200 dark:ring-gray-600"
+                            locale={locale}
                             isBirthdayToday={isBirthdayDate(member.birth_date, new Date())}
                             statusIndicator={{
                               show: true,
@@ -1793,33 +1890,10 @@ const AvailabilityCalendarRedesigned = ({
                           />
                         </div>
                         <div className="min-w-0 flex-1">
-                          <div className="text-sm font-medium text-gray-900 dark:text-white truncate">
+                          <div className="text-sm font-medium text-gray-900 dark:text-white whitespace-nowrap">
                             {member.first_name} {member.last_name}
-                            {member.birth_date && (
-                              <span className="ml-2 text-xs text-muted-foreground whitespace-nowrap">
-                                {(() => {
-                                  const birth = member.birth_date as string
-                                  const today = new Date()
-                                  if (isBirthdayDate(birth, today)) {
-                                    return `🎂 ${t("calendar.today")}`
-                                  }
-                                  if (/^\d{4}-\d{2}-\d{2}$/.test(birth)) {
-                                    const [, mm, dd] = birth.split('-')
-                                    const label = new Date(2000, parseInt(mm, 10) - 1, parseInt(dd, 10))
-                                      .toLocaleDateString(undefined, { month: 'short', day: '2-digit' })
-                                    return `🎂 ${label}`
-                                  } else {
-                                    const d = new Date(birth)
-                                    if (!isNaN(d.getTime())) {
-                                      return `🎂 ${d.toLocaleDateString(undefined, { month: 'short', day: '2-digit' })}`
-                                    }
-                                  }
-                                  return null
-                                })()}
-                              </span>
-                            )}
                           </div>
-                          <div className="flex items-center gap-2 mt-1">
+                          <div className="flex items-center gap-2 mt-1 flex-wrap">
                             {member.email && (
                               <Tooltip>
                                 <TooltipTrigger asChild>
@@ -1875,10 +1949,27 @@ const AvailabilityCalendarRedesigned = ({
                                 </TooltipContent>
                               </Tooltip>
                             )}
+                            {member.birth_date && (
+                              <span className="text-xs text-muted-foreground whitespace-nowrap flex items-center gap-1 ml-1">
+                                {(() => {
+                                  const birth = member.birth_date as string
+                                  const today = new Date()
+                                  if (isBirthdayDate(birth, today)) return `🎂 ${t("calendar.today")}`
+                                  if (/^\d{4}-\d{2}-\d{2}$/.test(birth)) {
+                                    const [, mm, dd] = birth.split('-')
+                                    const label = new Date(2000, parseInt(mm, 10) - 1, parseInt(dd, 10))
+                                      .toLocaleDateString(undefined, { month: 'short', day: '2-digit' })
+                                    return `🎂 ${label}`
+                                  }
+                                  const d = new Date(birth)
+                                  return !isNaN(d.getTime()) ? `🎂 ${d.toLocaleDateString(undefined, { month: 'short', day: '2-digit' })}` : null
+                                })()}
+                              </span>
+                            )}
                           </div>
                         </div>
                       </div>
-                      {editMode && (
+                      {editMode && userEmail && (
                         <div className="flex items-center gap-1">
                           <Tooltip>
                             <TooltipTrigger asChild>
@@ -1917,7 +2008,7 @@ const AvailabilityCalendarRedesigned = ({
                               <Button
                                 variant="ghost"
                                 size="sm"
-                                className="h-8 w-8 p-0 rounded-full hover:bg-gray-100 dark:hover:bg-gray-600 flex-shrink-0"
+                                className="h-6 w-6 p-0 rounded-md hover:bg-gray-100 dark:hover:bg-gray-600 flex-shrink-0"
                               >
                                 <MoreHorizontal className="h-4 w-4" />
                               </Button>
@@ -2188,6 +2279,14 @@ const AvailabilityCalendarRedesigned = ({
                         <div className="flex items-center gap-1 px-2">
                           <Switch checked={editMode} onCheckedChange={handleEditModeToggle} />
                         </div>
+                        {!userEmail && (
+                          <>
+                            <div className="w-px h-6 bg-orange-300/30"></div>
+                            <div className="px-1">
+                              <LoginButton />
+                            </div>
+                          </>
+                        )}
                       </div>
                     ) : (
                       <div className="flex items-center gap-2 bg-green-500/20 backdrop-blur-sm rounded-lg p-2 border border-green-400/30">

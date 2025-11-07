@@ -36,15 +36,18 @@ interface Member {
   birth_date?: string | null
 }
 
-interface LocaleTeamPageProps {
-  params: {
-    locale: string
-    slug: string // This is actually the invite_code now
-  }
+// Next.js 15: Route params are delivered as a Promise; unwrap with React.use()
+import { use as usePromise } from "react"
+
+interface LocaleTeamPageParams {
+  locale: string
+  slug: string // invite_code or friendly slug
 }
 
-export default function LocaleTeamPage({ params }: LocaleTeamPageProps) {
-  const locale = params.locale as Locale
+export default function LocaleTeamPage({ params }: { params: Promise<LocaleTeamPageParams> }) {
+  // Unwrap params promise once; suppress repeated warnings about direct access
+  const resolvedParams = usePromise(params)
+  const locale = resolvedParams.locale as Locale
   const { user } = useAuth()
   const router = useRouter()
 
@@ -66,17 +69,17 @@ export default function LocaleTeamPage({ params }: LocaleTeamPageProps) {
     const month = newDate.getMonth() + 1 // Convert to 1-indexed
     const day = newDate.getDate()
     
-    const newUrl = `/${locale}/team/${params.slug}/week/${year}/${month}/${day}`
+    const newUrl = `/${locale}/team/${resolvedParams.slug}/week/${year}/${month}/${day}`
     
     // Use setTimeout to avoid calling router.push during render
     setTimeout(() => {
       router.push(newUrl, { scroll: false })
     }, 0)
-  }, [locale, params.slug, router])
+  }, [locale, resolvedParams.slug, router])
 
   useEffect(() => {
     fetchTeamData()
-  }, [params.slug])
+  }, [resolvedParams.slug])
 
   const fetchTeamData = async () => {
     try {
@@ -84,7 +87,7 @@ export default function LocaleTeamPage({ params }: LocaleTeamPageProps) {
       let { data: teamData, error: teamError } = await supabase
         .from("teams")
         .select("id,name,slug,invite_code,is_password_protected,password_hash")
-        .eq("invite_code", params.slug)
+  .eq("invite_code", resolvedParams.slug)
         .single()
 
       // If not found by invite_code, try by slug (friendly URL)
@@ -92,7 +95,7 @@ export default function LocaleTeamPage({ params }: LocaleTeamPageProps) {
         const { data: teamBySlug, error: slugError } = await supabase
           .from("teams")
           .select("id,name,slug,invite_code,is_password_protected,password_hash")
-          .eq("slug", params.slug)
+          .eq("slug", resolvedParams.slug)
           .single()
 
         teamData = teamBySlug
@@ -234,7 +237,7 @@ export default function LocaleTeamPage({ params }: LocaleTeamPageProps) {
         <div className="text-center">
           <h1 className="text-2xl font-bold mb-4">Team not found</h1>
           <p className="text-gray-600 mb-4">
-            The invite code "{params.slug}" doesn't match any existing team.
+            The invite code "{resolvedParams.slug}" doesn't match any existing team.
           </p>
           <Link href={locale === "en" ? "/" : `/${locale}`}>
             <Button>Go Home</Button>

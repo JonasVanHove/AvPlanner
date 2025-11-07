@@ -3,6 +3,7 @@
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip"
 import { useTheme } from "next-themes"
+import { useTranslation, type Locale } from "@/lib/i18n"
 
 interface MemberAvatarProps {
   firstName: string
@@ -16,10 +17,12 @@ interface MemberAvatarProps {
     status?: "available" | "unavailable" | "need_to_check" | "absent" | "holiday" | "remote"
     tooltip?: string
   }
+  locale?: Locale
 }
 
-export function MemberAvatar({ firstName, lastName, profileImage, size = "md", className, statusIndicator, isBirthdayToday }: MemberAvatarProps) {
+export function MemberAvatar({ firstName, lastName, profileImage, size = "md", className, statusIndicator, isBirthdayToday, locale = "en" }: MemberAvatarProps) {
   const { theme } = useTheme()
+  const { t } = useTranslation(locale)
   const sizeClasses = {
     sm: "h-6 w-6 text-xs",
     md: "h-8 w-8 text-sm",
@@ -47,13 +50,13 @@ export function MemberAvatar({ firstName, lastName, profileImage, size = "md", c
 
   const getStatusLabel = (status: string | undefined) => {
     switch (status) {
-      case 'available': return 'Beschikbaar'
-      case 'remote': return 'Op Afstand'
-      case 'unavailable': return 'Niet Beschikbaar'
-      case 'need_to_check': return 'Moet Nakijken'
-      case 'absent': return 'Afwezig'
-      case 'holiday': return 'Vakantie'
-      default: return 'Status niet ingesteld'
+      case 'available': return t('status.available')
+      case 'remote': return t('status.remote')
+      case 'unavailable': return t('status.unavailable')
+      case 'need_to_check': return t('status.need_to_check')
+      case 'absent': return t('status.absent')
+      case 'holiday': return t('status.holiday')
+      default: return t('status.not_set')
     }
   }
 

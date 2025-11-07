@@ -8,7 +8,7 @@ import { Button } from "@/components/ui/button"
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
 import { DropdownMenu, DropdownMenuContent, DropdownMenuTrigger, DropdownMenuItem, DropdownMenuSeparator } from "@/components/ui/dropdown-menu"
 import { HamburgerMenu } from "@/components/ui/hamburger-menu"
-import { LogOut, UserIcon, ChevronDown, Shield } from "lucide-react"
+import { LogOut, UserIcon, ChevronDown, Shield, Users } from "lucide-react"
 import { useTranslation } from "@/lib/i18n"
 import { supabase } from "@/lib/supabase"
 import { useEffect, useState } from "react"
@@ -24,6 +24,7 @@ export default function HomePage() {
   const [loading, setLoading] = useState(true)
   const [isAdmin, setIsAdmin] = useState(false)
   const [userProfileImage, setUserProfileImage] = useState<string | null>(null)
+  const [userTeams, setUserTeams] = useState<any[]>([])
 
   useEffect(() => {
     // Get initial session
@@ -36,6 +37,7 @@ export default function HomePage() {
       if (session?.user) {
         checkAdminStatus(session.user.email!)
         fetchUserProfileImage(session.user.email!)
+        fetchUserTeams(session.user.email!)
       }
     }
 
@@ -51,8 +53,10 @@ export default function HomePage() {
         if (session?.user) {
           checkAdminStatus(session.user.email!)
           fetchUserProfileImage(session.user.email!)
+          fetchUserTeams(session.user.email!)
         } else {
           setIsAdmin(false)
+          setUserTeams([])
         }
       }
     )
@@ -104,6 +108,25 @@ export default function HomePage() {
       }
     } catch (error) {
       console.log('Error fetching homepage user profile image:', error)
+    }
+  }
+
+  const fetchUserTeams = async (email: string) => {
+    try {
+      const { data, error } = await supabase.rpc('get_user_teams_with_status', {
+        user_email: email
+      })
+
+      if (error) {
+        console.log('Error fetching user teams:', error.message)
+        return
+      }
+
+      // Filter only active teams
+      const activeTeams = (data || []).filter((team: any) => team.user_status === 'active')
+      setUserTeams(activeTeams)
+    } catch (error) {
+      console.log('Error fetching user teams:', error)
     }
   }
 
@@ -222,14 +245,40 @@ export default function HomePage() {
                         <UserIcon className="h-4 w-4 mr-2 transition-colors duration-200" />
                         My Teams & Me
                       </DropdownMenuItem>
+                      
+                      {userTeams.length > 0 && (
+                        <>
+                          <DropdownMenuSeparator className="bg-gray-800" />
+                          <div className="px-2 py-1.5 text-xs font-semibold text-gray-400">
+                            My Teams
+                          </div>
+                          {userTeams.map((team: any) => (
+                            <DropdownMenuItem 
+                              key={team.team_id}
+                              onClick={() => {
+                                const teamPath = `/team/${team.team_slug || team.team_invite_code}`
+                                router.push(teamPath)
+                              }}
+                              className="cursor-pointer text-gray-200 transition-all duration-200 hover:bg-gray-800 hover:text-blue-400 focus:bg-gray-800 focus:text-blue-400"
+                            >
+                              <Users className="h-4 w-4 mr-2 transition-colors duration-200" />
+                              <span className="truncate">{team.team_name}</span>
+                            </DropdownMenuItem>
+                          ))}
+                        </>
+                      )}
+                      
                       {isAdmin && (
-                        <DropdownMenuItem 
-                          onClick={handleAdminNavigation}
-                          className="cursor-pointer text-gray-200 transition-all duration-200 hover:bg-gray-800 hover:text-purple-400 focus:bg-gray-800 focus:text-purple-400"
-                        >
-                          <Shield className="h-4 w-4 mr-2 transition-colors duration-200" />
-                          Admin Panel
-                        </DropdownMenuItem>
+                        <>
+                          <DropdownMenuSeparator className="bg-gray-800" />
+                          <DropdownMenuItem 
+                            onClick={handleAdminNavigation}
+                            className="cursor-pointer text-gray-200 transition-all duration-200 hover:bg-gray-800 hover:text-purple-400 focus:bg-gray-800 focus:text-purple-400"
+                          >
+                            <Shield className="h-4 w-4 mr-2 transition-colors duration-200" />
+                            Admin Panel
+                          </DropdownMenuItem>
+                        </>
                       )}
                       
                       <DropdownMenuSeparator className="bg-gray-800" />
@@ -267,6 +316,31 @@ export default function HomePage() {
                         <UserIcon className="h-4 w-4 mr-3" />
                         <span>My Teams & Me</span>
                       </Button>
+                      
+                      {userTeams.length > 0 && (
+                        <>
+                          <div className="border-t border-gray-200 pt-2 mt-2">
+                            <div className="px-3 py-2 text-xs font-semibold text-gray-600">
+                              My Teams
+                            </div>
+                            {userTeams.map((team: any) => (
+                              <Button
+                                key={team.team_id}
+                                variant="ghost"
+                                onClick={() => {
+                                  const teamPath = `/team/${team.team_slug || team.team_invite_code}`
+                                  router.push(teamPath)
+                                }}
+                                className="w-full justify-start text-left h-auto py-3 px-3"
+                              >
+                                <Users className="h-4 w-4 mr-3" />
+                                <span className="truncate">{team.team_name}</span>
+                              </Button>
+                            ))}
+                          </div>
+                        </>
+                      )}
+                      
                       {isAdmin && (
                         <Button
                           variant="ghost"

@@ -1,6 +1,15 @@
 # Database Setup voor AvPlanner
 
 ## Problemen
+### Probleem 0: "Database error saving new user" (Signup faalt)
+Dit betekent dat het opslaan van een nieuwe gebruiker faalt in de database-laag. Oorzaken zijn meestal:
+- Trigger `on_auth_user_created` bestaat niet of faalt
+- RLS policies op `public.users` blokkeren de insert vanuit de trigger
+- `public.users` tabel mist of heeft verkeerde owner/kolommen
+- Duplicaat email in `auth.users` (soft-deleted/banned)
+
+Zie de sectie Oplossingen → Signup Fout herstellen voor een stapsgewijze aanpak.
+
 ### Probleem 1: 404 RPC Functie Fouten
 Je krijgt 404 fouten in de browser console voor ontbrekende Supabase RPC functies:
 - `is_user_admin`
@@ -12,6 +21,37 @@ Je krijgt 404 fouten in de browser console voor ontbrekende Supabase RPC functie
 Je krijgt deze fout op /my-teams omdat essentiële database tabellen ontbreken.
 
 ## Oplossingen
+
+### Signup Fout herstellen: "Database error saving new user"
+Voer deze stappen uit in Supabase Dashboard → SQL Editor.
+
+1) Diagnose – Auth en Trigger controleren
+- `database/scripts/7-check-auth-schema.sql`
+- `database/scripts/2-verify-trigger-details.sql`
+- `database/scripts/11-check-existing-users.sql` (controleer of het emailadres al bestaat / soft-deleted is)
+
+2) Minimalistische trigger test (doet niets, alleen logt)
+- Voer `database/scripts/8-minimal-test-trigger.sql` uit
+- Probeer opnieuw te registreren
+   - Werkt registratie nu wel? Dan zat het probleem in de insert naar `public.users`
+   - Werkt het nog steeds niet? Dan zit het probleem in Supabase Auth zelf (voor de trigger)
+
+3) Definitieve fix voor profiel-aanmaak bij signup
+- Voer `database/scripts/fix-user-signup.sql` uit
+   - Maakt/actualiseert `public.users`
+   - Zet owner op `postgres`, activeert RLS en voegt correcte policies toe
+   - (Re)maakt `on_auth_user_created` trigger en `public.handle_new_user()` functie (SECURITY DEFINER)
+   - Zet de juiste grants
+
+4) (Optioneel/Tijdelijk) RLS noodschakelaar
+- Als signup door RLS blijft falen, kun je tijdelijk RLS uitschakelen met `database/scripts/4-emergency-disable-rls.sql` om te bevestigen dat policies de oorzaak zijn. Schakel RLS daarna weer in met de correcte policies uit stap 3.
+
+5) Redirect URL configureren
+- Ga naar Supabase → Authentication → URL Configuration
+- Voeg je callback URL toe (bijv. `http://localhost:3000/auth/callback` en je productie domein)
+- Dit is vereist zodat verificatielinks correct terugkeren naar de app
+
+Na deze stappen moet aanmelden/registreren slagen zonder database-fouten.
 
 ## Voor Live Database met Ontbrekende Tabellen (jouw huidige situatie)
 

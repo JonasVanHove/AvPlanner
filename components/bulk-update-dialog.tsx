@@ -1034,6 +1034,7 @@ export function AnalyticsButton({ members, locale, weeksToShow, currentDate, tea
                               lastName={member.last_name}
                               profileImage={member.profile_image}
                               size="sm"
+                              locale={locale}
                             />
                             <div className="text-xs">
                               <p className={cn(
@@ -1096,6 +1097,7 @@ export function AnalyticsButton({ members, locale, weeksToShow, currentDate, tea
                           lastName={member.last_name}
                           profileImage={member.profile_image}
                           size="md"
+                          locale={locale}
                         />
                         <div className="flex-1">
                           <h5 className="text-lg font-bold text-gray-900 dark:text-white">
@@ -1213,6 +1215,7 @@ export function AnalyticsButton({ members, locale, weeksToShow, currentDate, tea
                             lastName={member.last_name}
                             profileImage={member.profile_image}
                             size="sm"
+                            locale={locale}
                           />
                           <div className="flex-1 min-w-0">
                             <p className="text-sm font-semibold text-gray-900 dark:text-white truncate">
@@ -2322,6 +2325,7 @@ export function BulkUpdateDialog({ members, locale, onUpdate, onRangeSelectionCh
                       lastName={member.last_name}
                       profileImage={member.profile_image}
                       size="sm"
+                      locale={locale}
                       className={cn(
                         "flex-shrink-0",
                         member.is_hidden && "opacity-50"

@@ -171,11 +171,16 @@ export default function TeamPage({ params }: TeamPageProps) {
       
       // Debug raw data coming from Supabase (to verify birth_date is returned by API)
       try {
-        console.log("🎂 Raw members (normal fetch):", (allMembersData || []).map((m: any) => ({
-          id: m.id,
-          name: `${m.first_name} ${m.last_name}`,
-          birth_date: m.birth_date ?? '<missing>'
-        })))
+        const g = window as any
+        if (!g.__AVP_LOG_RAW_MEMBERS_ONCE__) {
+          g.__AVP_LOG_RAW_MEMBERS_ONCE__ = true
+          console.log("🎂 Raw members (normal fetch):", (allMembersData || []).map((m: any) => ({
+            id: m.id,
+            name: `${m.first_name} ${m.last_name}`,
+            birth_date: m.birth_date ?? '<missing>'
+          })))
+          setTimeout(() => { g.__AVP_LOG_RAW_MEMBERS_ONCE__ = false }, 2000)
+        }
       } catch {}
 
       // Transform to consistent format
@@ -197,11 +202,16 @@ export default function TeamPage({ params }: TeamPageProps) {
       
       // Debug: verify birth_date presence coming from Supabase
       try {
-        console.log("🎂 Members loaded (normal fetch):", allMembers.map(m => ({
-          id: m.id,
-          name: `${m.first_name} ${m.last_name}`,
-          birth_date: m.birth_date
-        })))
+        const g = window as any
+        if (!g.__AVP_LOG_LOADED_MEMBERS_ONCE__) {
+          g.__AVP_LOG_LOADED_MEMBERS_ONCE__ = true
+          console.log("🎂 Members loaded (normal fetch):", allMembers.map(m => ({
+            id: m.id,
+            name: `${m.first_name} ${m.last_name}`,
+            birth_date: m.birth_date
+          })))
+          setTimeout(() => { g.__AVP_LOG_LOADED_MEMBERS_ONCE__ = false }, 2000)
+        }
       } catch {}
 
       setMembers(allMembers)

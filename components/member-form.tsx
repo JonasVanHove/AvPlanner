@@ -82,19 +82,26 @@ export function MemberForm({ teamId, locale, onMemberAdded, member, mode = "add"
 
   const uploadImage = async (file: File): Promise<string | null> => {
     try {
-      const fileExt = file.name.split(".").pop()
-      const fileName = `${Math.random()}.${fileExt}`
-      const filePath = `profile-images/${fileName}`
-
-      const { error: uploadError } = await supabase.storage.from("profile-images").upload(filePath, file)
-
-      if (uploadError) throw uploadError
-
-      const { data } = supabase.storage.from("profile-images").getPublicUrl(filePath)
-
-      return data.publicUrl
-    } catch (error) {
-      console.error("Error uploading image:", error)
+      console.log("Starting base64 conversion for file:", file.name, "size:", file.size)
+      
+      // Convert image to base64 instead of uploading to Storage
+      return new Promise((resolve, reject) => {
+        const reader = new FileReader()
+        reader.onload = () => {
+          const base64String = reader.result as string
+          console.log("Base64 conversion complete, string length:", base64String.length)
+          console.log("Base64 preview (first 100 chars):", base64String.substring(0, 100))
+          resolve(base64String)
+        }
+        reader.onerror = (error) => {
+          console.error("FileReader error:", error)
+          reject(new Error("Failed to read image file"))
+        }
+        reader.readAsDataURL(file)
+      })
+    } catch (error: any) {
+      console.error("Error converting image to base64:", error)
+      alert(`Fout bij uploaden afbeelding: ${error?.message || "Onbekende fout"}`)
       return null
     }
   }
@@ -109,32 +116,77 @@ export function MemberForm({ teamId, locale, onMemberAdded, member, mode = "add"
 
     setIsSubmitting(true)
     try {
-      let imageUrl = profileImagePreview
+      // Debug: log current auth session/role
+      try {
+        const { data: sessionData } = await supabase.auth.getSession()
+        console.log("Auth session user:", sessionData?.session?.user?.id || null)
+        console.log("Auth role (client):", sessionData?.session ? "authenticated" : "anon")
+      } catch (e) {
+        console.warn("Could not retrieve auth session", e)
+      }
+      let imageData = member?.profile_image || null
 
-      // Upload new image if selected
+      // Convert new image to base64 if selected
       if (profileImage) {
-        const uploadedUrl = await uploadImage(profileImage)
-        if (uploadedUrl) {
-          imageUrl = uploadedUrl
+        console.log("Converting new image to base64...")
+        const base64Data = await uploadImage(profileImage)
+        if (base64Data) {
+          console.log("Base64 conversion successful, length:", base64Data.length)
+          imageData = base64Data
+        } else {
+          console.error("Base64 conversion returned null")
         }
+      } else if (profileImagePreview && profileImagePreview !== member?.profile_image) {
+        // User might have pasted a preview but not uploaded
+        imageData = profileImagePreview
       }
 
       const memberData = {
         first_name: firstName.trim(),
         last_name: lastName.trim(),
         email: email.trim() || null,
-        profile_image: imageUrl || null,
+        profile_image: imageData,
         team_id: teamId,
       }
 
+      console.log("Saving member with image data length:", imageData?.length || 0)
+      console.log("Member data to save:", {
+        ...memberData,
+        profile_image: memberData.profile_image ? `[base64 data: ${memberData.profile_image.length} chars]` : null
+      })
+
       if (mode === "edit" && member) {
-        const { error } = await supabase.from("members").update(memberData).eq("id", member.id)
+        const { error, data } = await supabase
+          .from("members")
+          .update(memberData)
+          .eq("id", member.id)
+          .select() // Add select() to return the updated data
 
-        if (error) throw error
+        if (error) {
+          console.error("Update error:", error)
+          throw error
+        }
+        console.log("Member updated successfully:", data)
+        
+        // Verify the image was saved
+        const { data: verifyData } = await supabase
+          .from("members")
+          .select("id, first_name, last_name, profile_image")
+          .eq("id", member.id)
+          .single()
+        
+        console.log("Verification - image length in DB:", verifyData?.profile_image?.length || 0)
       } else {
-        const { error } = await supabase.from("members").insert([memberData])
+        const { error, data } = await supabase
+          .from("members")
+          .insert([memberData])
+          .select() // Add select() to return the inserted data
 
-        if (error) throw error
+        if (error) {
+          console.error("Insert error:", error)
+          throw error
+        }
+        console.log("Member inserted successfully:", data)
       }
 
       onMemberAdded()
