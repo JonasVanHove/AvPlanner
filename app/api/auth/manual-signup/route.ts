@@ -1,5 +1,5 @@
 import { NextRequest } from 'next/server'
-import { supabaseAdmin } from '@/lib/supabaseAdmin'
+import { getSupabaseAdmin } from '@/lib/supabaseAdmin'
 
 export const runtime = 'nodejs'
 export const dynamic = 'force-dynamic'
@@ -14,6 +14,9 @@ export async function POST(req: NextRequest) {
       console.error('[manual-signup] Missing SUPABASE_SERVICE_ROLE_KEY')
       return new Response(JSON.stringify({ error: 'missing_service_role_key' }), { status: 500 })
     }
+
+    // Get Supabase admin client (lazy initialization)
+    const supabaseAdmin = getSupabaseAdmin()
 
     const body = await req.json()
     const { email, password, first_name, last_name } = body || {}
