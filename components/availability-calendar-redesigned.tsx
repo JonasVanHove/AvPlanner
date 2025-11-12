@@ -30,9 +30,10 @@ import { supabase } from "@/lib/supabase"
 import { useTranslation, type Locale } from "@/lib/i18n"
 import { cn } from "@/lib/utils"
 import { MemberForm } from "./member-form"
+import { MemberAvatar } from "./member-avatar"
 import { BulkUpdateDialog, AnalyticsButton, PlannerButton } from "./bulk-update-dialog"
 import { SettingsDropdown } from "./settings-dropdown"
-import { MemberAvatar } from "./member-avatar"
+import { checkAndAwardBadgesClientSide } from "@/lib/badge-checker-client"
 import { EditModePasswordDialog } from "./edit-mode-password-dialog"
 import { AvailabilityDropdown } from "./availability-dropdown"
 import { useTodayAvailability } from "@/hooks/use-today-availability"
@@ -44,6 +45,8 @@ import { format } from "date-fns"
 import { useTheme } from "next-themes"
 import { toast } from "@/hooks/use-toast"
 import { LoginButton } from "@/components/auth/auth-dialog"
+import { BadgeNotificationComponent } from "@/components/badge-notification"
+import { BadgeDisplay } from "@/components/badge-display"
 
 interface Member {
   id: string
@@ -137,6 +140,9 @@ const AvailabilityCalendarRedesigned = ({
   }>({ isActive: false })
   // Weekend behavior: when true, weekends count as weekdays for completion
   const [weekendsAsWeekdays, setWeekendsAsWeekdays] = useState<boolean>(false)
+  // Badge system state
+  const [newBadges, setNewBadges] = useState<any[]>([])
+  const [showBadgeNotification, setShowBadgeNotification] = useState(false)
   const router = useRouter()
   const { t } = useTranslation(locale)
   // Realtime channel for team notifications
@@ -904,9 +910,47 @@ const AvailabilityCalendarRedesigned = ({
     // Evaluate completion for the current user in the current visible week using fresh data
     const weekStart = getMondayOfWeek(currentDate)
     triggerConfettiIfWeekComplete(weekStart, fresh)
+    
+    // Check for badge eligibility after update
+    // Check badges for the member whose availability was updated
+    console.log('🏅 [Calendar] Checking badges for updated member:', memberId)
+    checkBadges(memberId)
+    
+    // If someone else made the change, also check their badges (for "helped_other")
+    if (changedById && changedById !== memberId) {
+      console.log('🏅 [Calendar] Also checking badges for helper:', changedById)
+      checkBadges(changedById)
+    }
     } catch (error) {
       console.error("Error updating availability:", error)
       alert("Er is een fout opgetreden bij het bijwerken van de beschikbaarheid.")
+    }
+  }
+
+  // Check and award badges for a member (CLIENT-SIDE VERSION)
+  const checkBadges = async (memberId: string) => {
+    console.log('🏅 [Calendar] Starting CLIENT-SIDE badge check for member:', memberId)
+    try {
+      // Use client-side badge checking (bypasses Node.js fetch issues)
+      const result = await checkAndAwardBadgesClientSide(memberId, teamId)
+      
+      console.log('🏅 [Calendar] Client-side result:', result)
+      
+      if (result.newBadges && result.newBadges.length > 0) {
+        console.log(`🏅 [Calendar] 🎉 ${result.newBadges.length} new badge(s) awarded!`)
+        console.log('🏅 [Calendar] Stats:', result.stats)
+        // Show badge notifications
+        setNewBadges(result.newBadges)
+        setShowBadgeNotification(true)
+      } else {
+        console.log('🏅 [Calendar] ℹ️  No new badges')
+        if (result.stats) {
+          console.log(`🏅 [Calendar] Stats: ${result.stats.uniqueDates} unique dates, ${result.stats.eligibleBadges} eligible badges`)
+        }
+      }
+    } catch (error) {
+      console.error('🏅 [Calendar] ❌ Exception:', error)
+      // Don't show error to user - badges are optional gamification
     }
   }
 
@@ -1487,6 +1531,11 @@ const AvailabilityCalendarRedesigned = ({
                                         show: true,
                                         status: getTodayAvailability(member.id)?.status
                                       }}
+                                      memberId={member.id}
+                                      teamId={teamId}
+                                      email={member.email}
+                                      birthDate={member.birth_date}
+                                      clickable={true}
                                     />
                                     <div className="min-w-0 flex-1">
                                       <div className="text-sm font-medium text-gray-900 dark:text-white whitespace-nowrap">
@@ -1633,13 +1682,18 @@ const AvailabilityCalendarRedesigned = ({
                             lastName={member.last_name}
                             profileImage={member.profile_image}
                             size="sm"
-                            className="ring-1 ring-gray-200 dark:ring-gray-600"
+                            className=""
                             locale={locale}
                             isBirthdayToday={!editMode && isBirthdayDate(member.birth_date, new Date())}
                             statusIndicator={{
                               show: true,
                               status: getTodayAvailability(member.id)?.status
                             }}
+                            memberId={member.id}
+                            teamId={teamId}
+                            email={member.email}
+                            birthDate={member.birth_date}
+                            clickable={true}
                           />
                         </div>
                         
@@ -1891,13 +1945,18 @@ const AvailabilityCalendarRedesigned = ({
                             lastName={member.last_name}
                             profileImage={member.profile_image}
                             size="md"
-                            className="ring-1 ring-gray-200 dark:ring-gray-600"
+                            className=""
                             locale={locale}
                             isBirthdayToday={!editMode && isBirthdayDate(member.birth_date, new Date())}
                             statusIndicator={{
                               show: true,
                               status: getTodayAvailability(member.id)?.status
                             }}
+                            memberId={member.id}
+                            teamId={teamId}
+                            email={member.email}
+                            birthDate={member.birth_date}
+                            clickable={true}
                           />
                         </div>
                         
@@ -2688,6 +2747,19 @@ const AvailabilityCalendarRedesigned = ({
         error={passwordError}
         locale={locale}
       />
+
+      {/* Badge Notifications */}
+      {showBadgeNotification && newBadges.map((badge, index) => (
+        <BadgeNotificationComponent
+          key={`${badge.id}-${index}`}
+          badge={badge}
+          locale={locale}
+          onClose={() => {
+            setShowBadgeNotification(false)
+            setNewBadges([])
+          }}
+        />
+      ))}
     </TooltipProvider>
   )
 }
