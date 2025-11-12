@@ -51,6 +51,7 @@ export function MemberAvatar({
   const [showDialog, setShowDialog] = useState(false)
   const [badges, setBadges] = useState<any[]>([])
   const [isLoadingBadges, setIsLoadingBadges] = useState(false)
+  const [isAuthenticated, setIsAuthenticated] = useState<boolean | null>(null)
 
   // Fetch badges when dialog opens
   useEffect(() => {
@@ -61,9 +62,38 @@ export function MemberAvatar({
         memberId, 
         teamId 
       })
+      // Immediately try to use cached badges (if any) so non-authenticated viewers see something
+      try {
+        const cacheKey = `badges:${memberId}:${teamId}`
+        const raw = localStorage.getItem(cacheKey)
+        if (raw) {
+          const cached = JSON.parse(raw)
+          console.log(`🏅 [Avatar] Showing cached badges immediately (${(cached && cached.length) || 0})`)
+          setBadges(cached)
+        }
+      } catch (e) {
+        // ignore
+      }
+
       fetchMemberBadges()
     }
   }, [showDialog, email, memberId, teamId])
+
+  // Check authentication status on mount
+  useEffect(() => {
+    let mounted = true
+    ;(async () => {
+      try {
+        const { data } = await supabase.auth.getSession()
+        if (!mounted) return
+        setIsAuthenticated(!!data.session)
+      } catch (e) {
+        if (!mounted) return
+        setIsAuthenticated(false)
+      }
+    })()
+    return () => { mounted = false }
+  }, [])
 
   const fetchMemberBadges = async () => {
     if (!email || !memberId || !teamId) {
@@ -332,7 +362,20 @@ export function MemberAvatar({
                 </div>
               ) : (
                 <div className="text-center py-4 text-sm text-muted-foreground">
-                  {t('badge.noBadges')}
+                  {isAuthenticated === false ? (
+                    // Not logged in: hint to login to view badges (or show cached)
+                    (locale === 'nl'
+                      ? 'Log in om de badges te zien'
+                      : locale === 'fr'
+                        ? "Connectez-vous pour voir les badges"
+                        : 'Log in to view badges')
+                  ) : isAuthenticated === null ? (
+                    // Unknown auth state - be neutral
+                    (locale === 'nl' ? 'Badges niet beschikbaar' : locale === 'fr' ? 'Badges non disponibles' : 'Badges not available')
+                  ) : (
+                    // Authenticated but no badges
+                    t('badge.noBadges')
+                  )}
                 </div>
               )}
             </div>
