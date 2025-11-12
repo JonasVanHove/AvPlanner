@@ -111,13 +111,44 @@ export function MemberAvatar({
       
       if (badgeError) {
         console.error('🏅 [Avatar] Badge query error:', badgeError)
+
+        // Try localStorage fallback for unauthenticated viewers or RLS-blocked reads
+        try {
+          const cacheKey = `badges:${memberId}:${teamId}`
+          const raw = localStorage.getItem(cacheKey)
+          if (raw) {
+            const cached = JSON.parse(raw)
+            console.log(`🏅 [Avatar] Using cached badges from localStorage (${(cached && cached.length) || 0})`)
+            setBadges(cached)
+            return
+          }
+        } catch (e) {
+          console.warn('🏅 [Avatar] localStorage read failed:', e)
+        }
+
         setBadges([])
         return
       }
-      
+
       const elapsed = Date.now() - startTime
       console.log(`🏅 [Avatar] ✅ Loaded ${badgeData?.length || 0} badges in ${elapsed}ms`)
-      
+
+      // If server returned no badges, fall back to cached badges (helps unauthenticated viewers)
+      if ((!badgeData || badgeData.length === 0)) {
+        try {
+          const cacheKey = `badges:${memberId}:${teamId}`
+          const raw = localStorage.getItem(cacheKey)
+          if (raw) {
+            const cached = JSON.parse(raw)
+            console.log(`🏅 [Avatar] Server returned no badges — using cached badges (${(cached && cached.length) || 0})`)
+            setBadges(cached)
+            return
+          }
+        } catch (e) {
+          console.warn('🏅 [Avatar] localStorage read failed:', e)
+        }
+      }
+
       setBadges(badgeData || [])
     } catch (error: any) {
       const elapsed = Date.now() - startTime

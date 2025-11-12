@@ -114,12 +114,26 @@ export async function checkAndAwardBadgesClientSide(
         }
       } else {
         console.log(`🏅 [CLIENT] ✅ Awarded ${badge.type}!`)
-        newBadges.push({
+        const awarded = {
           type: badge.type,
           id: newBadge.id,
           week_year: 'lifetime',
-          activity_count: uniqueDates
-        })
+          activity_count: uniqueDates,
+          earned_at: newBadge.earned_at || new Date().toISOString()
+        }
+        newBadges.push(awarded)
+
+        // Persist awarded badges into localStorage as a fallback for unauthenticated viewers
+        try {
+          const cacheKey = `badges:${memberId}:${teamId}`
+          const raw = localStorage.getItem(cacheKey)
+          const existing = raw ? JSON.parse(raw) : []
+          // Avoid duplicates by badge type
+          const merged = [...existing.filter((b: any) => b.type !== awarded.type), awarded]
+          localStorage.setItem(cacheKey, JSON.stringify(merged))
+        } catch (e) {
+          // Ignore localStorage failures (e.g., private mode)
+        }
       }
     }
 
