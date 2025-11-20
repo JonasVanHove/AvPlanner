@@ -10,7 +10,7 @@ import { ForgotPasswordForm } from '@/components/auth/forgot-password-form'
 import { Button } from '@/components/ui/button'
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
 import { DropdownMenu, DropdownMenuContent, DropdownMenuTrigger, DropdownMenuItem, DropdownMenuSeparator, DropdownMenuSub, DropdownMenuSubTrigger, DropdownMenuSubContent } from "@/components/ui/dropdown-menu"
-import { LogOut, UserIcon, ChevronDown, Shield, Home } from "lucide-react"
+import { LogOut, UserIcon, ChevronDown, Shield, Home, Users } from "lucide-react"
 import { User } from '@supabase/supabase-js'
 import { useRouter } from 'next/navigation'
 import { useTheme } from "next-themes"
@@ -23,6 +23,7 @@ export default function MyTeamsPage() {
   const [loading, setLoading] = useState(true)
   const [isAdmin, setIsAdmin] = useState(false)
   const [userProfileImage, setUserProfileImage] = useState<string | null>(null)
+  const [userTeams, setUserTeams] = useState<any[]>([])
   const [authMode, setAuthMode] = useState<'login' | 'register' | 'forgot-password'>('login')
   const router = useRouter()
   const { setTheme } = useTheme()
@@ -37,6 +38,7 @@ export default function MyTeamsPage() {
       if (session?.user) {
         checkAdminStatus(session.user.email!)
         fetchUserProfileImage(session.user.email!)
+        fetchUserTeams(session.user.email!)
       }
     })
 
@@ -49,6 +51,7 @@ export default function MyTeamsPage() {
       if (session?.user) {
         checkAdminStatus(session.user.email!)
         fetchUserProfileImage(session.user.email!)
+        fetchUserTeams(session.user.email!)
       } else {
         setIsAdmin(false)
         setUserProfileImage(null)
@@ -73,6 +76,50 @@ export default function MyTeamsPage() {
       // Gracefully handle if the function doesn't exist in the database
       console.warn('Admin function not available - this is normal for basic setups:', error)
       setIsAdmin(false)
+    }
+  }
+
+  const fetchUserTeams = async (email: string) => {
+    try {
+      const { data: membersData, error: membersError } = await supabase
+        .from('members')
+        .select(`
+          id,
+          email,
+          status,
+          role,
+          team_id,
+          teams (
+            id,
+            name,
+            slug,
+            invite_code
+          )
+        `)
+        .eq('email', email)
+        .eq('status', 'active')
+
+      if (membersError) {
+        console.error('Error fetching user teams:', membersError)
+        setUserTeams([])
+        return
+      }
+
+      const teams = (membersData || [])
+        .filter((member: any) => member.teams)
+        .map((member: any) => ({
+          team_id: member.teams.id,
+          team_name: member.teams.name,
+          team_slug: member.teams.slug,
+          team_invite_code: member.teams.invite_code,
+          user_role: member.role,
+          user_status: member.status
+        }))
+
+      setUserTeams(teams)
+    } catch (error) {
+      console.error('Exception fetching user teams:', error)
+      setUserTeams([])
     }
   }
 
@@ -213,6 +260,25 @@ export default function MyTeamsPage() {
                       <Home className="h-4 w-4 mr-2 transition-colors duration-200" />
                       {t('myTeams.backToHome')}
                     </DropdownMenuItem>
+                    {userTeams.length > 0 && (
+                      <>
+                        <DropdownMenuSeparator />
+                        <div className="px-2 py-1.5 text-xs font-semibold text-muted-foreground">My Teams ({userTeams.length})</div>
+                        {userTeams.map((team: any) => (
+                          <DropdownMenuItem
+                            key={team.team_id}
+                            onClick={() => {
+                              const teamPath = `/team/${team.team_slug || team.team_invite_code}`
+                              router.push(teamPath)
+                            }}
+                            className="cursor-pointer transition-all duration-200 hover:bg-accent focus:bg-accent"
+                          >
+                            <Users className="h-4 w-4 mr-2 transition-colors duration-200" />
+                            <span className="truncate">{team.team_name}</span>
+                          </DropdownMenuItem>
+                        ))}
+                      </>
+                    )}
                     <DropdownMenuSub>
                       <DropdownMenuSubTrigger>
                         Theme
@@ -262,6 +328,25 @@ export default function MyTeamsPage() {
                     <span>Back to Home</span>
                   </div>
                 </HamburgerMenuItem>
+                {userTeams.length > 0 && (
+                  <div className="border-t border-gray-200 pt-2 mt-2">
+                    <div className="px-3 py-2 text-xs font-semibold text-muted-foreground">My Teams ({userTeams.length})</div>
+                    {userTeams.map((team: any) => (
+                      <Button
+                        key={team.team_id}
+                        variant="ghost"
+                        onClick={() => {
+                          const teamPath = `/team/${team.team_slug || team.team_invite_code}`
+                          router.push(teamPath)
+                        }}
+                        className="w-full justify-start text-left h-auto py-3 px-3"
+                      >
+                        <Users className="h-4 w-4 mr-3" />
+                        <span className="truncate">{team.team_name}</span>
+                      </Button>
+                    ))}
+                  </div>
+                )}
                 {isAdmin && (
                   <HamburgerMenuItem onClick={handleAdminNavigation}>
                     <div className="flex items-center justify-between w-full">

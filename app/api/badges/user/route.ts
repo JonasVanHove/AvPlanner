@@ -14,26 +14,44 @@ export async function GET(request: NextRequest) {
     const { searchParams } = new URL(request.url)
     const email = searchParams.get("email")
     const teamId = searchParams.get("teamId")
+    const memberId = searchParams.get("memberId")
     const limit = parseInt(searchParams.get("limit") || "50")
 
     console.log('🏅 [API] Badge request received:', { email, teamId, limit })
 
-    if (!email) {
-      console.warn('🏅 [API] Missing email parameter')
+    // Support two modes: lookup by email (legacy) or by memberId (preferred when viewing other members)
+    if (!email && !memberId) {
+      console.warn('🏅 [API] Missing email or memberId parameter')
       return NextResponse.json(
-        { error: "Missing email parameter" },
+        { error: "Missing email or memberId parameter" },
         { status: 400 }
       )
     }
 
-    console.log('🏅 [API] Calling get_user_badges RPC function...')
-    
-    // Call database function to get user badges
-    const { data, error } = await supabase.rpc("get_user_badges", {
-      p_user_email: email,
-      p_team_id: teamId || null,
-      p_limit: limit,
-    })
+    let data: any = null
+    let error: any = null
+
+    if (memberId) {
+      // Query the user_badges table directly by member_id for reliability
+      console.log('🏅 [API] Querying user_badges by memberId...')
+      const res = await supabase
+        .from('user_badges')
+        .select('*')
+        .eq('member_id', memberId)
+        .eq('team_id', teamId)
+        .order('earned_at', { ascending: false })
+      data = res.data
+      error = res.error
+    } else if (email) {
+      console.log('🏅 [API] Calling get_user_badges RPC function...')
+      const res = await supabase.rpc("get_user_badges", {
+        p_user_email: email,
+        p_team_id: teamId || null,
+        p_limit: limit,
+      })
+      data = res.data
+      error = res.error
+    }
 
     const elapsed = Date.now() - startTime
 

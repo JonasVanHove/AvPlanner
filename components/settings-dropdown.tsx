@@ -20,9 +20,10 @@ import {
 } from "@/components/ui/drawer"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { Input } from "@/components/ui/input"
-import { Settings, Download, Moon, Sun, Globe, Bell, ChevronDown, Monitor, Share2, Copy, QrCode, Eye, EyeOff, Leaf, Snowflake, Flower, Sun as SummerSun, Home, Contrast, Flame, Terminal } from "lucide-react"
+import { Settings, Download, Moon, Sun, Globe, Bell, ChevronDown, Monitor, Share2, Copy, QrCode, Eye, EyeOff, Leaf, Snowflake, Flower, Sun as SummerSun, Home, Contrast, Flame, Terminal, MessageSquare, Lightbulb, Bug } from "lucide-react"
 import { ExportDialog } from "./export-dialog"
 import { useAuth } from "@/hooks/useAuth"
+import { supabase } from "@/lib/supabase"
 
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog"
 import { useTheme } from "next-themes"
@@ -80,6 +81,7 @@ function SettingsPanelContent(props: {
   version?: string | null
   versionLoading: boolean
   onLanguageChange: (locale: Locale) => void
+  sendFeedbackEmail?: (type: 'idea' | 'bug') => Promise<void>
   onClose?: () => void
   teamInviteUrl?: string
   teamSlugUrl?: string
@@ -129,6 +131,27 @@ function SettingsPanelContent(props: {
             {currentLocale === "en" ? "Manage Team" : currentLocale === "nl" ? "Team Beheren" : "Gérer l'équipe"}
           </DropdownMenuItem>
           <DropdownMenuSeparator />
+          {/* Feedback / Bug reporting links */}
+          <DropdownMenuItem
+            onClick={() => {
+              onClose?.()
+              window.open('https://github.com/JonasVanHove/AvPlanner/discussions/new?category=ideas', '_blank', 'noopener,noreferrer')
+            }}
+            className="cursor-pointer"
+          >
+            <Lightbulb className="mr-2 h-4 w-4" />
+            {currentLocale === "en" ? "Submit Idea" : currentLocale === "nl" ? "Dien idee in" : "Soumettre une idée"}
+          </DropdownMenuItem>
+          <DropdownMenuItem
+            onClick={() => {
+              onClose?.()
+              window.open('https://github.com/JonasVanHove/AvPlanner/issues/new/choose', '_blank', 'noopener,noreferrer')
+            }}
+            className="cursor-pointer"
+          >
+            <Bug className="mr-2 h-4 w-4" />
+            {currentLocale === "en" ? "Report a Bug" : currentLocale === "nl" ? "Meld een bug" : "Signaler un bug"}
+          </DropdownMenuItem>
         </>
       )}
 
@@ -633,6 +656,39 @@ export function SettingsDropdown({ currentLocale, members, team, forceOpen, onOp
     window.dispatchEvent(new CustomEvent('teamNotificationSend', { detail }))
   }
 
+  // Compose and open a mailto to all admins for this team (fallback to generic address)
+  const sendFeedbackEmail = async (type: 'idea' | 'bug') => {
+    try {
+      let recipients: string[] = []
+      if (team?.id) {
+        const { data, error } = await supabase
+          .from('members')
+          .select('email, role')
+          .eq('team_id', team.id)
+          .in('role', ['admin', 'owner'])
+
+        if (!error && data && data.length > 0) {
+          recipients = data.map((r: any) => r.email).filter(Boolean)
+        }
+      }
+
+      if (recipients.length === 0) {
+        // Fallback addresses
+        recipients = [type === 'bug' ? 'bugs@avplanner.app' : 'feedback@avplanner.app']
+      }
+
+      const subject = encodeURIComponent(`${team?.name || 'AvPlanner'} - ${type === 'bug' ? 'Bug Report' : 'Feature Request'}`)
+      const bodyTemplate = type === 'bug'
+        ? `Hi team,%0A%0AI'd like to report a bug in ${team?.name || ''}. Steps to reproduce:%0A1.%0A2.%0A3.%0A%0AExpected result:%0A%0AActual result:%0A%0A(Please include browser and version)%0A`
+        : `Hi team,%0A%0AI have an idea or feature request for ${team?.name || ''} (%23team). Describe below:%0A%0A[Describe your idea here]%0A%0AThanks!`
+
+      window.location.href = `mailto:${recipients.join(',')}?subject=${subject}&body=${encodeURIComponent(decodeURIComponent(bodyTemplate))}`
+    } catch (e) {
+      console.error('Failed to compose feedback email', e)
+      window.location.href = type === 'bug' ? 'mailto:bugs@avplanner.app' : 'mailto:feedback@avplanner.app'
+    }
+  }
+
   // Stable settings panel to avoid remounts on each keystroke
   const settingsPanel = (
     <SettingsPanelContent
@@ -711,8 +767,6 @@ export function SettingsDropdown({ currentLocale, members, team, forceOpen, onOp
       )}
 
       <ExportDialog open={exportDialogOpen} onOpenChange={setExportDialogOpen} members={members} locale={currentLocale} />
-      
-
     </>
   )
 }

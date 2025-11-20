@@ -38,9 +38,13 @@ export function TeamBadgesPage({ teamId, teamName, userEmail, locale }: TeamBadg
   const router = useRouter()
   const [leaderboard, setLeaderboard] = useState<LeaderboardEntry[]>([])
   const [myBadges, setMyBadges] = useState<Badge[]>([])
+  const [selectedMemberId, setSelectedMemberId] = useState<string | null>(null)
+  const [selectedMemberName, setSelectedMemberName] = useState<string | null>(null)
+  const [selectedBadges, setSelectedBadges] = useState<Badge[]>([])
   const [isLoading, setIsLoading] = useState(true)
 
   useEffect(() => {
+    // Load leaderboard and default badges
     loadBadgeData()
   }, [teamId, userEmail])
 
@@ -57,15 +61,41 @@ export function TeamBadgesPage({ teamId, teamName, userEmail, locale }: TeamBadg
 
       // Load user's badges if logged in
       if (userEmail) {
+        // Default to current user
         const badgesRes = await fetch(`/api/badges/user?email=${encodeURIComponent(userEmail)}&teamId=${teamId}`)
         const badgesData = await badgesRes.json()
         
         if (badgesData.success) {
           setMyBadges(badgesData.badges || [])
+          setSelectedBadges(badgesData.badges || [])
+          setSelectedMemberId(null)
+          setSelectedMemberName(null)
         }
       }
     } catch (error) {
       console.error('Error loading badge data:', error)
+    } finally {
+      setIsLoading(false)
+    }
+  }
+
+  const loadBadgesForMember = async (memberId: string, memberName?: string) => {
+    setIsLoading(true)
+    try {
+      const res = await fetch(`/api/badges/user?memberId=${memberId}&teamId=${teamId}`)
+      const data = await res.json()
+      if (data.success) {
+        setSelectedBadges(data.badges || [])
+        setSelectedMemberId(memberId)
+        setSelectedMemberName(memberName || null)
+      } else {
+        setSelectedBadges([])
+        setSelectedMemberId(memberId)
+        setSelectedMemberName(memberName || null)
+      }
+    } catch (e) {
+      console.error('Error loading member badges:', e)
+      setSelectedBadges([])
     } finally {
       setIsLoading(false)
     }
@@ -164,18 +194,18 @@ export function TeamBadgesPage({ teamId, teamName, userEmail, locale }: TeamBadg
           <Trophy className="h-12 w-12 text-yellow-500" />
         </div>
 
-        {/* My Badges Section */}
+        {/* My / Selected Member Badges Section */}
         {userEmail && (
           <Card>
             <CardHeader>
               <CardTitle className="flex items-center gap-2">
                 <Award className="h-5 w-5 text-blue-500" />
-                {texts.myBadges[locale]}
+                {selectedMemberId ? `${selectedMemberName || 'Member'}'s Badges` : texts.myBadges[locale]}
               </CardTitle>
             </CardHeader>
             <CardContent>
-              {myBadges.length > 0 ? (
-                <BadgeList badges={myBadges} locale={locale} />
+              {selectedBadges && selectedBadges.length > 0 ? (
+                <BadgeList badges={selectedBadges} locale={locale} />
               ) : (
                 <p className="text-center text-muted-foreground py-8">
                   {texts.noBadges[locale]}
@@ -236,6 +266,11 @@ export function TeamBadgesPage({ teamId, teamName, userEmail, locale }: TeamBadg
                           <div className="text-xs text-muted-foreground uppercase">
                             {texts.totalBadges[locale]}
                           </div>
+                        </div>
+                        <div className="ml-4 flex-shrink-0">
+                          <Button size="sm" onClick={() => loadBadgesForMember(entry.member_id, entry.member_name)}>
+                            View Badges
+                          </Button>
                         </div>
                       </div>
                     </CardContent>
