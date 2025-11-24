@@ -1230,7 +1230,8 @@ export default function TeamSettingsPage({ params }: TeamSettingsPageProps) {
                                   Laatst: {formatDate(member.last_active)}
                                 </Badge>
                               )}
-                              <Badge variant="outline" className="text-xs">
+                              <Badge variant="outline" className="text-xs flex items-center gap-1">
+                                <CalendarDays className="h-3 w-3 text-muted-foreground" />
                                 Lid sinds: {formatDate(member.joined_at)}
                               </Badge>
                             </div>

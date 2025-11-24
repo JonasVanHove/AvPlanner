@@ -18,7 +18,18 @@ CHECK (badge_type IN (
   'activity_50',
   'activity_100',
   'activity_500',
-  'activity_1000'
+  'activity_1000',
+  'collaboration',
+  'early_bird',
+  'night_shift',
+  'consistency_30',
+  'consistency_90',
+  'attendance_100',
+  -- Time-spent badges
+  'time_1h',
+  'time_10h',
+  'time_50h',
+  'time_200h'
 ));
 
 -- Verify the constraint was updated

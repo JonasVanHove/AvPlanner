@@ -12,16 +12,26 @@ CREATE TABLE IF NOT EXISTS public.user_badges (
   member_id UUID NOT NULL REFERENCES public.members(id) ON DELETE CASCADE,
   team_id UUID NOT NULL REFERENCES public.teams(id) ON DELETE CASCADE,
   badge_type TEXT NOT NULL CHECK (badge_type IN (
-    'timely_completion', 
-    'helped_other', 
-    'streak_3', 
-    'streak_10', 
+    'timely_completion',
+    'helped_other',
+    'streak_3',
+    'streak_10',
     'perfect_month',
     'activity_10',
     'activity_50',
     'activity_100',
     'activity_500',
-    'activity_1000'
+    'activity_1000',
+    'collaboration',
+    'early_bird',
+    'night_shift',
+    'consistency_30',
+    'consistency_90',
+    'attendance_100',
+    -- Remote/Holiday weekly badges
+    'remote_3_days',
+    'holiday_5_days',
+    'remote_full_week'
   )),
   week_year TEXT NOT NULL, -- Format: "2024-W48" for uniqueness per week
   earned_at TIMESTAMPTZ DEFAULT NOW(),
@@ -48,7 +58,22 @@ BEGIN
     'activity_50',
     'activity_100',
     'activity_500',
-    'activity_1000'
+    'activity_1000',
+    'collaboration',
+    'early_bird',
+    'night_shift',
+    'consistency_30',
+    'consistency_90',
+    'attendance_100',
+    -- Time-spent badges
+    'time_1h',
+    'time_10h',
+    'time_50h',
+    'time_200h',
+    -- Remote/Holiday weekly badges
+    'remote_3_days',
+    'holiday_5_days',
+    'remote_full_week'
   ));
 EXCEPTION
   WHEN duplicate_object THEN
@@ -275,33 +300,59 @@ BEGIN
 END;
 $$ LANGUAGE plpgsql SECURITY DEFINER;
 
--- Function: Get badge leaderboard for a team
-CREATE OR REPLACE FUNCTION get_badge_leaderboard(
+-- Function: Get badge leaderboard for a team (discipline-aware variant)
+-- NOTE: This function is renamed to avoid overloading ambiguity with RPC callers
+CREATE OR REPLACE FUNCTION get_badge_leaderboard_by_discipline(
   p_team_id UUID,
-  p_limit INTEGER DEFAULT 10
+  p_limit INTEGER DEFAULT 10,
+  p_discipline TEXT DEFAULT NULL
 ) RETURNS TABLE (
   member_id UUID,
   member_name TEXT,
   total_badges BIGINT,
   timely_badges BIGINT,
   helper_badges BIGINT,
-  streak_badges BIGINT
+  streak_badges BIGINT,
+  activity_badges BIGINT,
+  collaboration_badges BIGINT,
+  early_bird_badges BIGINT,
+  consistency_badges BIGINT,
+  attendance_badges BIGINT
 ) AS $$
 BEGIN
   RETURN QUERY
-  SELECT 
-    tm.id AS member_id,
-    TRIM(tm.first_name || ' ' || COALESCE(tm.last_name, '')) AS member_name,
-    COUNT(*)::BIGINT AS total_badges,
-    COUNT(*) FILTER (WHERE ub.badge_type = 'timely_completion')::BIGINT AS timely_badges,
-    COUNT(*) FILTER (WHERE ub.badge_type = 'helped_other')::BIGINT AS helper_badges,
-    COUNT(*) FILTER (WHERE ub.badge_type IN ('streak_3', 'streak_10', 'perfect_month'))::BIGINT AS streak_badges
-  FROM members tm
-  LEFT JOIN user_badges ub ON ub.member_id = tm.id AND ub.team_id = p_team_id
-  WHERE tm.team_id = p_team_id
-  GROUP BY tm.id, tm.first_name, tm.last_name
-  HAVING COUNT(*) > 0
-  ORDER BY total_badges DESC, timely_badges DESC
+  SELECT * FROM (
+    SELECT 
+      tm.id AS member_id,
+      TRIM(tm.first_name || ' ' || COALESCE(tm.last_name, '')) AS member_name,
+      COUNT(ub.*)::BIGINT AS total_badges,
+      COUNT(ub.*) FILTER (WHERE ub.badge_type = 'timely_completion')::BIGINT AS timely_badges,
+      COUNT(ub.*) FILTER (WHERE ub.badge_type = 'helped_other')::BIGINT AS helper_badges,
+      COUNT(ub.*) FILTER (WHERE ub.badge_type IN ('streak_3', 'streak_10', 'perfect_month', 'consistency_30', 'consistency_90'))::BIGINT AS streak_badges,
+      COUNT(ub.*) FILTER (WHERE ub.badge_type LIKE 'activity_%')::BIGINT AS activity_badges,
+      COUNT(ub.*) FILTER (WHERE ub.badge_type = 'collaboration')::BIGINT AS collaboration_badges,
+      COUNT(ub.*) FILTER (WHERE ub.badge_type IN ('early_bird','night_shift'))::BIGINT AS early_bird_badges,
+      COUNT(ub.*) FILTER (WHERE ub.badge_type IN ('consistency_30','consistency_90'))::BIGINT AS consistency_badges,
+      COUNT(ub.*) FILTER (WHERE ub.badge_type = 'attendance_100')::BIGINT AS attendance_badges
+    FROM members tm
+    LEFT JOIN user_badges ub ON ub.member_id = tm.id AND ub.team_id = p_team_id
+    WHERE tm.team_id = p_team_id
+    GROUP BY tm.id, tm.first_name, tm.last_name
+  ) t
+  WHERE t.total_badges > 0
+  ORDER BY
+    CASE
+      WHEN p_discipline = 'activity' THEN t.activity_badges
+      WHEN p_discipline = 'timely' THEN t.timely_badges
+      WHEN p_discipline = 'helper' THEN t.helper_badges
+      WHEN p_discipline = 'streak' THEN t.streak_badges
+      WHEN p_discipline = 'collaboration' THEN t.collaboration_badges
+      WHEN p_discipline = 'early_bird' THEN t.early_bird_badges
+      WHEN p_discipline = 'consistency' THEN t.consistency_badges
+      WHEN p_discipline = 'attendance' THEN t.attendance_badges
+      ELSE t.total_badges
+    END DESC,
+    t.total_badges DESC
   LIMIT p_limit;
 END;
 $$ LANGUAGE plpgsql SECURITY DEFINER;
@@ -318,6 +369,14 @@ DECLARE
   v_helped_members UUID[];
   v_new_badges JSONB := '[]'::JSONB;
   v_badge_id UUID;
+  -- Week context and counters for remote/holiday badges
+  v_week_start DATE;
+  v_week_end DATE;
+  v_weekends_as_weekdays BOOLEAN;
+  v_required_days INTEGER;
+  v_remote_days INTEGER;
+  v_holiday_days INTEGER;
+  v_has_past_full_holiday_week BOOLEAN := FALSE;
 BEGIN
   -- Get user_id from member (members.auth_user_id column)
   SELECT auth_user_id INTO v_user_id
@@ -403,6 +462,131 @@ BEGIN
     END LOOP;
   END;
 
+  -- Weekly remote/holiday badge checks for current ISO week
+  -- Derive team settings and week window
+  SELECT COALESCE((settings->>'weekendsAsWeekdays')::boolean, false)
+  INTO v_weekends_as_weekdays
+  FROM teams
+  WHERE id = p_team_id;
+
+  -- Compute current week [Mon..Sun] window
+  v_week_start := date_trunc('week', CURRENT_DATE)::date + 1;
+  v_week_end := (v_week_start + INTERVAL '6 days')::date;
+
+  -- Required days for a full week according to team settings
+  IF v_weekends_as_weekdays THEN
+    v_required_days := 7;
+  ELSE
+    v_required_days := 5;
+  END IF;
+
+  -- Count remote days in current week (for this team only via member check)
+  SELECT COUNT(DISTINCT a.date)
+  INTO v_remote_days
+  FROM availability a
+  INNER JOIN members m ON m.id = a.member_id
+  WHERE a.member_id = p_member_id
+    AND m.team_id = p_team_id
+    AND a.date >= v_week_start AND a.date <= v_week_end
+    AND a.status = 'remote'
+    AND (v_weekends_as_weekdays OR EXTRACT(DOW FROM a.date) NOT IN (0,6));
+
+  -- Count holiday days in current week (for this team only via member check)
+  SELECT COUNT(DISTINCT a.date)
+  INTO v_holiday_days
+  FROM availability a
+  INNER JOIN members m ON m.id = a.member_id
+  WHERE a.member_id = p_member_id
+    AND m.team_id = p_team_id
+    AND a.date >= v_week_start AND a.date <= v_week_end
+    AND a.status = 'holiday'
+    AND (v_weekends_as_weekdays OR EXTRACT(DOW FROM a.date) NOT IN (0,6));
+
+  -- Gating: has any past ISO week with a full holiday week (in this team)
+  SELECT EXISTS (
+    SELECT 1
+    FROM (
+      SELECT (date_trunc('week', a.date)::date + 1) AS wk_start,
+             COUNT(DISTINCT a.date) AS cnt
+      FROM availability a
+      INNER JOIN members m ON m.id = a.member_id
+      WHERE a.member_id = p_member_id
+        AND m.team_id = p_team_id
+        AND a.date < v_week_start
+        AND a.status = 'holiday'
+        AND (v_weekends_as_weekdays OR EXTRACT(DOW FROM a.date) NOT IN (0,6))
+      GROUP BY 1
+    ) s
+    WHERE s.cnt >= v_required_days
+  ) INTO v_has_past_full_holiday_week;
+
+  -- Award: 3 remote days => Remote Worker
+  IF v_remote_days >= 3 THEN
+    v_badge_id := award_badge(
+      v_user_id,
+      p_member_id,
+      p_team_id,
+      'remote_3_days',
+      v_week_year,
+      jsonb_build_object('remote_days', v_remote_days, 'week_start', v_week_start, 'week_end', v_week_end)
+    );
+    IF v_badge_id IS NOT NULL THEN
+      v_new_badges := v_new_badges || jsonb_build_object(
+        'type', 'remote_3_days',
+        'id', v_badge_id,
+        'week_year', v_week_year,
+        'remote_days', v_remote_days
+      );
+    END IF;
+  END IF;
+
+  -- Award: 5 holiday days => Holiday Tripper
+  IF v_holiday_days >= 5 THEN
+    v_badge_id := award_badge(
+      v_user_id,
+      p_member_id,
+      p_team_id,
+      'holiday_5_days',
+      v_week_year,
+      jsonb_build_object('holiday_days', v_holiday_days, 'week_start', v_week_start, 'week_end', v_week_end)
+    );
+    IF v_badge_id IS NOT NULL THEN
+      v_new_badges := v_new_badges || jsonb_build_object(
+        'type', 'holiday_5_days',
+        'id', v_badge_id,
+        'week_year', v_week_year,
+        'holiday_days', v_holiday_days
+      );
+    END IF;
+  END IF;
+
+  -- Award: Full remote week (gated by any past full holiday week)
+  IF v_remote_days >= v_required_days AND v_has_past_full_holiday_week THEN
+    v_badge_id := award_badge(
+      v_user_id,
+      p_member_id,
+      p_team_id,
+      'remote_full_week',
+      v_week_year,
+      jsonb_build_object(
+        'remote_days', v_remote_days,
+        'required_days', v_required_days,
+        'gated_by_holiday_week', true,
+        'week_start', v_week_start,
+        'week_end', v_week_end
+      )
+    );
+    IF v_badge_id IS NOT NULL THEN
+      v_new_badges := v_new_badges || jsonb_build_object(
+        'type', 'remote_full_week',
+        'id', v_badge_id,
+        'week_year', v_week_year,
+        'remote_days', v_remote_days,
+        'required_days', v_required_days
+      );
+    END IF;
+  END IF;
+
   RETURN jsonb_build_object('new_badges', v_new_badges);
 END;
 $$ LANGUAGE plpgsql SECURITY DEFINER;
@@ -415,6 +599,7 @@ GRANT EXECUTE ON FUNCTION get_week_year TO authenticated, service_role;
 GRANT EXECUTE ON FUNCTION award_badge TO authenticated, service_role;
 GRANT EXECUTE ON FUNCTION get_user_badges TO authenticated, service_role;
 GRANT EXECUTE ON FUNCTION get_badge_leaderboard TO authenticated, service_role;
+GRANT EXECUTE ON FUNCTION get_badge_leaderboard_by_discipline TO authenticated, service_role;
 GRANT EXECUTE ON FUNCTION check_and_award_badges TO authenticated, service_role;
 
 -- Add changed_by_id to availability table if not exists

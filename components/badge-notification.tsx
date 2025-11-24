@@ -1,14 +1,28 @@
 "use client"
 
 import { useEffect, useState } from "react"
-import { Award, HelpingHand, Flame, Star, Trophy, X } from "lucide-react"
+import { Award, HelpingHand, Flame, Star, Trophy, X, Target, Crown, Zap } from "lucide-react"
 import { Card, CardContent } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { type Locale } from "@/lib/i18n"
 import { cn } from "@/lib/utils"
 import { createConfetti } from "@/lib/confetti"
 
-export type BadgeType = "timely_completion" | "helped_other" | "streak_3" | "streak_10" | "perfect_month"
+export type BadgeType =
+  | "timely_completion"
+  | "helped_other"
+  | "streak_3"
+  | "streak_10"
+  | "perfect_month"
+  | "collaboration"
+  | "early_bird"
+  | "consistency_30"
+  | "consistency_90"
+  | "attendance_100"
+  | "time_1h"
+  | "time_10h"
+  | "time_50h"
+  | "time_200h"
 
 interface BadgeNotification {
   type: BadgeType
@@ -112,6 +126,150 @@ const badgeConfig: Record<
       en: "Outstanding! You completed everything on time for an entire month!",
       nl: "Uitstekend! Je hebt een hele maand alles tijdig ingevuld!",
       fr: "Exceptionnel! Vous avez tout complété à temps pendant un mois entier!",
+    },
+  },
+  collaboration: {
+    icon: HelpingHand,
+    color: "text-teal-600",
+    bgColor: "bg-teal-100 dark:bg-teal-900/20",
+    emoji: "🤝",
+    title: {
+      en: "Collaboration Badge Earned!",
+      nl: "Samenwerkingsbadge Verdiend!",
+      fr: "Badge de Collaboration Gagné!",
+    },
+    message: {
+      en: "Nice work collaborating with your team to improve schedules!",
+      nl: "Goed gedaan met samenwerken om de planningen te verbeteren!",
+      fr: "Beau travail en collaborant avec votre équipe pour améliorer les plannings!",
+    },
+  },
+  early_bird: {
+    icon: Target,
+    color: "text-sky-500",
+    bgColor: "bg-sky-100 dark:bg-sky-900/20",
+    emoji: "🌅",
+    title: {
+      en: "Early Bird Badge!",
+      nl: "Vroege Vogel Badge!",
+      fr: "Badge Lève-tôt!",
+    },
+    message: {
+      en: "You consistently filled schedules early — great planning!",
+      nl: "Je vult consequent vroeg in — top planning!",
+      fr: "Vous remplissez régulièrement les plannings en avance — super planification!",
+    },
+  },
+  consistency_30: {
+    icon: Crown,
+    color: "text-amber-600",
+    bgColor: "bg-amber-100 dark:bg-amber-900/20",
+    emoji: "🏅",
+    title: {
+      en: "30-Day Consistency Badge!",
+      nl: "30 Dagen Consistent Badge!",
+      fr: "Badge Cohérence 30 Jours!",
+    },
+    message: {
+      en: "Great consistency — 30 days of reliable scheduling!",
+      nl: "Geweldige consistentie — 30 dagen betrouwbaar plannen!",
+      fr: "Grande cohérence — 30 jours de planification fiable!",
+    },
+  },
+  consistency_90: {
+    icon: Crown,
+    color: "text-amber-700",
+    bgColor: "bg-amber-200 dark:bg-amber-900/30",
+    emoji: "🏅",
+    title: {
+      en: "90-Day Consistency Badge!",
+      nl: "90 Dagen Consistent Badge!",
+      fr: "Badge Cohérence 90 Jours!",
+    },
+    message: {
+      en: "Incredible — 90 days of consistent scheduling!",
+      nl: "Ongelooflijk — 90 dagen consequent plannen!",
+      fr: "Incroyable — 90 jours de planification cohérente!",
+    },
+  },
+  attendance_100: {
+    icon: Star,
+    color: "text-green-700",
+    bgColor: "bg-green-100 dark:bg-green-900/20",
+    emoji: "🌟",
+    title: {
+      en: "Perfect Attendance Badge!",
+      nl: "Perfecte Aanwezigheid Badge!",
+      fr: "Badge Présence Parfaite!",
+    },
+    message: {
+      en: "Excellent attendance — keep it up!",
+      nl: "Uitstekende aanwezigheid — ga zo door!",
+      fr: "Excellente présence — continuez comme ça!",
+    },
+  },
+  time_1h: {
+    icon: Zap,
+    color: "text-sky-500",
+    bgColor: "bg-sky-100 dark:bg-sky-900/20",
+    emoji: "⏱️",
+    title: {
+      en: "1 Hour Usage Badge!",
+      nl: "1 Uur Gebruiksbadge!",
+      fr: "Badge 1 Heure!",
+    },
+    message: {
+      en: "Nice — you've spent at least an hour in the planner!",
+      nl: "Goed zo — je hebt minstens een uur met de planner gewerkt!",
+      fr: "Bien joué — vous avez passé au moins une heure sur le planificateur!",
+    },
+  },
+  time_10h: {
+    icon: Crown,
+    color: "text-amber-500",
+    bgColor: "bg-amber-100 dark:bg-amber-900/20",
+    emoji: "🏅",
+    title: {
+      en: "10 Hour Usage Badge!",
+      nl: "10 Uur Gebruiksbadge!",
+      fr: "Badge 10 Heures!",
+    },
+    message: {
+      en: "You've invested 10 hours — impressive dedication!",
+      nl: "Je hebt 10 uur geïnvesteerd — indrukwekkende inzet!",
+      fr: "Vous avez investi 10 heures — impressionnant!",
+    },
+  },
+  time_50h: {
+    icon: Crown,
+    color: "text-yellow-600",
+    bgColor: "bg-yellow-100 dark:bg-yellow-900/20",
+    emoji: "🏆",
+    title: {
+      en: "50 Hour Usage Badge!",
+      nl: "50 Uur Gebruiksbadge!",
+      fr: "Badge 50 Heures!",
+    },
+    message: {
+      en: "Power user — 50 hours in the planner!",
+      nl: "Power user — 50 uur in de planner!",
+      fr: "Utilisateur expert — 50 heures!",
+    },
+  },
+  time_200h: {
+    icon: Crown,
+    color: "text-red-600",
+    bgColor: "bg-red-100 dark:bg-red-900/20",
+    emoji: "🌟",
+    title: {
+      en: "200 Hour Legend Badge!",
+      nl: "200 Uur Legende Badge!",
+      fr: "Badge Légende 200 Heures!",
+    },
+    message: {
+      en: "Legendary — 200 hours of planner use!",
+      nl: "Legendarisch — 200 uur plannergebruik!",
+      fr: "Légendaire — 200 heures d'utilisation!",
     },
   },
 }

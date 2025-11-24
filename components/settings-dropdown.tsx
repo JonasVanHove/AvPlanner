@@ -137,9 +137,9 @@ function SettingsPanelContent(props: {
               onClose?.()
               window.open('https://github.com/JonasVanHove/AvPlanner/discussions/new?category=ideas', '_blank', 'noopener,noreferrer')
             }}
-            className="cursor-pointer"
+            className="cursor-pointer group flex items-center"
           >
-            <Lightbulb className="mr-2 h-4 w-4" />
+            <Lightbulb className="mr-2 h-4 w-4 text-gray-300 transition-colors duration-150 group-hover:text-yellow-400" />
             {currentLocale === "en" ? "Submit Idea" : currentLocale === "nl" ? "Dien idee in" : "Soumettre une idée"}
           </DropdownMenuItem>
           <DropdownMenuItem
@@ -147,9 +147,9 @@ function SettingsPanelContent(props: {
               onClose?.()
               window.open('https://github.com/JonasVanHove/AvPlanner/issues/new/choose', '_blank', 'noopener,noreferrer')
             }}
-            className="cursor-pointer"
+            className="cursor-pointer group flex items-center"
           >
-            <Bug className="mr-2 h-4 w-4" />
+            <Bug className="mr-2 h-4 w-4 text-gray-300 transition-colors duration-150 group-hover:text-green-400" />
             {currentLocale === "en" ? "Report a Bug" : currentLocale === "nl" ? "Meld een bug" : "Signaler un bug"}
           </DropdownMenuItem>
         </>

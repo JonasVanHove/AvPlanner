@@ -7,7 +7,8 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } f
 import { useTheme } from "next-themes"
 import { useTranslation, type Locale } from "@/lib/i18n"
 import { BadgeDisplay } from "@/components/badge-display"
-import { Award, Mail, Calendar, User } from "lucide-react"
+import { Award, Mail, Calendar, CalendarDays, User, MessageSquare, Cake } from "lucide-react"
+import { Button } from "@/components/ui/button"
 import { cn } from "@/lib/utils"
 import { supabase } from "@/lib/supabase"
 
@@ -76,6 +77,7 @@ export function MemberAvatar({
       }
 
       fetchMemberBadges()
+      fetchMemberInfo()
     }
   }, [showDialog, email, memberId, teamId])
 
@@ -96,98 +98,72 @@ export function MemberAvatar({
   }, [])
 
   const fetchMemberBadges = async () => {
-    if (!email || !memberId || !teamId) {
-      console.log('🏅 [Avatar] Badge Fetch Skipped: Missing required params', { email, memberId, teamId })
-      return
-    }
-    
-    console.log('🏅 [Avatar] Fetching badges CLIENT-SIDE for:', email)
+    if (!memberId || !teamId) return
+
     const startTime = Date.now()
     setIsLoadingBadges(true)
-    
+
     try {
-      // CLIENT-SIDE: Query badges directly from Supabase
-      console.log('🏅 [Avatar] Querying member by auth_user_id...')
-      
-      // First get the member to find auth_user_id
-      const { data: memberData, error: memberError } = await supabase
-        .from('members')
-        .select('auth_user_id, first_name, last_name')
-        .eq('id', memberId)
-        .eq('team_id', teamId)
-        .maybeSingle()
-      
-      if (memberError) {
-        console.error('🏅 [Avatar] Member query error:', memberError)
-        setBadges([])
-        return
-      }
-      
-      if (!memberData) {
-        console.warn('🏅 [Avatar] Member not found')
-        setBadges([])
-        return
-      }
-      
-      console.log('🏅 [Avatar] Found member:', memberData.first_name, memberData.last_name)
-      
-      // Query badges using member_id (more reliable than user_id which can be null)
-      const { data: badgeData, error: badgeError } = await supabase
-        .from('user_badges')
-        .select('badge_type, earned_at')
-        .eq('member_id', memberId)
-        .eq('team_id', teamId)
-        .order('earned_at', { ascending: false })
-      
-      if (badgeError) {
-        console.error('🏅 [Avatar] Badge query error:', badgeError)
+      console.log('🏅 [Avatar] Fetching badges via server API for memberId:', memberId)
+      const res = await fetch(`/api/badges/user?memberId=${encodeURIComponent(memberId)}&teamId=${encodeURIComponent(teamId)}`)
+      const data = await res.json()
 
-        // Try localStorage fallback for unauthenticated viewers or RLS-blocked reads
+      if (data && data.success && Array.isArray(data.badges)) {
+        setBadges(data.badges.map((b: any) => ({ badge_type: b.badge_type, earned_at: b.earned_at, badge_id: b.badge_id || b.id, team_name: b.team_name })))
+        try {
+          const cacheKey = `badges:${memberId}:${teamId}`
+          localStorage.setItem(cacheKey, JSON.stringify(data.badges))
+        } catch (e) {
+          // ignore localStorage errors
+        }
+      } else {
+        // fallback to cached badges if available
         try {
           const cacheKey = `badges:${memberId}:${teamId}`
           const raw = localStorage.getItem(cacheKey)
           if (raw) {
             const cached = JSON.parse(raw)
-            console.log(`🏅 [Avatar] Using cached badges from localStorage (${(cached && cached.length) || 0})`)
             setBadges(cached)
             return
           }
         } catch (e) {
-          console.warn('🏅 [Avatar] localStorage read failed:', e)
+          // ignore
         }
-
         setBadges([])
-        return
       }
-
-      const elapsed = Date.now() - startTime
-      console.log(`🏅 [Avatar] ✅ Loaded ${badgeData?.length || 0} badges in ${elapsed}ms`)
-
-      // If server returned no badges, fall back to cached badges (helps unauthenticated viewers)
-      if ((!badgeData || badgeData.length === 0)) {
-        try {
-          const cacheKey = `badges:${memberId}:${teamId}`
-          const raw = localStorage.getItem(cacheKey)
-          if (raw) {
-            const cached = JSON.parse(raw)
-            console.log(`🏅 [Avatar] Server returned no badges — using cached badges (${(cached && cached.length) || 0})`)
-            setBadges(cached)
-            return
-          }
-        } catch (e) {
-          console.warn('🏅 [Avatar] localStorage read failed:', e)
+    } catch (err) {
+      console.error('🏅 [Avatar] Badge API fetch failed:', err)
+      try {
+        const cacheKey = `badges:${memberId}:${teamId}`
+        const raw = localStorage.getItem(cacheKey)
+        if (raw) {
+          const cached = JSON.parse(raw)
+          setBadges(cached)
+          return
         }
+      } catch (e) {
+        // ignore
       }
-
-      setBadges(badgeData || [])
-    } catch (error: any) {
-      const elapsed = Date.now() - startTime
-      console.error(`🏅 [Avatar] ❌ Badge fetch error after ${elapsed}ms:`, error.message)
       setBadges([])
     } finally {
       setIsLoadingBadges(false)
-      const totalTime = Date.now() - startTime
-      console.log(`🏅 [Avatar] Badge fetch completed in ${totalTime}ms`)
+      const total = Date.now() - startTime
+      console.log(`🏅 [Avatar] Badge fetch (API) completed in ${total}ms`)
+    }
+  }
+
+  const [joinedAt, setJoinedAt] = useState<string | null>(null)
+
+  const fetchMemberInfo = async () => {
+    if (!memberId) return
+    try {
+      const res = await fetch(`/api/members/info?memberId=${encodeURIComponent(memberId)}`)
+      const data = await res.json()
+      if (data && data.success && data.member) {
+        setJoinedAt(data.member.created_at)
+      }
+    } catch (err) {
+      console.warn('Failed to fetch member info:', err)
     }
   }
   const sizeClasses = {
@@ -285,7 +261,9 @@ export function MemberAvatar({
           </Tooltip>
         )}
         {isBirthdayToday && (
-          <div className="absolute -bottom-0.5 -right-3.5 text-[10px] select-none" title="Birthday">🎂</div>
+          <div className="absolute -bottom-0.5 -right-3.5 select-none" title={locale === 'nl' ? 'Verjaardag' : locale === 'fr' ? 'Anniversaire' : 'Birthday'}>
+            <Cake className="h-4 w-4 text-pink-500 drop-shadow-sm" />
+          </div>
         )}
       </div>
 
@@ -323,16 +301,54 @@ export function MemberAvatar({
                   <span className="text-muted-foreground">{email}</span>
                 </div>
               )}
+              {/* Quick action buttons: Teams chat and mail */}
+              {email && (
+                <div className="flex items-center gap-2 mt-2">
+                  <a
+                    href={`https://teams.microsoft.com/l/chat/0/0?users=${encodeURIComponent(email)}`}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    title={locale === 'nl' ? 'Stuur bericht via Teams' : locale === 'fr' ? "Envoyer un message (Teams)" : 'Message (Teams)'}
+                  >
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      className="flex items-center gap-2 px-3 py-1 rounded-full text-purple-700 hover:bg-purple-50 dark:hover:bg-purple-900/20 shadow-sm"
+                    >
+                      <MessageSquare className="h-4 w-4 text-purple-600" />
+                      <span className="hidden sm:inline">{locale === 'nl' ? 'Bericht' : locale === 'fr' ? 'Message' : 'Message'}</span>
+                    </Button>
+                  </a>
+
+                  <a href={`mailto:${email}`} title={locale === 'nl' ? 'Stuur e-mail' : locale === 'fr' ? 'Envoyer un mail' : 'Send email'}>
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      className="flex items-center gap-2 px-3 py-1 rounded-full text-sky-700 hover:bg-sky-50 dark:hover:bg-sky-900/20 shadow-sm"
+                    >
+                      <Mail className="h-4 w-4 text-sky-600" />
+                      <span className="hidden sm:inline">{locale === 'nl' ? 'Mail' : locale === 'fr' ? 'Mail' : 'Email'}</span>
+                    </Button>
+                  </a>
+                </div>
+              )}
               {birthDate && (
                 <div className="flex items-center gap-2 text-sm">
-                  <Calendar className="h-4 w-4 text-muted-foreground" />
+                  <Cake className="h-4 w-4 text-pink-500" />
                   <span className="text-muted-foreground">
                     {new Date(birthDate).toLocaleDateString(locale, { 
                       month: 'long', 
                       day: 'numeric' 
                     })}
-                    {isBirthdayToday && " 🎂"}
                   </span>
+                </div>
+              )}
+
+              {/* Member joined date (visible for all viewers via server API) */}
+              {joinedAt && (
+                <div className="flex items-center gap-2 text-sm">
+                  <CalendarDays className="h-4 w-4 text-muted-foreground" />
+                  <span className="text-muted-foreground">{locale === 'nl' ? 'Lid sinds' : locale === 'fr' ? 'Membre depuis' : 'Member since'}: {new Date(joinedAt).toLocaleDateString(locale, { year: 'numeric', month: 'long', day: 'numeric' })}</span>
                 </div>
               )}
             </div>

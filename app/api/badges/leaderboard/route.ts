@@ -20,7 +20,7 @@ export async function GET(request: NextRequest) {
       )
     }
 
-    // Call database function to get leaderboard
+    // Call database function to get leaderboard (call legacy signature: p_team_id, p_limit)
     const { data, error } = await supabase.rpc("get_badge_leaderboard", {
       p_team_id: teamId,
       p_limit: limit,

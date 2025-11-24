@@ -41,6 +41,7 @@ export function TeamBadgesPage({ teamId, teamName, userEmail, locale }: TeamBadg
   const [selectedMemberId, setSelectedMemberId] = useState<string | null>(null)
   const [selectedMemberName, setSelectedMemberName] = useState<string | null>(null)
   const [selectedBadges, setSelectedBadges] = useState<Badge[]>([])
+  const [selectedBadgesGrouped, setSelectedBadgesGrouped] = useState<Record<string, Badge[]> | null>(null)
   const [isLoading, setIsLoading] = useState(true)
 
   useEffect(() => {
@@ -58,18 +59,33 @@ export function TeamBadgesPage({ teamId, teamName, userEmail, locale }: TeamBadg
       if (leaderboardData.success) {
         setLeaderboard(leaderboardData.leaderboard || [])
       }
-
       // Load user's badges if logged in
       if (userEmail) {
         // Default to current user
         const badgesRes = await fetch(`/api/badges/user?email=${encodeURIComponent(userEmail)}&teamId=${teamId}`)
         const badgesData = await badgesRes.json()
-        
-        if (badgesData.success) {
+
+        console.log('🏅 [UI] /api/badges/user response status:', badgesRes.status, 'body:', badgesData)
+
+        if (badgesData && badgesData.success) {
           setMyBadges(badgesData.badges || [])
           setSelectedBadges(badgesData.badges || [])
           setSelectedMemberId(null)
           setSelectedMemberName(null)
+          setSelectedBadgesGrouped(badgesData.grouped || null)
+        } else {
+          console.warn('🏅 [UI] No badges returned for userEmail:', userEmail, 'response:', badgesData)
+        }
+      } else {
+        // Fallback: if no userEmail provided, automatically load badges for
+        // the top member on the leaderboard so guests still see badges.
+        if (leaderboardData?.success && Array.isArray(leaderboardData.leaderboard) && leaderboardData.leaderboard.length > 0) {
+          const top = leaderboardData.leaderboard[0]
+          try {
+            await loadBadgesForMember(top.member_id, top.member_name)
+          } catch (e) {
+            console.warn('🏅 [UI] Failed to load fallback member badges:', e)
+          }
         }
       }
     } catch (error) {
@@ -86,6 +102,7 @@ export function TeamBadgesPage({ teamId, teamName, userEmail, locale }: TeamBadg
       const data = await res.json()
       if (data.success) {
         setSelectedBadges(data.badges || [])
+        setSelectedBadgesGrouped(data.grouped || null)
         setSelectedMemberId(memberId)
         setSelectedMemberName(memberName || null)
       } else {
@@ -159,6 +176,93 @@ export function TeamBadgesPage({ teamId, teamName, userEmail, locale }: TeamBadg
     },
   }
 
+  // Importance ranking for badge types (higher = more impressive)
+  const badgeImportance: Record<string, number> = {
+    // Activity tiers - higher is more impressive
+    activity_1000: 100,
+    activity_500: 90,
+    activity_100: 80,
+    activity_50: 70,
+    activity_10: 60,
+    // Other important badges
+    attendance_100: 95,
+    streak_10: 92,
+    perfect_month: 91,
+    consistency_90: 89,
+    consistency_30: 75,
+    timely_completion: 88,
+    helped_other: 87,
+    collaboration: 65,
+    early_bird: 45,
+    night_shift: 35,
+  }
+
+  const disciplineLabels: Record<string, Record<string, string>> = {
+    timely: { en: 'Timely', nl: 'Tijdig', fr: 'Ponctuel' },
+    helper: { en: 'Helper', nl: 'Helper', fr: 'Aide' },
+    streak: { en: 'Streaks', nl: 'Streaks', fr: 'Séries' },
+    activity: { en: 'Activity', nl: 'Activiteit', fr: 'Activité' },
+    collaboration: { en: 'Collaboration', nl: 'Samenwerking', fr: 'Collaboration' },
+    early_bird: { en: 'Early Birds', nl: 'Vroege Vogels', fr: 'Lève-tôt' },
+    consistency: { en: 'Consistency', nl: 'Consistentie', fr: 'Cohérence' },
+    attendance: { en: 'Attendance', nl: 'Aanwezigheid', fr: 'Présence' },
+    other: { en: 'Other', nl: 'Overig', fr: 'Autre' },
+  }
+
+  const disciplineOrder = ['timely', 'helper', 'streak', 'activity', 'collaboration', 'early_bird', 'consistency', 'attendance', 'other']
+
+  // Map badge type to discipline (same logic used elsewhere)
+  const disciplineFor = (type: string) => {
+    if (!type) return 'other'
+    if (type === 'timely_completion') return 'timely'
+    if (type === 'helped_other') return 'helper'
+    if (type.startsWith('streak') || ['perfect_month'].includes(type) || type.startsWith('consistency')) return 'streak'
+    if (type.startsWith('activity')) return 'activity'
+    if (['collaboration'].includes(type)) return 'collaboration'
+    if (['early_bird', 'night_shift'].includes(type)) return 'early_bird'
+    if (['attendance_100'].includes(type)) return 'attendance'
+    return 'other'
+  }
+
+  // Always compute grouped badges client-side so ordering is consistent
+  const computeGroupedOrdered = (badgesArray: Badge[] | null) => {
+    const raw = badgesArray || []
+    const normalized = raw.map((b) => ({
+      badge_id: b.badge_id,
+      badge_type: b.badge_type,
+      week_year: b.week_year,
+      earned_at: b.earned_at,
+      team_name: b.team_name,
+      metadata: b.metadata || {},
+    }))
+
+    // Group by discipline
+    const grouped: Record<string, Badge[]> = {}
+    for (const badge of normalized) {
+      const d = disciplineFor(badge.badge_type as string)
+      grouped[d] = grouped[d] || []
+      grouped[d].push(badge)
+    }
+
+    // Sort each group by importance then date
+    const groupedOrdered: Record<string, Badge[]> = {}
+    for (const d of disciplineOrder) {
+      const group = grouped[d]
+      if (!group || group.length === 0) continue
+      const sortedGroup = [...group].sort((a, b) => {
+        const ia = badgeImportance[(a as any).badge_type] || 0
+        const ib = badgeImportance[(b as any).badge_type] || 0
+        if (ia !== ib) return ib - ia
+        return new Date(b.earned_at).getTime() - new Date(a.earned_at).getTime()
+      })
+      groupedOrdered[d] = sortedGroup
+    }
+
+    return groupedOrdered
+  }
+
+  const groupedToRender = selectedBadgesGrouped && Object.keys(selectedBadgesGrouped).length ? selectedBadgesGrouped : computeGroupedOrdered(selectedBadges)
+
   if (isLoading) {
     return (
       <div className="min-h-screen bg-gradient-to-br from-blue-50 via-white to-purple-50 dark:from-gray-900 dark:via-gray-800 dark:to-gray-900 p-4">
@@ -205,7 +309,32 @@ export function TeamBadgesPage({ teamId, teamName, userEmail, locale }: TeamBadg
             </CardHeader>
             <CardContent>
               {selectedBadges && selectedBadges.length > 0 ? (
-                <BadgeList badges={selectedBadges} locale={locale} />
+                // If the API returned grouped badges, render as a trophy cabinet grouped by discipline
+                selectedBadgesGrouped ? (
+                  <div className="space-y-6">
+                    {disciplineOrder.map((d) => {
+                      const group = selectedBadgesGrouped[d]
+                      if (!group || group.length === 0) return null
+
+                      // Sort group by importance (most impressive first)
+                      const sortedGroup = [...group].sort((a, b) => {
+                        const ia = badgeImportance[a.badge_type] || 0
+                        const ib = badgeImportance[b.badge_type] || 0
+                        if (ia !== ib) return ib - ia
+                        return new Date(b.earned_at).getTime() - new Date(a.earned_at).getTime()
+                      })
+
+                      return (
+                        <div key={d}>
+                          <h3 className="text-lg font-semibold mb-2">{disciplineLabels[d]?.[locale] || d}</h3>
+                          <BadgeDisplay badges={sortedGroup} locale={locale} size="lg" showCount={true} />
+                        </div>
+                      )
+                    })}
+                  </div>
+                ) : (
+                  <BadgeList badges={selectedBadges} locale={locale} />
+                )
               ) : (
                 <p className="text-center text-muted-foreground py-8">
                   {texts.noBadges[locale]}
