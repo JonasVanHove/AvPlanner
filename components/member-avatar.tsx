@@ -53,6 +53,7 @@ export function MemberAvatar({
   const [badges, setBadges] = useState<any[]>([])
   const [isLoadingBadges, setIsLoadingBadges] = useState(false)
   const [isAuthenticated, setIsAuthenticated] = useState<boolean | null>(null)
+  const [lastActivity, setLastActivity] = useState<string | null>(null)
 
   // Fetch badges when dialog opens
   useEffect(() => {
@@ -161,6 +162,19 @@ export function MemberAvatar({
       const data = await res.json()
       if (data && data.success && data.member) {
         setJoinedAt(data.member.created_at)
+      }
+
+      // Fetch last activity from availability table
+      const { data: availData, error } = await supabase
+        .from('availability')
+        .select('updated_at')
+        .eq('member_id', memberId)
+        .order('updated_at', { ascending: false })
+        .limit(1)
+        .single()
+
+      if (availData && !error) {
+        setLastActivity(availData.updated_at)
       }
     } catch (err) {
       console.warn('Failed to fetch member info:', err)
@@ -296,40 +310,43 @@ export function MemberAvatar({
             {/* Member Info */}
             <div className="space-y-2">
               {email && (
-                <div className="flex items-center gap-2 text-sm">
-                  <Mail className="h-4 w-4 text-muted-foreground" />
-                  <span className="text-muted-foreground">{email}</span>
-                </div>
-              )}
-              {/* Quick action buttons: Teams chat and mail */}
-              {email && (
-                <div className="flex items-center gap-2 mt-2">
-                  <a
-                    href={`https://teams.microsoft.com/l/chat/0/0?users=${encodeURIComponent(email)}`}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    title={locale === 'nl' ? 'Stuur bericht via Teams' : locale === 'fr' ? "Envoyer un message (Teams)" : 'Message (Teams)'}
-                  >
-                    <Button
-                      variant="ghost"
-                      size="sm"
-                      className="flex items-center gap-2 px-3 py-1 rounded-full text-purple-700 hover:bg-purple-50 dark:hover:bg-purple-900/20 shadow-sm"
+                <div className="flex items-center justify-between text-sm">
+                  <div className="flex items-center gap-2 min-w-0">
+                    <Mail className="h-4 w-4 text-muted-foreground flex-shrink-0" />
+                    <span className="text-muted-foreground truncate" title={email}>{email}</span>
+                  </div>
+                  <div className="flex items-center gap-1 pl-2">
+                    <a
+                      href={`https://teams.microsoft.com/l/chat/0/0?users=${encodeURIComponent(email)}`}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      aria-label={locale === 'nl' ? 'Teams bericht sturen' : locale === 'fr' ? 'Envoyer message Teams' : 'Send Teams message'}
+                      title={locale === 'nl' ? 'Teams bericht' : locale === 'fr' ? 'Message Teams' : 'Teams message'}
+                      className="group"
                     >
-                      <MessageSquare className="h-4 w-4 text-purple-600" />
-                      <span className="hidden sm:inline">{locale === 'nl' ? 'Bericht' : locale === 'fr' ? 'Message' : 'Message'}</span>
-                    </Button>
-                  </a>
-
-                  <a href={`mailto:${email}`} title={locale === 'nl' ? 'Stuur e-mail' : locale === 'fr' ? 'Envoyer un mail' : 'Send email'}>
-                    <Button
-                      variant="ghost"
-                      size="sm"
-                      className="flex items-center gap-2 px-3 py-1 rounded-full text-sky-700 hover:bg-sky-50 dark:hover:bg-sky-900/20 shadow-sm"
+                      <Button
+                        variant="ghost"
+                        size="icon"
+                        className="h-7 w-7 text-muted-foreground hover:text-purple-600 hover:bg-purple-600/10 transition-colors"
+                      >
+                        <MessageSquare className="h-4 w-4" />
+                      </Button>
+                    </a>
+                    <a
+                      href={`mailto:${email}`}
+                      aria-label={locale === 'nl' ? 'E-mail sturen' : locale === 'fr' ? 'Envoyer mail' : 'Send email'}
+                      title={locale === 'nl' ? 'E-mail' : locale === 'fr' ? 'Mail' : 'Email'}
+                      className="group"
                     >
-                      <Mail className="h-4 w-4 text-sky-600" />
-                      <span className="hidden sm:inline">{locale === 'nl' ? 'Mail' : locale === 'fr' ? 'Mail' : 'Email'}</span>
-                    </Button>
-                  </a>
+                      <Button
+                        variant="ghost"
+                        size="icon"
+                        className="h-7 w-7 text-muted-foreground hover:text-sky-600 hover:bg-sky-600/10 transition-colors"
+                      >
+                        <Mail className="h-4 w-4" />
+                      </Button>
+                    </a>
+                  </div>
                 </div>
               )}
               {birthDate && (
@@ -349,6 +366,22 @@ export function MemberAvatar({
                 <div className="flex items-center gap-2 text-sm">
                   <CalendarDays className="h-4 w-4 text-muted-foreground" />
                   <span className="text-muted-foreground">{locale === 'nl' ? 'Lid sinds' : locale === 'fr' ? 'Membre depuis' : 'Member since'}: {new Date(joinedAt).toLocaleDateString(locale, { year: 'numeric', month: 'long', day: 'numeric' })}</span>
+                </div>
+              )}
+              {isAuthenticated && lastActivity && (
+                <div className="flex items-center gap-2 text-sm">
+                  <Calendar className="h-4 w-4 text-muted-foreground" />
+                  <span className="text-muted-foreground">
+                    {locale === 'nl' ? 'Laatste record' : locale === 'fr' ? 'Dernier enregistrement' : 'Last record'}: {new Date(lastActivity).toLocaleDateString(locale, { year: 'numeric', month: 'long', day: 'numeric' })}
+                    {(() => {
+                      const days = Math.floor((new Date().getTime() - new Date(lastActivity).getTime()) / (1000 * 60 * 60 * 24))
+                      if (days === 0) return ` (${locale === 'nl' ? 'Vandaag' : locale === 'fr' ? "Aujourd'hui" : 'Today'})`
+                      if (days === 1) return ` (${locale === 'nl' ? 'Gisteren' : locale === 'fr' ? 'Hier' : 'Yesterday'})`
+                      if (days < 7) return ` (${days} ${locale === 'nl' ? 'dagen geleden' : locale === 'fr' ? 'jours passés' : 'days ago'})`
+                      if (days < 30) return ` (${Math.floor(days / 7)} ${locale === 'nl' ? 'weken geleden' : locale === 'fr' ? 'semaines passées' : 'weeks ago'})`
+                      return ` (${Math.floor(days / 30)} ${locale === 'nl' ? 'maanden geleden' : locale === 'fr' ? 'mois passés' : 'months ago'})`
+                    })()}
+                  </span>
                 </div>
               )}
             </div>

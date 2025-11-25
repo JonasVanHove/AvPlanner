@@ -173,6 +173,7 @@ export default function TeamSettingsPage({ params }: TeamSettingsPageProps) {
     team_is_password_protected: false,
     team_password: ""
   })
+  const [showTeamPassword, setShowTeamPassword] = useState(false)
   
   const { user } = useAuth()
   const { version, buildInfo, commitMessage } = useVersion()
@@ -758,14 +759,32 @@ export default function TeamSettingsPage({ params }: TeamSettingsPageProps) {
                 {editableSettings.team_is_password_protected && (
                   <div className="space-y-2">
                     <Label htmlFor="team-password">Team Wachtwoord</Label>
-                    <Input
-                      id="team-password"
-                      type="password"
-                      placeholder="Voer nieuw wachtwoord in (laat leeg om niet te wijzigen)"
-                      value={editableSettings.team_password}
-                      onChange={(e) => handleSettingChange('team_password', e.target.value)}
-                      disabled={!teamSettings?.user_is_admin}
-                    />
+                    <div className="relative">
+                      <Input
+                        id="team-password"
+                        type={showTeamPassword ? "text" : "password"}
+                        placeholder="Voer nieuw wachtwoord in (laat leeg om niet te wijzigen)"
+                        value={editableSettings.team_password}
+                        onChange={(e) => handleSettingChange('team_password', e.target.value)}
+                        disabled={!teamSettings?.user_is_admin}
+                        className="pr-10"
+                      />
+                      <Button
+                        type="button"
+                        variant="ghost"
+                        size="sm"
+                        className="absolute right-0 top-0 h-full px-3 py-2 hover:bg-transparent"
+                        onClick={() => setShowTeamPassword(!showTeamPassword)}
+                        disabled={!teamSettings?.user_is_admin}
+                        tabIndex={-1}
+                      >
+                        {showTeamPassword ? (
+                          <EyeOff className="h-4 w-4 text-gray-400" />
+                        ) : (
+                          <Eye className="h-4 w-4 text-gray-400" />
+                        )}
+                      </Button>
+                    </div>
                   </div>
                 )}
               </div>

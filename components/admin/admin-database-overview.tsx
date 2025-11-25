@@ -108,6 +108,7 @@ interface AdminUser {
   user_name: string
   user_created_at: string
   user_last_sign_in: string
+  last_activity_date: string
   total_teams: number
   active_teams: number
   is_admin: boolean
@@ -138,6 +139,7 @@ export function AdminDatabaseOverview({ user }: AdminDatabaseOverviewProps) {
   const [activeTab, setActiveTab] = useState<'overview' | 'teams' | 'users' | 'activity'>('overview')
   const [searchTerm, setSearchTerm] = useState("")
   const [teamStatusFilter, setTeamStatusFilter] = useState("all")
+  const [userSortBy, setUserSortBy] = useState<'name' | 'email' | 'created' | 'activity'>('activity')
   const [actionLoading, setActionLoading] = useState<string | null>(null)
   const [teamToUpdate, setTeamToUpdate] = useState<{team: DetailedTeam, newStatus: string} | null>(null)
   const [refreshKey, setRefreshKey] = useState(0)
@@ -158,31 +160,32 @@ export function AdminDatabaseOverview({ user }: AdminDatabaseOverviewProps) {
 
   const checkAdminStatus = async () => {
     try {
-      // Gebruik members tabel: check role en status
+      // Check if user has at least one admin role in any active team
       const { data, error } = await supabase
         .from('members')
-        .select('email, role, status')
+        .select('role, status')
         .eq('email', user.email)
         .eq('role', 'admin')
         .eq('status', 'active')
-        .limit(1)
-        .single()
 
-      if (error || !data) {
+      if (error) {
+        console.error('Error checking admin status:', error)
         setIsAdmin(false)
-        setError('Access denied: You are not an admin')
+        setError('Failed to verify admin status')
         return
       }
 
-      if (data.role === 'admin') {
+      // User is admin if they have at least one active admin membership
+      if (data && data.length > 0) {
         setIsAdmin(true)
       } else {
         setIsAdmin(false)
-        setError('Access denied: You are not an admin')
+        setError('Access denied: You need admin privileges to access this panel')
       }
     } catch (error) {
       console.error('Error checking admin status:', error)
       setError('Failed to verify admin status')
+      setIsAdmin(false)
     } finally {
       setLoading(false)
     }
@@ -191,79 +194,195 @@ export function AdminDatabaseOverview({ user }: AdminDatabaseOverviewProps) {
   const fetchAllData = async () => {
     try {
       setLoading(true)
-      // Fetch database statistics directly from tables
-      let statsError = null;
-      let stats: DatabaseStats = {
-        total_users: 0,
-        total_teams: 0,
-        active_teams: 0,
-        inactive_teams: 0,
-        archived_teams: 0,
-        total_members: 0,
-        active_members: 0,
-        inactive_members: 0,
-        left_members: 0,
-        total_admins: 0,
-        recent_signups: 0,
-        recent_teams: 0,
-        password_protected_teams: 0,
-        teams_with_availability: 0,
-      };
-      try {
-        // Count teams
-        const { count: teamCount, error: teamCountError } = await supabase
-          .from('teams')
-          .select('*', { count: 'exact', head: true });
-        // Count members
-        const { count: memberCount, error: memberCountError } = await supabase
-          .from('members')
-          .select('*', { count: 'exact', head: true });
-        // Count activities
-        const { count: activityCount, error: activityCountError } = await supabase
-          .from('activity')
-          .select('*', { count: 'exact', head: true });
-        stats.total_teams = teamCount ?? 0;
-        stats.total_members = memberCount ?? 0;
-        // Optionally, you can add more queries to fill other fields
-        statsError = teamCountError || memberCountError || activityCountError;
-        if (statsError) {
-          console.error('Error fetching database statistics:', statsError);
-        }
-      } catch (err) {
-        statsError = err;
-        console.error('Error fetching database statistics:', err);
+      
+      // Fetch all statistics in parallel
+      const [
+        usersCount,
+        teamsCount,
+        activeTeamsCount,
+        inactiveTeamsCount,
+        archivedTeamsCount,
+        membersCount,
+        activeMembersCount,
+        inactiveMembersCount,
+        leftMembersCount,
+        adminsCount,
+        passwordProtectedCount,
+        teamsData,
+        usersData
+      ] = await Promise.all([
+        supabase.from('users').select('*', { count: 'exact', head: true }),
+        supabase.from('teams').select('*', { count: 'exact', head: true }),
+        supabase.from('teams').select('*', { count: 'exact', head: true }).eq('status', 'active'),
+        supabase.from('teams').select('*', { count: 'exact', head: true }).eq('status', 'inactive'),
+        supabase.from('teams').select('*', { count: 'exact', head: true }).eq('status', 'archived'),
+        supabase.from('members').select('*', { count: 'exact', head: true }),
+        supabase.from('members').select('*', { count: 'exact', head: true }).eq('status', 'active'),
+        supabase.from('members').select('*', { count: 'exact', head: true }).eq('status', 'inactive'),
+        supabase.from('members').select('*', { count: 'exact', head: true }).eq('status', 'left'),
+        supabase.from('members').select('*', { count: 'exact', head: true }).eq('role', 'admin').eq('status', 'active'),
+        supabase.from('teams').select('*', { count: 'exact', head: true }).eq('is_password_protected', true),
+        // Fetch all teams with member counts
+        supabase.from('teams').select(`
+          id,
+          name,
+          slug,
+          invite_code,
+          status,
+          is_password_protected,
+          created_at,
+          archived_at,
+          archived_by,
+          auto_holidays_enabled,
+          created_by
+        `).order('created_at', { ascending: false }),
+        // Fetch all users with basic info
+        supabase.from('users').select('*').order('created_at', { ascending: false })
+      ])
+
+      // Set statistics
+      setStats({
+        total_users: usersCount.count || 0,
+        total_teams: teamsCount.count || 0,
+        active_teams: activeTeamsCount.count || 0,
+        inactive_teams: inactiveTeamsCount.count || 0,
+        archived_teams: archivedTeamsCount.count || 0,
+        total_members: membersCount.count || 0,
+        active_members: activeMembersCount.count || 0,
+        inactive_members: inactiveMembersCount.count || 0,
+        left_members: leftMembersCount.count || 0,
+        total_admins: adminsCount.count || 0,
+        recent_signups: 0, // Can be calculated if needed
+        recent_teams: 0, // Can be calculated if needed
+        password_protected_teams: passwordProtectedCount.count || 0,
+        teams_with_availability: 0 // Can be calculated if needed
+      })
+
+      // Process teams data with member counts
+      if (teamsData.data) {
+        const teamsWithCounts = await Promise.all(
+          teamsData.data.map(async (team: any) => {
+            const [
+              { count: totalMembers },
+              { count: activeMembers },
+              { count: inactiveMembers },
+              { count: leftMembers },
+              { count: admins },
+              { count: availabilityCount }
+            ] = await Promise.all([
+              supabase.from('members').select('*', { count: 'exact', head: true }).eq('team_id', team.id),
+              supabase.from('members').select('*', { count: 'exact', head: true }).eq('team_id', team.id).eq('status', 'active'),
+              supabase.from('members').select('*', { count: 'exact', head: true }).eq('team_id', team.id).eq('status', 'inactive'),
+              supabase.from('members').select('*', { count: 'exact', head: true }).eq('team_id', team.id).eq('status', 'left'),
+              supabase.from('members').select('*', { count: 'exact', head: true }).eq('team_id', team.id).eq('role', 'admin'),
+              supabase.from('availability').select('*', { count: 'exact', head: true }).in('member_id', 
+                (await supabase.from('members').select('id').eq('team_id', team.id)).data?.map(m => m.id) || []
+              )
+            ])
+
+            // Get creator info
+            let creatorEmail = ''
+            let creatorName = ''
+            if (team.created_by) {
+              const { data: creator } = await supabase
+                .from('users')
+                .select('email, first_name, last_name')
+                .eq('id', team.created_by)
+                .single()
+              
+              if (creator) {
+                creatorEmail = creator.email
+                creatorName = `${creator.first_name || ''} ${creator.last_name || ''}`.trim()
+              }
+            }
+
+            return {
+              team_id: team.id,
+              team_name: team.name,
+              team_slug: team.slug || '',
+              team_invite_code: team.invite_code,
+              team_status: team.status,
+              team_is_password_protected: team.is_password_protected,
+              team_created_at: team.created_at,
+              team_archived_at: team.archived_at || '',
+              team_archived_by: team.archived_by || '',
+              member_count: totalMembers || 0,
+              active_member_count: activeMembers || 0,
+              inactive_member_count: inactiveMembers || 0,
+              left_member_count: leftMembers || 0,
+              admin_count: admins || 0,
+              creator_email: creatorEmail,
+              creator_name: creatorName,
+              last_activity: '', // Can be calculated if needed
+              availability_count: availabilityCount || 0
+            }
+          })
+        )
+        setTeams(teamsWithCounts as DetailedTeam[])
       }
-      setStats(stats)
 
-      // Fetch detailed teams: alle teams waar user admin is
-        // Fetch teams where the current user is the creator
-        const { data: teamsData, error: teamsError } = await supabase
-          .from('teams')
-          .select('*')
-          .eq('created_by', user.id)
+      // Process users data
+      if (usersData.data) {
+        const usersWithCounts = await Promise.all(
+          usersData.data.map(async (userData: any) => {
+            const [
+              { count: teamCount },
+              { count: activeTeamCount }
+            ] = await Promise.all([
+              supabase.from('members').select('*', { count: 'exact', head: true }).eq('auth_user_id', userData.id),
+              supabase.from('members').select('*', { count: 'exact', head: true }).eq('auth_user_id', userData.id).eq('status', 'active')
+            ])
 
-        if (teamsError) throw teamsError
-        setTeams(teamsData || [])
+            // Check if user is admin in any team
+            const { data: adminCheck } = await supabase
+              .from('members')
+              .select('role')
+              .eq('auth_user_id', userData.id)
+              .eq('role', 'admin')
+              .eq('status', 'active')
 
-      // Fetch all users: alle members met role 'admin' en status 'active'
-      const { data: usersData, error: usersError } = await supabase
-        .from('members')
-        .select('*')
-        .eq('role', 'admin')
-        .eq('status', 'active')
+            // Get last activity from availability table via member_id
+            // First get all member_ids for this user
+            const { data: memberIds } = await supabase
+              .from('members')
+              .select('id')
+              .eq('auth_user_id', userData.id)
 
-      if (usersError) throw usersError
-      setUsers(usersData || [])
+            let lastActivityDate = ''
+            if (memberIds && memberIds.length > 0) {
+              const memberIdList = memberIds.map(m => m.id)
+              
+              // Get the most recent availability record based on updated_at timestamp
+              const { data: lastActivity } = await supabase
+                .from('availability')
+                .select('updated_at')
+                .in('member_id', memberIdList)
+                .order('updated_at', { ascending: false })
+                .limit(1)
+                .single()
 
-      // Fetch recent activity: voorbeeld, haal laatste 50 rows uit activity tabel
-      const { data: activityData, error: activityError } = await supabase
-        .from('activity')
-        .select('*')
-        .order('created_at', { ascending: false })
-        .limit(50)
+              lastActivityDate = lastActivity?.updated_at || ''
+            }
 
-      if (activityError) throw activityError
-      setActivity(activityData || [])
+            const isUserAdmin = adminCheck && adminCheck.length > 0
+
+            return {
+              user_id: userData.id,
+              user_email: userData.email,
+              user_name: `${userData.first_name || ''} ${userData.last_name || ''}`.trim(),
+              user_created_at: userData.created_at,
+              user_last_sign_in: '', // Not available in users table
+              last_activity_date: lastActivityDate,
+              total_teams: teamCount || 0,
+              active_teams: activeTeamCount || 0,
+              is_admin: isUserAdmin,
+              profile_image_url: userData.profile_image_url || '',
+              email_confirmed: true // Assume true if in users table
+            }
+          })
+        )
+        setUsers(usersWithCounts as AdminUser[])
+      }
 
     } catch (error: any) {
       console.error('Error fetching data:', error)
@@ -283,26 +402,32 @@ export function AdminDatabaseOverview({ user }: AdminDatabaseOverviewProps) {
     try {
       setActionLoading(teamToUpdate.team.team_id)
       
-      const { error } = await supabase.rpc('update_team_status', {
-        team_id_param: teamToUpdate.team.team_id,
-        new_status: teamToUpdate.newStatus,
-        admin_email: user.email
-      })
+      const updateData: any = { 
+        status: teamToUpdate.newStatus
+      }
+      
+      // Add archived info if archiving
+      if (teamToUpdate.newStatus === 'archived') {
+        updateData.archived_at = new Date().toISOString()
+        updateData.archived_by = user.email
+      }
+      
+      const { error } = await supabase
+        .from('teams')
+        .update(updateData)
+        .eq('id', teamToUpdate.team.team_id)
 
       if (error) throw error
 
-      // Update local state
-      setTeams(teams.map(t => 
-        t.team_id === teamToUpdate.team.team_id 
-          ? { ...t, team_status: teamToUpdate.newStatus }
-          : t
-      ))
-
+      // Refresh data to get updated counts
+      await fetchAllData()
+      
       setTeamToUpdate(null)
+      setError('')
       alert(`Team "${teamToUpdate.team.team_name}" status updated to ${teamToUpdate.newStatus}`)
     } catch (error: any) {
       console.error('Error updating team status:', error)
-      alert(`Failed to update team status: ${error.message}`)
+      setError(`Failed to update team status: ${error.message}`)
     } finally {
       setActionLoading(null)
     }
@@ -375,10 +500,29 @@ export function AdminDatabaseOverview({ user }: AdminDatabaseOverviewProps) {
   return matchesSearch && matchesStatus
   })
 
-  const filteredUsers = users.filter(user => 
-  (user.user_email ?? '').toLowerCase().includes(searchTerm.toLowerCase()) ||
-  (user.user_name ?? '').toLowerCase().includes(searchTerm.toLowerCase())
-  )
+  const filteredUsers = users
+    .filter(user => 
+      (user.user_email ?? '').toLowerCase().includes(searchTerm.toLowerCase()) ||
+      (user.user_name ?? '').toLowerCase().includes(searchTerm.toLowerCase())
+    )
+    .sort((a, b) => {
+      switch (userSortBy) {
+        case 'name':
+          return (a.user_name || a.user_email).localeCompare(b.user_name || b.user_email)
+        case 'email':
+          return a.user_email.localeCompare(b.user_email)
+        case 'created':
+          return new Date(b.user_created_at).getTime() - new Date(a.user_created_at).getTime()
+        case 'activity':
+          // Sort by last activity, most recent first (empty dates last)
+          if (!a.last_activity_date && !b.last_activity_date) return 0
+          if (!a.last_activity_date) return 1
+          if (!b.last_activity_date) return -1
+          return new Date(b.last_activity_date).getTime() - new Date(a.last_activity_date).getTime()
+        default:
+          return 0
+      }
+    })
 
   const refreshData = () => {
     setRefreshKey(prev => prev + 1)
@@ -785,7 +929,22 @@ export function AdminDatabaseOverview({ user }: AdminDatabaseOverviewProps) {
         <TabsContent value="users" className="space-y-4">
           <Card>
             <CardHeader>
-              <CardTitle>Users Management ({filteredUsers.length})</CardTitle>
+              <div className="flex items-center justify-between">
+                <CardTitle>Users Management ({filteredUsers.length})</CardTitle>
+                <div className="flex items-center gap-2">
+                  <Select value={userSortBy} onValueChange={(value: any) => setUserSortBy(value)}>
+                    <SelectTrigger className="w-[180px]">
+                      <SelectValue placeholder="Sort by..." />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="activity">Recent Activity</SelectItem>
+                      <SelectItem value="created">Recently Joined</SelectItem>
+                      <SelectItem value="name">Name (A-Z)</SelectItem>
+                      <SelectItem value="email">Email (A-Z)</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+              </div>
             </CardHeader>
             <CardContent>
               {filteredUsers.length === 0 ? (
@@ -803,51 +962,72 @@ export function AdminDatabaseOverview({ user }: AdminDatabaseOverviewProps) {
                         <TableHead>Teams</TableHead>
                         <TableHead>Admin</TableHead>
                         <TableHead>Joined</TableHead>
-                        <TableHead>Last Sign In</TableHead>
+                        <TableHead>Last Activity</TableHead>
                       </TableRow>
                     </TableHeader>
                     <TableBody>
-                      {filteredUsers.map((user) => (
-                        <TableRow key={user.user_id}>
+                      {filteredUsers.map((userData) => (
+                        <TableRow key={userData.user_id}>
                           <TableCell>
                             <div className="flex items-center gap-3">
                               <MemberAvatar
-                                firstName={user.user_name.split(' ')[0] || user.user_email.split('@')[0]}
-                                lastName={user.user_name.split(' ').slice(1).join(' ') || ''}
-                                profileImage={user.profile_image_url || undefined}
+                                firstName={userData.user_name.split(' ')[0] || userData.user_email.split('@')[0]}
+                                lastName={userData.user_name.split(' ').slice(1).join(' ') || ''}
+                                profileImage={userData.profile_image_url || undefined}
                                 size="md"
                                 statusIndicator={{
                                   show: true,
-                                  status: todayAvailability[user.user_id]
+                                  status: todayAvailability[userData.user_id]
                                 }}
                               />
                               <div>
-                                <p className="font-medium">{user.user_name}</p>
-                                <p className="text-xs text-gray-500">{user.user_email}</p>
+                                <div className="flex items-center gap-2">
+                                  <p className="font-medium">{userData.user_name || userData.user_email}</p>
+                                  {user.id === userData.user_id && (
+                                    <Badge variant="outline" className="text-xs">Me</Badge>
+                                  )}
+                                </div>
+                                <p className="text-xs text-gray-500">{userData.user_email}</p>
                               </div>
                             </div>
                           </TableCell>
                           <TableCell>
-                            <Badge variant={user.email_confirmed ? 'default' : 'secondary'}>
-                              {user.email_confirmed ? 'Confirmed' : 'Pending'}
+                            <Badge variant={userData.email_confirmed ? 'default' : 'secondary'}>
+                              {userData.email_confirmed ? 'Confirmed' : 'Pending'}
                             </Badge>
                           </TableCell>
                           <TableCell>
                             <div>
-                              <p className="text-sm font-medium">{user.active_teams} active</p>
-                              <p className="text-xs text-gray-500">{user.total_teams} total</p>
+                              <p className="text-sm font-medium">{userData.active_teams} active</p>
+                              <p className="text-xs text-gray-500">{userData.total_teams} total</p>
                             </div>
                           </TableCell>
                           <TableCell>
-                            <Badge variant={user.is_admin ? 'destructive' : 'secondary'}>
-                              {user.is_admin ? 'Admin' : 'User'}
+                            <Badge variant={userData.is_admin ? 'destructive' : 'secondary'}>
+                              {userData.is_admin ? 'Admin' : 'User'}
                             </Badge>
                           </TableCell>
                           <TableCell>
-                            <p className="text-sm">{formatDate(user.user_created_at)}</p>
+                            <p className="text-sm">{formatDate(userData.user_created_at)}</p>
                           </TableCell>
                           <TableCell>
-                            <p className="text-sm">{formatDate(user.user_last_sign_in)}</p>
+                            {userData.last_activity_date ? (
+                              <div>
+                                <p className="text-sm font-medium">{formatDate(userData.last_activity_date)}</p>
+                                <p className="text-xs text-gray-500">
+                                  {(() => {
+                                    const days = Math.floor((new Date().getTime() - new Date(userData.last_activity_date).getTime()) / (1000 * 60 * 60 * 24))
+                                    if (days === 0) return 'Today'
+                                    if (days === 1) return 'Yesterday'
+                                    if (days < 7) return `${days} days ago`
+                                    if (days < 30) return `${Math.floor(days / 7)} weeks ago`
+                                    return `${Math.floor(days / 30)} months ago`
+                                  })()}
+                                </p>
+                              </div>
+                            ) : (
+                              <p className="text-sm text-gray-400">No activity yet</p>
+                            )}
                           </TableCell>
                         </TableRow>
                       ))}

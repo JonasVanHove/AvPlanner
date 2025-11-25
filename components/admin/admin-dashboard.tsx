@@ -52,6 +52,7 @@ interface AdminTeam {
 }
 
 interface AdminUser {
+  member_id: string
   admin_email: string
   admin_name: string
   granted_by: string
@@ -121,18 +122,56 @@ export function AdminDashboard({ user }: AdminDashboardProps) {
   const fetchAllTeams = async () => {
     try {
       setLoading(true)
-      // Haal alle teams op waar user admin is
-      // Gebruik de juiste kolom, bijvoorbeeld creator_email
-      const { data, error } = await supabase
+      
+      // In admin mode, fetch ALL teams from the database
+      const { data: teams, error: teamsError } = await supabase
         .from('teams')
-        .select('*')
-        .eq('creator_email', user.email)
+        .select(`
+          id,
+          name,
+          slug,
+          invite_code,
+          is_password_protected,
+          created_at,
+          created_by,
+          status
+        `)
+        .order('created_at', { ascending: false })
 
-      if (error) {
-        throw error
-      }
+      if (teamsError) throw teamsError
 
-      setTeams(data || [])
+      // Get member counts for each team
+      const teamsWithCounts = await Promise.all(
+        (teams || []).map(async (team) => {
+          const { count } = await supabase
+            .from('members')
+            .select('*', { count: 'exact', head: true })
+            .eq('team_id', team.id)
+
+          // Get creator email and name
+          const { data: creator } = await supabase
+            .from('users')
+            .select('email, first_name, last_name')
+            .eq('id', team.created_by)
+            .single()
+
+          return {
+            team_id: team.id,
+            team_name: team.name,
+            team_slug: team.slug,
+            team_invite_code: team.invite_code,
+            team_is_password_protected: team.is_password_protected,
+            team_created_at: team.created_at,
+            member_count: count || 0,
+            creator_email: creator?.email || 'Unknown',
+            creator_name: creator?.first_name && creator?.last_name 
+              ? `${creator.first_name} ${creator.last_name}` 
+              : creator?.email || 'Unknown'
+          }
+        })
+      )
+
+      setTeams(teamsWithCounts)
     } catch (error: any) {
       console.error('Error fetching teams:', error)
       setError(error.message || 'Failed to fetch teams')
@@ -146,15 +185,32 @@ export function AdminDashboard({ user }: AdminDashboardProps) {
       // Haal alle users op met role 'admin'
       const { data, error } = await supabase
         .from('members')
-        .select('*')
+        .select(`
+          id,
+          email,
+          first_name,
+          last_name,
+          role,
+          status,
+          created_at
+        `)
         .eq('role', 'admin')
         .eq('status', 'active')
 
-      if (error) {
-        throw error
-      }
+      if (error) throw error
 
-      setAdminUsers(data || [])
+      const adminUsers = (data || []).map(member => ({
+        member_id: member.id,
+        admin_email: member.email,
+        admin_name: member.first_name && member.last_name 
+          ? `${member.first_name} ${member.last_name}` 
+          : member.email,
+        granted_by: 'System',
+        granted_at: member.created_at,
+        is_active: member.status === 'active'
+      }))
+
+      setAdminUsers(adminUsers)
     } catch (error: any) {
       console.error('Error fetching admin users:', error)
       setError(error.message || 'Failed to fetch admin users')
@@ -545,7 +601,7 @@ export function AdminDashboard({ user }: AdminDashboardProps) {
                   </TableHeader>
                   <TableBody>
                     {filteredAdminUsers.map((admin) => (
-                      <TableRow key={admin.admin_email}>
+                      <TableRow key={admin.member_id}>
                         <TableCell className="font-medium">
                           {admin.admin_email}
                         </TableCell>
