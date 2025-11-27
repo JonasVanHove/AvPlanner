@@ -5,7 +5,7 @@ import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
 import { useTheme } from "next-themes"
-import { Monitor, Sun, Moon, Leaf, Snowflake, Flower, Sun as SummerSun } from "lucide-react"
+import { Monitor, Sun, Moon, Leaf, Snowflake, Flower, Sun as SummerSun, Home, Contrast, Flame, Terminal } from "lucide-react"
 
 export default function ThemeDemo() {
   const { setTheme, theme } = useTheme()
@@ -59,6 +59,34 @@ export default function ThemeDemo() {
       icon: SummerSun, 
       description: "Bright summer palette with yellow and warm tones",
       color: "bg-yellow-500"
+    },
+    { 
+      name: "Cozy", 
+      value: "cozy", 
+      icon: Home, 
+      description: "Warm and comfortable living room vibes",
+      color: "bg-amber-600"
+    },
+    { 
+      name: "Black & White", 
+      value: "blackwhite", 
+      icon: Contrast, 
+      description: "Classic monochrome minimalist design",
+      color: "bg-gray-900"
+    },
+    { 
+      name: "By the Stove", 
+      value: "bythestove", 
+      icon: Flame, 
+      description: "Cozy fireplace warmth with red and orange",
+      color: "bg-red-600"
+    },
+    { 
+      name: "Development", 
+      value: "testdev", 
+      icon: Terminal, 
+      description: "Hacker-style green on dark theme for developers",
+      color: "bg-green-600"
     },
   ]
 

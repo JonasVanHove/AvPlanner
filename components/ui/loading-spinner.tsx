@@ -3,8 +3,24 @@
 import { cn } from "@/lib/utils"
 import { cva, type VariantProps } from "class-variance-authority"
 
+// Inline keyframes for production build compatibility
+const spinnerKeyframes = `
+@keyframes spinner-spin {
+  0% { transform: rotate(0deg); }
+  100% { transform: rotate(360deg); }
+}
+@keyframes spinner-pulse {
+  0%, 100% { opacity: 1; transform: scale(1); }
+  50% { opacity: 0.5; transform: scale(0.8); }
+}
+@keyframes spinner-bounce {
+  0%, 100% { transform: translateY(0); }
+  50% { transform: translateY(-25%); }
+}
+`
+
 const spinnerVariants = cva(
-  "animate-spin",
+  "",
   {
     variants: {
       variant: {
@@ -12,6 +28,7 @@ const spinnerVariants = cva(
         secondary: "text-gray-600",
         white: "text-white",
         accent: "text-purple-600",
+        theme: "text-primary", // Uses theme's primary color
       },
       size: {
         sm: "h-4 w-4",
@@ -47,8 +64,10 @@ export function LoadingSpinner({
       className={cn("flex items-center justify-center gap-2", className)}
       {...props}
     >
+      <style dangerouslySetInnerHTML={{ __html: spinnerKeyframes }} />
       <svg
         className={cn(spinnerVariants({ variant, size }))}
+        style={{ animation: 'spinner-spin 1s linear infinite' }}
         xmlns="http://www.w3.org/2000/svg"
         fill="none"
         viewBox="0 0 24 24"
@@ -73,6 +92,7 @@ export function LoadingSpinner({
           "text-gray-600": variant === "secondary",
           "text-white": variant === "white",
           "text-purple-600": variant === "accent",
+          "text-foreground": variant === "theme",
         })}>
           {text}
         </span>
@@ -89,12 +109,13 @@ export function PulseLoader({
   ...props
 }: LoadingSpinnerProps) {
   const dotClass = cn(
-    "rounded-full animate-pulse",
+    "rounded-full",
     {
       "bg-blue-600": variant === "default",
       "bg-gray-600": variant === "secondary", 
       "bg-white": variant === "white",
       "bg-purple-600": variant === "accent",
+      "bg-primary": variant === "theme",
     },
     {
       "h-2 w-2": size === "sm",
@@ -109,9 +130,10 @@ export function PulseLoader({
       className={cn("flex items-center justify-center gap-1", className)}
       {...props}
     >
-      <div className={cn(dotClass, "animation-delay-0")} />
-      <div className={cn(dotClass, "animation-delay-150")} />
-      <div className={cn(dotClass, "animation-delay-300")} />
+      <style dangerouslySetInnerHTML={{ __html: spinnerKeyframes }} />
+      <div className={dotClass} style={{ animation: 'spinner-pulse 2s cubic-bezier(0.4, 0, 0.6, 1) infinite', animationDelay: '0ms' }} />
+      <div className={dotClass} style={{ animation: 'spinner-pulse 2s cubic-bezier(0.4, 0, 0.6, 1) infinite', animationDelay: '150ms' }} />
+      <div className={dotClass} style={{ animation: 'spinner-pulse 2s cubic-bezier(0.4, 0, 0.6, 1) infinite', animationDelay: '300ms' }} />
     </div>
   )
 }
@@ -127,13 +149,15 @@ export function SkeletonLoader({
 } & React.HTMLAttributes<HTMLDivElement>) {
   return (
     <div className={cn("space-y-3", className)} {...props}>
+      <style dangerouslySetInnerHTML={{ __html: spinnerKeyframes }} />
       {Array.from({ length: lines }).map((_, i) => (
         <div
           key={i}
           className={cn(
-            "h-4 bg-gray-200 dark:bg-gray-700 rounded animate-pulse",
+            "h-4 bg-gray-200 dark:bg-gray-700 rounded",
             i === lines - 1 ? "w-3/4" : "w-full"
           )}
+          style={{ animation: 'spinner-pulse 2s cubic-bezier(0.4, 0, 0.6, 1) infinite' }}
         />
       ))}
     </div>
@@ -154,6 +178,7 @@ export function DotsLoader({
       "bg-gray-600": variant === "secondary",
       "bg-white": variant === "white", 
       "bg-purple-600": variant === "accent",
+      "bg-primary": variant === "theme",
     },
     {
       "h-1.5 w-1.5": size === "sm",
@@ -168,9 +193,10 @@ export function DotsLoader({
       className={cn("flex items-center justify-center gap-1", className)}
       {...props}
     >
-      <div className={cn(dotClass, "animate-bounce")} style={{ animationDelay: "0ms" }} />
-      <div className={cn(dotClass, "animate-bounce")} style={{ animationDelay: "150ms" }} />
-      <div className={cn(dotClass, "animate-bounce")} style={{ animationDelay: "300ms" }} />
+      <style dangerouslySetInnerHTML={{ __html: spinnerKeyframes }} />
+      <div className={dotClass} style={{ animation: 'spinner-bounce 1s infinite', animationDelay: '0ms' }} />
+      <div className={dotClass} style={{ animation: 'spinner-bounce 1s infinite', animationDelay: '150ms' }} />
+      <div className={dotClass} style={{ animation: 'spinner-bounce 1s infinite', animationDelay: '300ms' }} />
     </div>
   )
 }
@@ -185,14 +211,14 @@ export function LoadingOverlay({
   return (
     <div
       className={cn(
-        "fixed inset-0 z-50 flex items-center justify-center bg-white/80 dark:bg-gray-900/80 backdrop-blur-sm",
+        "fixed inset-0 z-50 flex items-center justify-center bg-background/80 backdrop-blur-sm",
         className
       )}
       {...props}
     >
       <div className="flex flex-col items-center gap-4">
         <LoadingSpinner variant={variant} size="xl" />
-        <p className="text-sm font-medium text-gray-600 dark:text-gray-400">
+        <p className="text-sm font-medium text-muted-foreground">
           {text}
         </p>
       </div>

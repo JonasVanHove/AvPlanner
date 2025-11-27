@@ -2,6 +2,7 @@ import type React from "react"
 import type { Metadata } from "next"
 import "./globals.css"
 import { ThemeProvider } from "@/components/theme-provider"
+import { AccessibilityProvider } from "@/hooks/use-accessibility"
 
 export const metadata: Metadata = {
   title: "AvPlanner",
@@ -37,7 +38,9 @@ export default function RootLayout({
           disableTransitionOnChange
           themes={["light", "dark", "system", "autumn", "winter", "spring", "summer", "cozy", "blackwhite", "bythestove", "testdev"]}
         >
-          {children}
+          <AccessibilityProvider>
+            {children}
+          </AccessibilityProvider>
         </ThemeProvider>
       </body>
     </html>

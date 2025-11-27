@@ -246,7 +246,6 @@ export function MemberForm({ teamId, locale, onMemberAdded, member, mode = "add"
                 lastName={lastName}
                 profileImage={profileImagePreview}
                 size="lg"
-                className="ring-2 ring-gray-200 dark:ring-gray-600"
               />
               <div className="flex flex-col gap-2">
                 <Button

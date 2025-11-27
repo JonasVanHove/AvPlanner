@@ -85,11 +85,31 @@ const config: Config = {
   				to: {
   					height: '0'
   				}
+  			},
+  			'spin': {
+  				'0%': { transform: 'rotate(0deg)' },
+  				'100%': { transform: 'rotate(360deg)' }
+  			},
+  			'pulse': {
+  				'0%, 100%': { opacity: '1', transform: 'scale(1)' },
+  				'50%': { opacity: '0.5', transform: 'scale(0.8)' }
+  			},
+  			'bounce': {
+  				'0%, 100%': { transform: 'translateY(0)' },
+  				'50%': { transform: 'translateY(-25%)' }
+  			},
+  			'loading-dot': {
+  				'0%, 80%, 100%': { transform: 'scale(0)', opacity: '0.5' },
+  				'40%': { transform: 'scale(1)', opacity: '1' }
   			}
   		},
   		animation: {
   			'accordion-down': 'accordion-down 0.2s ease-out',
-  			'accordion-up': 'accordion-up 0.2s ease-out'
+  			'accordion-up': 'accordion-up 0.2s ease-out',
+  			'spin': 'spin 1s linear infinite',
+  			'pulse': 'pulse 2s cubic-bezier(0.4, 0, 0.6, 1) infinite',
+  			'bounce': 'bounce 1s infinite',
+  			'loading-dot': 'loading-dot 1.4s ease-in-out infinite'
   		}
   	}
   },

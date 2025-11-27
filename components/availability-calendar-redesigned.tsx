@@ -18,6 +18,8 @@ import {
   Users,
   Keyboard,
   Settings,
+  Undo2,
+  Redo2,
 } from "lucide-react"
 import { Copy } from "lucide-react"
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu"
@@ -47,6 +49,7 @@ import { toast } from "@/hooks/use-toast"
 import { LoginButton } from "@/components/auth/auth-dialog"
 import { BadgeNotificationComponent } from "@/components/badge-notification"
 import { BadgeDisplay } from "@/components/badge-display"
+import { useUndoRedo } from "@/hooks/use-undo-redo"
 
 interface Member {
   id: string
@@ -158,6 +161,17 @@ const AvailabilityCalendarRedesigned = ({
   // Mobile responsive hook
   const isMobile = useIsMobile()
 
+  // Undo/Redo hook for availability changes
+  const { 
+    canUndo, 
+    canRedo, 
+    undo: undoChange, 
+    redo: redoChange, 
+    recordChange: recordAvailabilityChange,
+    recordChanges: recordAvailabilityChanges,
+    clear: clearUndoHistory
+  } = useUndoRedo<Availability>()
+
   // Load weekend preference per team and listen for changes
   useEffect(() => {
     try {
@@ -220,6 +234,12 @@ const AvailabilityCalendarRedesigned = ({
           header: 'bg-gradient-to-r from-red-700 via-orange-800 to-red-900 dark:from-red-900 dark:via-orange-900 dark:to-red-950',
           headerBorder: 'border-red-500/20 dark:border-red-700'
         }
+      case 'testdev':
+        return {
+          background: 'bg-[hsl(222,22%,12%)]',
+          header: 'bg-[hsl(220,20%,8%)]',
+          headerBorder: 'border-[hsl(140,100%,50%)]'
+        }
       default:
         return {
           background: 'bg-gray-50 dark:bg-gray-900',
@@ -263,6 +283,16 @@ const AvailabilityCalendarRedesigned = ({
           avatar: 'ring-2 ring-red-400/60 shadow-xl shadow-red-900/30',
           text: 'text-red-900/90',
           accent: 'bg-gradient-to-r from-red-100 to-orange-100 text-red-800',
+        }
+      case 'testdev':
+        return {
+          container: 'testdev',
+          card: 'bg-[hsl(222,22%,14%)] border border-green-500/40 shadow-lg shadow-green-500/10',
+          button: 'hover:bg-green-500/20 hover:text-green-300 border-green-500/40 transition-all duration-200',
+          input: 'bg-[hsl(222,22%,12%)] border-green-500/50 text-green-400 focus:border-green-400 focus:ring-green-400/30',
+          avatar: 'ring-2 ring-green-500/60 shadow-lg shadow-green-500/20',
+          text: 'text-green-400',
+          accent: 'bg-green-500/20 text-green-300 border border-green-500/40',
         }
       default:
         return {
@@ -545,6 +575,69 @@ const AvailabilityCalendarRedesigned = ({
     }
   }, [])
 
+  // Undo handler - reverts to previous availability state (defined early for keyboard shortcuts)
+  const handleUndo = useCallback(async () => {
+    if (!canUndo || !editMode) return
+    
+    const change = undoChange()
+    if (!change) return
+
+    try {
+      // Restore the previous state
+      if (change.previousState) {
+        // Update to previous state
+        const { error } = await supabase.from("availability").upsert([{
+          member_id: change.previousState.member_id,
+          date: change.previousState.date,
+          status: change.previousState.status,
+        }], { onConflict: "member_id,date" })
+        if (error) throw error
+      } else {
+        // No previous state means it was a new entry, so delete it
+        const { error } = await supabase
+          .from("availability")
+          .delete()
+          .eq("member_id", change.currentState.member_id)
+          .eq("date", change.currentState.date)
+        if (error) throw error
+      }
+      await fetchAvailability()
+      toast({
+        title: t("editMode.undo"),
+        description: locale === "en" ? "Change undone" : locale === "nl" ? "Wijziging ongedaan gemaakt" : "Modification annulée",
+      })
+    } catch (error) {
+      console.error("Error undoing change:", error)
+    }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [canUndo, editMode, undoChange, t, locale])
+
+  // Redo handler - reapplies the change (defined early for keyboard shortcuts)
+  const handleRedo = useCallback(async () => {
+    if (!canRedo || !editMode) return
+    
+    const change = redoChange()
+    if (!change) return
+
+    try {
+      // Apply the change again
+      const { error } = await supabase.from("availability").upsert([{
+        member_id: change.currentState.member_id,
+        date: change.currentState.date,
+        status: change.currentState.status,
+      }], { onConflict: "member_id,date" })
+      if (error) throw error
+      await fetchAvailability()
+      toast({
+        title: t("editMode.redo"),
+        description: locale === "en" ? "Change reapplied" : locale === "nl" ? "Wijziging opnieuw toegepast" : "Modification réappliquée",
+      })
+    } catch (error) {
+      console.error("Error redoing change:", error)
+    }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [canRedo, editMode, redoChange, t, locale])
+
   // Keyboard shortcuts for navigation (like Google Calendar)
   useEffect(() => {
     const handleKeyPress = (event: KeyboardEvent) => {
@@ -562,6 +655,24 @@ const AvailabilityCalendarRedesigned = ({
       }
 
       if (isEditable(target) || isEditable(active)) {
+        return
+      }
+
+      // Undo/Redo shortcuts (Ctrl+Z / Ctrl+Y)
+      if ((event.ctrlKey || event.metaKey) && event.key.toLowerCase() === 'z') {
+        event.preventDefault()
+        if (event.shiftKey) {
+          // Ctrl+Shift+Z = Redo
+          handleRedo()
+        } else {
+          // Ctrl+Z = Undo
+          handleUndo()
+        }
+        return
+      }
+      if ((event.ctrlKey || event.metaKey) && event.key.toLowerCase() === 'y') {
+        event.preventDefault()
+        handleRedo()
         return
       }
 
@@ -600,7 +711,7 @@ const AvailabilityCalendarRedesigned = ({
     return () => {
       document.removeEventListener('keydown', handleKeyPress)
     }
-  }, [weeksToShow]) // Include weeksToShow as dependency since navigateDate uses it
+  }, [weeksToShow, handleUndo, handleRedo]) // Include undo/redo handlers
 
   // Track if this is the initial render to avoid calling onDateNavigation on mount
   const isInitialRender = useRef(true)
@@ -888,6 +999,12 @@ const AvailabilityCalendarRedesigned = ({
       // Find current user's member ID to track who made the change
       const currentUserMember = members.find(m => m.email === userEmail)
       const changedById = currentUserMember?.id || null
+
+      // Record the change for undo/redo before making the update
+      recordAvailabilityChange(
+        oldStatus ? { member_id: memberId, date, status: oldStatus } as Availability : null,
+        { member_id: memberId, date, status } as Availability
+      )
 
       // Update availability with changed_by_id and mark as not auto-holiday (manual change)
       const { error } = await supabase.from("availability").upsert([{ 
@@ -2330,6 +2447,7 @@ const AvailabilityCalendarRedesigned = ({
                       weeksToShow={weeksToShow}
                       currentDate={currentDate}
                       teamId={teamId}
+                      teamSlug={team?.slug}
                     />
                     <PlannerButton 
                       members={visibleMembers} 
@@ -2346,6 +2464,44 @@ const AvailabilityCalendarRedesigned = ({
                           <Edit3 className="h-4 w-4 text-orange-100" />
                           <span className="text-sm font-medium text-orange-100">Edit Mode</span>
                         </div>
+                        <div className="w-px h-6 bg-orange-300/30"></div>
+                        {/* Undo/Redo buttons */}
+                        <TooltipProvider>
+                          <Tooltip>
+                            <TooltipTrigger asChild>
+                              <Button
+                                variant="ghost"
+                                size="sm"
+                                onClick={handleUndo}
+                                disabled={!canUndo}
+                                className={`h-8 w-8 p-0 ${canUndo ? 'text-orange-100 hover:bg-orange-400/30' : 'text-orange-100/40 cursor-not-allowed'}`}
+                              >
+                                <Undo2 className="h-4 w-4" />
+                              </Button>
+                            </TooltipTrigger>
+                            <TooltipContent>
+                              <p>{t("editMode.undoTooltip")}</p>
+                            </TooltipContent>
+                          </Tooltip>
+                        </TooltipProvider>
+                        <TooltipProvider>
+                          <Tooltip>
+                            <TooltipTrigger asChild>
+                              <Button
+                                variant="ghost"
+                                size="sm"
+                                onClick={handleRedo}
+                                disabled={!canRedo}
+                                className={`h-8 w-8 p-0 ${canRedo ? 'text-orange-100 hover:bg-orange-400/30' : 'text-orange-100/40 cursor-not-allowed'}`}
+                              >
+                                <Redo2 className="h-4 w-4" />
+                              </Button>
+                            </TooltipTrigger>
+                            <TooltipContent>
+                              <p>{t("editMode.redoTooltip")}</p>
+                            </TooltipContent>
+                          </Tooltip>
+                        </TooltipProvider>
                         <div className="w-px h-6 bg-orange-300/30"></div>
                         <BulkUpdateDialog 
                           members={members} 
@@ -2439,6 +2595,17 @@ const AvailabilityCalendarRedesigned = ({
                               <div className="flex justify-between">
                                 <span>Quick toggle:</span>
                                 <kbd className="px-2 py-1 text-xs rounded border border-border bg-muted text-foreground font-mono">Ctrl+Click</kbd>
+                              </div>
+                              <div className="flex justify-between">
+                                <span>{t("editMode.undo")}:</span>
+                                <kbd className="px-2 py-1 text-xs rounded border border-border bg-muted text-foreground font-mono">Ctrl+Z</kbd>
+                              </div>
+                              <div className="flex justify-between">
+                                <span>{t("editMode.redo")}:</span>
+                                <div className="flex gap-1">
+                                  <kbd className="px-2 py-1 text-xs rounded border border-border bg-muted text-foreground font-mono">Ctrl+Y</kbd>
+                                  <kbd className="px-2 py-1 text-xs rounded border border-border bg-muted text-foreground font-mono">Ctrl+Shift+Z</kbd>
+                                </div>
                               </div>
                               <div className="text-xs text-gray-500">
                                 Ctrl+Click on availability cells to quickly toggle between available/unavailable
@@ -2535,6 +2702,7 @@ const AvailabilityCalendarRedesigned = ({
                         weeksToShow={weeksToShow}
                         currentDate={currentDate}
                         teamId={teamId}
+                        teamSlug={team?.slug}
                       />
                     </HamburgerMenuItem>
                     <HamburgerMenuItem>
@@ -2684,8 +2852,11 @@ const AvailabilityCalendarRedesigned = ({
           {isLoading ? (
             <div className="text-center py-12">
               <div className={`inline-flex items-center gap-3 ${themeClasses.card} rounded-lg px-6 py-4 shadow-sm`}>
-                <div className="w-6 h-6 bg-blue-600 rounded-full animate-pulse"></div>
-                <span className="font-medium text-gray-900 dark:text-white">Loading...</span>
+                <div 
+                  className="w-6 h-6 bg-primary rounded-full"
+                  style={{ animation: 'pulse 2s cubic-bezier(0.4, 0, 0.6, 1) infinite' }}
+                />
+                <span className={`font-medium ${themeClasses.text}`}>Loading...</span>
               </div>
             </div>
           ) : (

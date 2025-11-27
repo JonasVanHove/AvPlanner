@@ -25,11 +25,11 @@ export function ConditionalThemeProvider({ children, teamSlug }: ConditionalThem
     // Team-specific restrictions can be handled elsewhere; for now we preserve user's choice.
     if (theme && themeClasses.includes(theme)) {
       htmlElement.classList.add(theme)
-      // For 'testdev', also ensure dark mode class is present for previewing dark variants
-      if (theme === 'testdev') {
+      // For 'testdev' and 'winter', also ensure dark mode class is present for dark variants
+      if (theme === 'testdev' || theme === 'winter') {
         htmlElement.classList.add('dark')
       } else {
-        // Remove explicit dark when switching away from testdev to avoid surprises
+        // Remove explicit dark when switching away from testdev/winter to avoid surprises
         htmlElement.classList.remove('dark')
       }
     } else {

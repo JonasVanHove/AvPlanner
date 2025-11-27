@@ -20,7 +20,7 @@ import {
 } from "@/components/ui/drawer"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { Input } from "@/components/ui/input"
-import { Settings, Download, Moon, Sun, Globe, Bell, ChevronDown, Monitor, Share2, Copy, QrCode, Eye, EyeOff, Leaf, Snowflake, Flower, Sun as SummerSun, Home, Contrast, Flame, Terminal, MessageSquare, Lightbulb, Bug } from "lucide-react"
+import { Settings, Download, Moon, Sun, Globe, Bell, ChevronDown, Monitor, Share2, Copy, QrCode, Eye, EyeOff, Leaf, Snowflake, Flower, Sun as SummerSun, Home, Contrast, Flame, Terminal, MessageSquare, Lightbulb, Bug, Accessibility, Zap, ZapOff } from "lucide-react"
 import { ExportDialog } from "./export-dialog"
 import { useAuth } from "@/hooks/useAuth"
 import { supabase } from "@/lib/supabase"
@@ -30,6 +30,7 @@ import { useTheme } from "next-themes"
 import { useTranslation, type Locale } from "@/lib/i18n"
 import { useIsMobile } from "@/hooks/use-mobile"
 import { useVersion } from "@/hooks/use-version"
+import { useAccessibility } from "@/hooks/use-accessibility"
 import { useRouter } from "next/navigation"
 
 interface Member {
@@ -85,6 +86,11 @@ function SettingsPanelContent(props: {
   onClose?: () => void
   teamInviteUrl?: string
   teamSlugUrl?: string
+  // Accessibility settings
+  highContrast: boolean
+  onHighContrastToggle: (enabled: boolean) => void
+  reducedMotion: boolean
+  onReducedMotionToggle: (enabled: boolean) => void
 }) {
   const {
     currentLocale,
@@ -111,6 +117,10 @@ function SettingsPanelContent(props: {
     versionLoading,
     onLanguageChange,
     onClose,
+    highContrast,
+    onHighContrastToggle,
+    reducedMotion,
+    onReducedMotionToggle,
   } = props
 
   const { t } = useTranslation(currentLocale)
@@ -351,9 +361,6 @@ function SettingsPanelContent(props: {
             value={theme || "system"}
             onValueChange={(val) => {
               onThemeChange(val)
-              if (typeof window !== 'undefined') {
-                setTimeout(() => window.location.reload(), 0)
-              }
             }}
           >
             <SelectTrigger className="w-full h-8 text-sm bg-gray-50 dark:bg-gray-700 border-gray-200 dark:border-gray-600">
@@ -512,6 +519,48 @@ function SettingsPanelContent(props: {
 
       <div className="h-px bg-gray-200 dark:bg-gray-600 my-1" />
 
+      {/* Accessibility Section */}
+      <div className="px-2 py-2">
+        <div className="flex items-center mb-3">
+          <Accessibility className="mr-2 h-4 w-4" />
+          <Label className="text-sm font-medium">{t("accessibility.title")}</Label>
+        </div>
+        
+        <div className="space-y-3">
+          {/* High Contrast Toggle */}
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-2">
+              <Contrast className="h-3 w-3 text-gray-500" />
+              <span className="text-xs">{t("accessibility.highContrast")}</span>
+            </div>
+            <Switch
+              checked={highContrast}
+              onCheckedChange={onHighContrastToggle}
+              className="h-4 w-7"
+            />
+          </div>
+
+          {/* Reduced Motion Toggle */}
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-2">
+              {reducedMotion ? (
+                <ZapOff className="h-3 w-3 text-gray-500" />
+              ) : (
+                <Zap className="h-3 w-3 text-gray-500" />
+              )}
+              <span className="text-xs">{t("accessibility.reducedMotion")}</span>
+            </div>
+            <Switch
+              checked={reducedMotion}
+              onCheckedChange={onReducedMotionToggle}
+              className="h-4 w-7"
+            />
+          </div>
+        </div>
+      </div>
+
+      <div className="h-px bg-gray-200 dark:bg-gray-600 my-1" />
+
       <div className="px-2 py-2">
         <div className="flex items-center justify-center">
           <span className="text-xs text-gray-400 dark:text-gray-500">
@@ -541,6 +590,7 @@ export function SettingsDropdown({ currentLocale, members, team, forceOpen, onOp
   const { version, isLoading: versionLoading } = useVersion()
   const router = useRouter()
   const { user } = useAuth()
+  const { highContrast, setHighContrast, reducedMotion, setReducedMotion } = useAccessibility()
 
   // Handle forceOpen prop
   useEffect(() => {
@@ -715,6 +765,10 @@ export function SettingsDropdown({ currentLocale, members, team, forceOpen, onOp
       version={version}
       versionLoading={versionLoading}
       onLanguageChange={handleLanguageChange}
+      highContrast={highContrast}
+      onHighContrastToggle={setHighContrast}
+      reducedMotion={reducedMotion}
+      onReducedMotionToggle={setReducedMotion}
     />
   )
 

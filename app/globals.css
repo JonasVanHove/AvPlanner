@@ -2,6 +2,180 @@
 @tailwind components;
 @tailwind utilities;
 
+/* ========================================
+   GLOBAL: Disable white ring-offset-color
+   ======================================== */
+*, *::before, *::after {
+  --tw-ring-offset-color: transparent !important;
+}
+
+/* ========================================
+   ACCESSIBILITY: Reduced Motion
+   ======================================== */
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
+}
+
+html.reduced-motion *, 
+html.reduced-motion *::before, 
+html.reduced-motion *::after {
+  animation-duration: 0.01ms !important;
+  animation-iteration-count: 1 !important;
+  transition-duration: 0.01ms !important;
+  scroll-behavior: auto !important;
+}
+
+/* ========================================
+   ACCESSIBILITY: High Contrast Mode
+   ======================================== */
+html.high-contrast {
+  --background: 0 0% 0%;
+  --foreground: 0 0% 100%;
+  --card: 0 0% 5%;
+  --card-foreground: 0 0% 100%;
+  --popover: 0 0% 5%;
+  --popover-foreground: 0 0% 100%;
+  --primary: 60 100% 50%;
+  --primary-foreground: 0 0% 0%;
+  --secondary: 0 0% 15%;
+  --secondary-foreground: 0 0% 100%;
+  --muted: 0 0% 15%;
+  --muted-foreground: 0 0% 70%;
+  --accent: 180 100% 40%;
+  --accent-foreground: 0 0% 0%;
+  --destructive: 0 100% 50%;
+  --destructive-foreground: 0 0% 100%;
+  --border: 0 0% 40%;
+  --input: 0 0% 20%;
+  --ring: 60 100% 50%;
+}
+
+html.high-contrast * {
+  border-color: hsl(var(--border)) !important;
+}
+
+html.high-contrast a,
+html.high-contrast button,
+html.high-contrast [role="button"] {
+  text-decoration: underline;
+  text-underline-offset: 2px;
+}
+
+html.high-contrast a:focus,
+html.high-contrast button:focus,
+html.high-contrast [role="button"]:focus,
+html.high-contrast input:focus,
+html.high-contrast select:focus,
+html.high-contrast textarea:focus {
+  outline: 3px solid hsl(var(--ring)) !important;
+  outline-offset: 2px !important;
+}
+
+html.high-contrast .bg-green-50,
+html.high-contrast .bg-green-500\/20 {
+  background-color: hsl(120, 100%, 20%) !important;
+  border: 2px solid hsl(120, 100%, 50%) !important;
+}
+
+html.high-contrast .bg-red-50,
+html.high-contrast .bg-red-500\/20 {
+  background-color: hsl(0, 100%, 20%) !important;
+  border: 2px solid hsl(0, 100%, 50%) !important;
+}
+
+html.high-contrast .bg-blue-50,
+html.high-contrast .bg-blue-500\/20 {
+  background-color: hsl(210, 100%, 20%) !important;
+  border: 2px solid hsl(210, 100%, 50%) !important;
+}
+
+html.high-contrast .bg-yellow-50,
+html.high-contrast .bg-yellow-500\/20 {
+  background-color: hsl(50, 100%, 20%) !important;
+  border: 2px solid hsl(50, 100%, 50%) !important;
+}
+
+html.high-contrast .bg-purple-50,
+html.high-contrast .bg-purple-500\/20 {
+  background-color: hsl(280, 100%, 20%) !important;
+  border: 2px solid hsl(280, 100%, 50%) !important;
+}
+
+/* ========================================
+   SCROLLBAR STYLING: Dark Mode Support
+   ======================================== */
+/* Webkit browsers (Chrome, Safari, Edge) */
+::-webkit-scrollbar {
+  width: 10px;
+  height: 10px;
+}
+
+::-webkit-scrollbar-track {
+  background: #f1f1f1;
+  border-radius: 5px;
+}
+
+::-webkit-scrollbar-thumb {
+  background: #c1c1c1;
+  border-radius: 5px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: #a1a1a1;
+}
+
+/* Dark mode scrollbars */
+.dark ::-webkit-scrollbar-track,
+html.dark ::-webkit-scrollbar-track {
+  background: #1f2937;
+}
+
+.dark ::-webkit-scrollbar-thumb,
+html.dark ::-webkit-scrollbar-thumb {
+  background: #4b5563;
+}
+
+.dark ::-webkit-scrollbar-thumb:hover,
+html.dark ::-webkit-scrollbar-thumb:hover {
+  background: #6b7280;
+}
+
+/* Firefox */
+* {
+  scrollbar-width: thin;
+  scrollbar-color: #c1c1c1 #f1f1f1;
+}
+
+.dark *,
+html.dark * {
+  scrollbar-color: #4b5563 #1f2937;
+}
+
+/* Development/testdev theme scrollbars - dark green/hacker style */
+html.testdev ::-webkit-scrollbar-track {
+  background: #0d1117;
+}
+
+html.testdev ::-webkit-scrollbar-thumb {
+  background: #1f3829;
+  border: 1px solid #22c55e33;
+}
+
+html.testdev ::-webkit-scrollbar-thumb:hover {
+  background: #2a5038;
+  border-color: #22c55e55;
+  box-shadow: 0 0 8px #22c55e44;
+}
+
+html.testdev * {
+  scrollbar-color: #1f3829 #0d1117;
+}
+
 @layer base {
   :root {
     --background: 0 0% 100%;
@@ -113,32 +287,45 @@
     --chart-5: 10 90% 50%;
   }
 
-  /* Winter Theme - Koele winterskleuren */
+  /* Winter Theme - Exact zoals dark mode maar met blauwe tinten en sneeuw */
   .winter {
-    --background: 210 30% 96%;
-    --foreground: 220 25% 20%;
-    --card: 210 30% 96%;
-    --card-foreground: 220 25% 20%;
-    --popover: 210 30% 96%;
-    --popover-foreground: 220 25% 20%;
-    --primary: 210 80% 60%;
-    --primary-foreground: 210 30% 96%;
-    --secondary: 215 25% 88%;
-    --secondary-foreground: 220 25% 20%;
-    --muted: 215 25% 88%;
-    --muted-foreground: 220 15% 50%;
-    --accent: 200 35% 85%;
-    --accent-foreground: 220 25% 20%;
-    --destructive: 350 70% 55%;
+    /* Exact zelfde zwarte achtergrond als dark mode */
+    --background: 222 22% 12%;
+    --foreground: 210 30% 96%;
+    --card: 222 22% 14%;
+    --card-foreground: 210 30% 96%;
+    --popover: 222 22% 14%;
+    --popover-foreground: 210 30% 96%;
+    /* Primary met ijsblauwe tint */
+    --primary: 200 70% 50%;
+    --primary-foreground: 210 40% 98%;
+    --secondary: 220 16% 18%;
+    --secondary-foreground: 210 30% 96%;
+    --muted: 220 16% 18%;
+    --muted-foreground: 215 18% 70%;
+    --accent: 220 16% 20%;
+    --accent-foreground: 210 30% 96%;
+    --destructive: 0 55% 36%;
     --destructive-foreground: 210 30% 96%;
-    --border: 215 20% 85%;
-    --input: 215 20% 85%;
-    --ring: 210 80% 60%;
-    --chart-1: 210 80% 60%;
-    --chart-2: 200 70% 55%;
-    --chart-3: 190 60% 50%;
-    --chart-4: 220 65% 65%;
-    --chart-5: 240 75% 70%;
+    --border: 220 14% 26%;
+    --input: 220 14% 26%;
+    /* Ring met ijsblauwe tint */
+    --ring: 200 70% 50%;
+    /* Charts met blauwe winterkleuren */
+    --chart-1: 200 65% 50%;
+    --chart-2: 190 55% 45%;
+    --chart-3: 210 60% 52%;
+    --chart-4: 195 50% 56%;
+    --chart-5: 205 55% 52%;
+    /* Sidebar - exact zoals dark mode */
+    --sidebar-background: 240 5.9% 10%;
+    --sidebar-foreground: 240 4.8% 95.9%;
+    --sidebar-primary: 200 70% 50%;
+    --sidebar-primary-foreground: 0 0% 100%;
+    --sidebar-accent: 240 3.7% 15.9%;
+    --sidebar-accent-foreground: 240 4.8% 95.9%;
+    --sidebar-border: 240 3.7% 15.9%;
+    --sidebar-ring: 200 70% 55%;
   }
 
   /* Spring Theme - Frisse lentekleuren */
@@ -451,15 +638,1349 @@ html.bythestove .text-gray-600 { color: hsl(15 12% 26%) !important; }
 html.testdev .text-gray-500 { color: hsl(140 30% 55%) !important; }
 html.testdev .text-gray-600 { color: hsl(140 40% 65%) !important; }
 
+/* WINTER THEME - Forceer donkere achtergronden met blauwe tinten */
+html.winter .bg-white { background-color: hsl(222 22% 14%) !important; }
+html.winter .bg-gray-50 { background-color: hsl(222 22% 10%) !important; }
+html.winter .bg-gray-100 { background-color: hsl(222 22% 10%) !important; }
+html.winter .bg-gray-200 { background-color: hsl(222 22% 12%) !important; }
+html.winter .bg-gray-300 { background-color: hsl(222 22% 14%) !important; }
+html.winter .bg-gray-400 { background-color: hsl(222 22% 16%) !important; }
+html.winter .bg-gray-800 { background-color: hsl(222 22% 14%) !important; }
+html.winter .bg-gray-900 { background-color: hsl(222 22% 10%) !important; }
+html.winter .bg-slate-50 { background-color: hsl(222 22% 10%) !important; }
+html.winter .bg-slate-100 { background-color: hsl(222 22% 10%) !important; }
+html.winter .bg-slate-200 { background-color: hsl(222 22% 12%) !important; }
+html.winter .bg-background { background-color: hsl(222 22% 10%) !important; }
+html.winter .text-gray-900 { color: hsl(200 30% 96%) !important; }
+html.winter .text-gray-800 { color: hsl(200 30% 94%) !important; }
+html.winter .text-gray-700 { color: hsl(200 25% 85%) !important; }
+html.winter .text-gray-600 { color: hsl(200 20% 75%) !important; }
+html.winter .text-gray-500 { color: hsl(200 18% 65%) !important; }
+html.winter .text-gray-400 { color: hsl(200 15% 55%) !important; }
+html.winter .border-gray-200 { border-color: hsl(220 14% 26%) !important; }
+html.winter .border-gray-300 { border-color: hsl(220 14% 26%) !important; }
+html.winter .divide-gray-200 > * + * { border-color: hsl(220 14% 26%) !important; }
+
+/* Winter body en main achtergrond */
+html.winter body { background-color: hsl(222 22% 10%) !important; }
+html.winter main { background-color: hsl(222 22% 10%) !important; }
+html.winter .min-h-screen { background-color: hsl(222 22% 10%) !important; }
+
+/* Winter - availability tabel cellen donker maken */
+html.winter [class*="bg-white"],
+html.winter [class*="bg-gray-50"],
+html.winter [class*="bg-gray-100"],
+html.winter [class*="bg-gray-200"] {
+  background-color: hsl(222 22% 14%) !important;
+}
+
+/* Winter - weekend cellen subtiel donkerder */
+html.winter [class*="weekend"],
+html.winter .bg-gray-50\/50,
+html.winter .bg-gray-100\/50,
+html.winter .bg-slate-50,
+html.winter .bg-slate-100 {
+  background-color: hsl(222 18% 16%) !important;
+}
+
+/* Winter - tabel rijen en cellen */
+html.winter tr,
+html.winter td,
+html.winter th {
+  background-color: transparent !important;
+  border-color: hsl(220 14% 22%) !important;
+}
+
+html.winter tbody tr {
+  background-color: hsl(222 22% 14%) !important;
+}
+
+html.winter tbody tr:hover {
+  background-color: hsl(210 25% 18%) !important;
+}
+
+/* Winter - card/rounded containers (exclude status indicators) */
+html.winter [class*="rounded"][class*="border"]:not(.bg-green-500):not(.bg-red-500):not(.bg-blue-500):not(.bg-yellow-500):not(.bg-purple-500):not(.bg-gray-500):not(.bg-orange-500):not(.bg-pink-500):not(.bg-teal-500):not(.bg-cyan-500):not(.bg-gray-400):not([class*="rounded-full"][class*="w-3"]) {
+  background-color: hsl(222 22% 12%) !important;
+  border-color: hsl(220 14% 24%) !important;
+}
+
+/* Winter - verwijder lichte blauwe achtergronden (availability, icons, etc) - NIET de status kleuren */
+html.winter .bg-blue-50,
+html.winter .bg-blue-100,
+html.winter .bg-blue-200,
+html.winter [class*="bg-primary/10"],
+html.winter .bg-primary\/5,
+html.winter [class*="bg-primary"][class*="/"] {
+  background-color: transparent !important;
+}
+
+/* Winter - geselecteerde dag duidelijk zichtbaar met blauwe achtergrond */
+html.winter [aria-selected="true"],
+html.winter [data-selected="true"],
+html.winter .bg-primary\/10[aria-selected="true"] {
+  background-color: hsl(210 80% 45%) !important;
+  border: 2px solid hsl(210 90% 65%) !important;
+  box-shadow: 0 0 15px hsl(210 100% 55% / 0.6) !important;
+}
+
+html.winter [class*="ring-blue"],
+html.winter [class*="border-blue"]:not(.bg-blue-500) {
+  border-color: hsl(200 50% 40%) !important;
+}
+
+/* Winter - geselecteerde dag tekst wit maken */
+html.winter [class*="text-blue-600"],
+html.winter [class*="text-blue-700"],
+html.winter [class*="text-blue-800"],
+html.winter [class*="text-primary"] {
+  color: white !important;
+}
+
+/* Winter - huidige dag highlight */
+html.winter [class*="today"] {
+  background-color: hsl(210 70% 38%) !important;
+  border-color: hsl(210 80% 55%) !important;
+}
+
+/* Winter - copy/outline buttons transparante achtergrond */
+html.winter button[class*="outline"],
+html.winter button[class*="variant-outline"] {
+  background-color: transparent !important;
+}
+
+/* Winter - navigatie blauwe lijn verwijderen */
+html.winter nav,
+html.winter header,
+html.winter [class*="nav"],
+html.winter [class*="header"] {
+  border-color: hsl(220 14% 22%) !important;
+}
+
+html.winter .border-b,
+html.winter .border-t,
+html.winter [class*="border-primary"] {
+  border-color: hsl(220 14% 22%) !important;
+}
+
+/* Winter - Settings menu scrollbar zwart */
+html.winter [class*="overflow"],
+html.winter [class*="scroll"],
+html.winter [role="dialog"],
+html.winter [class*="Sheet"],
+html.winter [class*="Drawer"],
+html.winter [class*="Dialog"] {
+  scrollbar-color: hsl(220 15% 22%) hsl(222 22% 10%) !important;
+  scrollbar-width: thin !important;
+}
+
+html.winter [class*="overflow"]::-webkit-scrollbar,
+html.winter [class*="scroll"]::-webkit-scrollbar,
+html.winter [role="dialog"]::-webkit-scrollbar,
+html.winter [class*="Sheet"]::-webkit-scrollbar,
+html.winter [class*="Drawer"]::-webkit-scrollbar,
+html.winter [class*="Dialog"]::-webkit-scrollbar {
+  width: 6px !important;
+  height: 6px !important;
+}
+
+html.winter [class*="overflow"]::-webkit-scrollbar-track,
+html.winter [class*="scroll"]::-webkit-scrollbar-track,
+html.winter [role="dialog"]::-webkit-scrollbar-track,
+html.winter [class*="Sheet"]::-webkit-scrollbar-track,
+html.winter [class*="Drawer"]::-webkit-scrollbar-track,
+html.winter [class*="Dialog"]::-webkit-scrollbar-track {
+  background: hsl(222 22% 10%) !important;
+}
+
+html.winter [class*="overflow"]::-webkit-scrollbar-thumb,
+html.winter [class*="scroll"]::-webkit-scrollbar-thumb,
+html.winter [role="dialog"]::-webkit-scrollbar-thumb,
+html.winter [class*="Sheet"]::-webkit-scrollbar-thumb,
+html.winter [class*="Drawer"]::-webkit-scrollbar-thumb,
+html.winter [class*="Dialog"]::-webkit-scrollbar-thumb {
+  background: hsl(220 15% 25%) !important;
+  border-radius: 3px !important;
+}
+
+html.winter [class*="overflow"]::-webkit-scrollbar-thumb:hover,
+html.winter [class*="scroll"]::-webkit-scrollbar-thumb:hover,
+html.winter [role="dialog"]::-webkit-scrollbar-thumb:hover,
+html.winter [class*="Sheet"]::-webkit-scrollbar-thumb:hover,
+html.winter [class*="Drawer"]::-webkit-scrollbar-thumb:hover,
+html.winter [class*="Dialog"]::-webkit-scrollbar-thumb:hover {
+  background: hsl(220 15% 32%) !important;
+}
+
+/* Winter - Buttons beter leesbaar met blauw/wit */
+html.winter button[class*="bg-primary"],
+html.winter button[class*="Button"][class*="default"],
+html.winter [class*="bg-primary"]:not(button) {
+  background-color: hsl(200 70% 45%) !important;
+  color: white !important;
+  border-color: hsl(200 70% 55%) !important;
+}
+
+html.winter button[class*="bg-primary"]:hover,
+html.winter button[class*="Button"][class*="default"]:hover,
+html.winter [class*="bg-primary"]:not(button):hover {
+  background-color: hsl(200 70% 55%) !important;
+}
+
+html.winter button[class*="outline"],
+html.winter button[class*="secondary"] {
+  background-color: hsl(210 20% 18%) !important;
+  color: hsl(200 80% 75%) !important;
+  border-color: hsl(200 50% 45%) !important;
+}
+
+html.winter button[class*="outline"]:hover,
+html.winter button[class*="secondary"]:hover {
+  background-color: hsl(200 30% 25%) !important;
+  color: white !important;
+}
+
+html.winter button[class*="ghost"] {
+  color: hsl(200 70% 70%) !important;
+  background-color: transparent !important;
+}
+
+html.winter button[class*="ghost"]:hover {
+  background-color: hsl(200 30% 20%) !important;
+  color: white !important;
+}
+
+/* Winter - icon buttons (kleine buttons zonder variant class) transparant */
+html.winter button:not([class*="bg-"]):not([class*="Button"]):not([class*="outline"]):not([class*="ghost"]):not([class*="secondary"]):not([role="switch"]):not([class*="Switch"]) {
+  background-color: transparent !important;
+  border-color: transparent !important;
+}
+
+/* Winter - Sliders/Toggles (Switch) */
+html.winter [role="switch"],
+html.winter [data-state],
+html.winter button[class*="Switch"] {
+  background-color: hsl(210 20% 25%) !important;
+  border-color: hsl(200 40% 35%) !important;
+}
+
+html.winter [role="switch"][data-state="checked"],
+html.winter [data-state="checked"] {
+  background-color: hsl(200 70% 45%) !important;
+  border-color: hsl(200 70% 55%) !important;
+}
+
+html.winter [role="switch"] span,
+html.winter [role="switch"]::before,
+html.winter button[class*="Switch"] span {
+  background-color: white !important;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.3) !important;
+}
+
+/* Winter - Checkboxes */
+html.winter [role="checkbox"],
+html.winter input[type="checkbox"] {
+  background-color: hsl(210 20% 20%) !important;
+  border-color: hsl(200 50% 45%) !important;
+}
+
+html.winter [role="checkbox"][data-state="checked"],
+html.winter input[type="checkbox"]:checked {
+  background-color: hsl(200 70% 45%) !important;
+  border-color: hsl(200 70% 55%) !important;
+}
+
+/* Winter - Radio buttons */
+html.winter [role="radio"],
+html.winter input[type="radio"] {
+  background-color: hsl(210 20% 20%) !important;
+  border-color: hsl(200 50% 45%) !important;
+}
+
+html.winter [role="radio"][data-state="checked"],
+html.winter input[type="radio"]:checked {
+  background-color: hsl(200 70% 45%) !important;
+  border-color: hsl(200 70% 55%) !important;
+}
+
+/* Winter - Input fields */
+html.winter input:not([type="checkbox"]):not([type="radio"]),
+html.winter textarea,
+html.winter select {
+  background-color: hsl(210 20% 15%) !important;
+  border-color: hsl(200 40% 35%) !important;
+  color: hsl(200 20% 90%) !important;
+}
+
+html.winter input:focus,
+html.winter textarea:focus,
+html.winter select:focus {
+  border-color: hsl(200 70% 50%) !important;
+  box-shadow: 0 0 0 2px hsl(200 70% 45% / 0.3) !important;
+}
+
+/* Winter - Dropdown/Select menu items */
+html.winter [role="option"],
+html.winter [role="menuitem"],
+html.winter [class*="SelectItem"],
+html.winter [class*="DropdownMenuItem"] {
+  color: hsl(200 20% 85%) !important;
+}
+
+html.winter [role="option"]:hover,
+html.winter [role="menuitem"]:hover,
+html.winter [role="option"][data-highlighted],
+html.winter [role="menuitem"][data-highlighted] {
+  background-color: hsl(200 50% 30%) !important;
+  color: white !important;
+}
+
+/* Winter - Status indicator bolletjes (member avatars) - hoge specificiteit */
+html.winter .bg-green-500,
+html.winter div.bg-green-500,
+html.winter .rounded-full.bg-green-500 { background-color: #22c55e !important; }
+
+html.winter .bg-red-500,
+html.winter div.bg-red-500,
+html.winter .rounded-full.bg-red-500 { background-color: #ef4444 !important; }
+
+html.winter .bg-blue-500,
+html.winter div.bg-blue-500,
+html.winter .rounded-full.bg-blue-500 { background-color: #3b82f6 !important; }
+
+html.winter .bg-yellow-500,
+html.winter div.bg-yellow-500,
+html.winter .rounded-full.bg-yellow-500 { background-color: #eab308 !important; }
+
+html.winter .bg-purple-500,
+html.winter div.bg-purple-500,
+html.winter .rounded-full.bg-purple-500 { background-color: #a855f7 !important; }
+
+html.winter .bg-gray-500,
+html.winter div.bg-gray-500,
+html.winter .rounded-full.bg-gray-500 { background-color: #6b7280 !important; }
+
+html.winter .bg-gray-400,
+html.winter div.bg-gray-400,
+html.winter .rounded-full.bg-gray-400 { background-color: #9ca3af !important; }
+
+html.winter .bg-orange-500,
+html.winter div.bg-orange-500,
+html.winter .rounded-full.bg-orange-500 { background-color: #f97316 !important; }
+
+html.winter .bg-pink-500,
+html.winter div.bg-pink-500,
+html.winter .rounded-full.bg-pink-500 { background-color: #ec4899 !important; }
+
+html.winter .bg-teal-500,
+html.winter div.bg-teal-500,
+html.winter .rounded-full.bg-teal-500 { background-color: #14b8a6 !important; }
+
+html.winter .bg-cyan-500,
+html.winter div.bg-cyan-500,
+html.winter .rounded-full.bg-cyan-500 { background-color: #06b6d4 !important; }
+
+/* Winter - Dark scrollbars (voor hele pagina) */
+html.winter,
+html.winter body {
+  scrollbar-color: hsl(200 30% 25%) hsl(222 22% 12%);
+  scrollbar-width: thin;
+}
+
+html.winter ::-webkit-scrollbar,
+html.winter ::-webkit-scrollbar,
+html.winter *::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+
+html.winter ::-webkit-scrollbar-track,
+html.winter *::-webkit-scrollbar-track {
+  background: hsl(222 22% 12%);
+  border-radius: 4px;
+}
+
+html.winter ::-webkit-scrollbar-thumb,
+html.winter *::-webkit-scrollbar-thumb {
+  background: hsl(200 30% 28%);
+  border-radius: 4px;
+  border: 2px solid hsl(222 22% 12%);
+}
+
+html.winter ::-webkit-scrollbar-thumb:hover,
+html.winter *::-webkit-scrollbar-thumb:hover {
+  background: hsl(200 35% 35%);
+}
+
+html.winter ::-webkit-scrollbar-corner,
+html.winter *::-webkit-scrollbar-corner {
+  background: hsl(222 22% 12%);
+}
+
+/* Winter - force dark table styling met blauwe tinten */
+html.winter table,
+html.winter .table,
+html.winter [class*="rounded-lg"][class*="border"] {
+  background-color: hsl(222 22% 12%) !important;
+  border-color: hsl(200 40% 30%) !important;
+}
+
+html.winter thead,
+html.winter th {
+  background-color: hsl(222 22% 10%) !important;
+  color: hsl(200 60% 80%) !important;
+  border-color: hsl(200 40% 25%) !important;
+}
+
+html.winter tbody tr {
+  background-color: hsl(222 22% 14%) !important;
+  border-color: hsl(200 20% 22%) !important;
+}
+
+html.winter tbody tr:nth-child(even) {
+  background-color: hsl(222 22% 12%) !important;
+}
+
+html.winter tbody tr:hover {
+  background-color: hsl(200 30% 18%) !important;
+}
+
+html.winter td {
+  background-color: transparent !important;
+  border-color: hsl(200 20% 22%) !important;
+}
+
+/* Winter - Override alle grijze achtergronden naar donker */
+html.winter [class*="dark:bg-gray-800"] {
+  background-color: hsl(222 22% 14%) !important;
+}
+
+html.winter [class*="dark:bg-gray-700"] {
+  background-color: hsl(222 22% 16%) !important;
+}
+
+html.winter [class*="dark:bg-gray-900"] {
+  background-color: hsl(222 22% 10%) !important;
+}
+
 /* Inputs and borders clarity */
 html.cozy .border-gray-200, html.cozy .border-gray-300 { border-color: hsl(var(--border)) !important; }
 html.blackwhite .border-gray-200, html.blackwhite .border-gray-300 { border-color: hsl(var(--border)) !important; }
 html.bythestove .border-gray-200, html.bythestove .border-gray-300 { border-color: hsl(var(--border)) !important; }
 html.testdev .border-gray-200, html.testdev .border-gray-300 { border-color: hsl(var(--border)) !important; }
+html.winter .border-gray-200, html.winter .border-gray-300 { border-color: hsl(var(--border)) !important; }
 
 /* Buttons and inputs should respect theme colors */
-html.testdev .bg-white { background-color: hsl(var(--card)) !important; }
+html.testdev .bg-white { background-color: hsl(222 22% 14%) !important; }
 html.testdev .text-gray-900 { color: hsl(var(--foreground)) !important; }
+html.testdev .text-gray-800 { color: hsl(var(--foreground)) !important; }
+html.testdev .text-gray-700 { color: hsl(140 50% 60%) !important; }
+html.testdev .bg-gray-50 { background-color: hsl(222 22% 12%) !important; }
+html.testdev .bg-gray-100 { background-color: hsl(220 16% 16%) !important; }
+html.testdev .bg-gray-200 { background-color: hsl(220 16% 18%) !important; }
+html.testdev .bg-gray-800 { background-color: hsl(222 22% 14%) !important; }
+html.testdev .bg-gray-900 { background-color: hsl(222 22% 10%) !important; }
+
+/* Testdev - force dark table styling */
+html.testdev table,
+html.testdev .table,
+html.testdev [class*="rounded-lg"][class*="border"] {
+  background-color: hsl(222 22% 12%) !important;
+  border-color: hsl(140 50% 30%) !important;
+}
+
+html.testdev thead,
+html.testdev th {
+  background-color: hsl(222 22% 10%) !important;
+  color: hsl(140 75% 65%) !important;
+  border-color: hsl(140 50% 25%) !important;
+}
+
+html.testdev tbody tr {
+  background-color: hsl(222 22% 14%) !important;
+  border-color: hsl(140 30% 20%) !important;
+}
+
+html.testdev tbody tr:nth-child(even) {
+  background-color: hsl(222 22% 12%) !important;
+}
+
+html.testdev tbody tr:hover {
+  background-color: hsl(140 40% 15%) !important;
+}
+
+html.testdev td {
+  background-color: transparent !important;
+  border-color: hsl(140 30% 20%) !important;
+  color: hsl(140 60% 60%) !important;
+}
+
+/* Override all gray backgrounds in testdev to dark theme */
+html.testdev [class*="dark:bg-gray-800"] {
+  background-color: hsl(222 22% 14%) !important;
+}
+
+html.testdev [class*="dark:bg-gray-700"] {
+  background-color: hsl(222 22% 16%) !important;
+}
+
+html.testdev [class*="dark:bg-gray-900"] {
+  background-color: hsl(222 22% 10%) !important;
+}
+
+/* Card and container backgrounds */
+html.testdev .rounded-lg,
+html.testdev .rounded-xl,
+html.testdev [class*="shadow"] {
+  background-color: hsl(222 22% 14%) !important;
+  border-color: hsl(140 40% 25%) !important;
+}
+
+/* ============================================= */
+/* TESTDEV HEADER - Cyberpunk Neon Navigation   */
+/* ============================================= */
+
+/* Main header bar - dark with neon border glow */
+html.testdev [class*="shadow-lg"][class*="border-b"] {
+  background: linear-gradient(180deg, hsl(220, 25%, 12%) 0%, hsl(220, 20%, 8%) 100%) !important;
+  border-bottom: 2px solid hsl(140, 100%, 50%) !important;
+  box-shadow: 
+    0 0 20px hsla(140, 100%, 50%, 0.3),
+    0 0 40px hsla(140, 100%, 50%, 0.15),
+    inset 0 -1px 0 hsla(140, 100%, 50%, 0.5),
+    inset 0 1px 0 hsla(0, 0%, 100%, 0.05) !important;
+}
+
+/* Logo icon box - glowing neon container */
+html.testdev [class*="shadow-lg"][class*="border-b"] .bg-white\/10 {
+  background: linear-gradient(135deg, hsla(140, 100%, 50%, 0.2) 0%, hsla(160, 100%, 40%, 0.1) 100%) !important;
+  border: 1px solid hsl(140, 100%, 50%) !important;
+  box-shadow: 
+    0 0 15px hsla(140, 100%, 50%, 0.4),
+    0 0 30px hsla(140, 100%, 50%, 0.2),
+    inset 0 0 10px hsla(140, 100%, 60%, 0.2) !important;
+}
+
+/* App title - bright neon text */
+html.testdev [class*="shadow-lg"][class*="border-b"] h1 {
+  color: hsl(140, 100%, 70%) !important;
+  text-shadow: 
+    0 0 10px hsla(140, 100%, 50%, 0.8),
+    0 0 20px hsla(140, 100%, 50%, 0.5),
+    0 0 40px hsla(140, 100%, 50%, 0.3) !important;
+  letter-spacing: 0.5px;
+}
+
+/* Team name - softer neon accent */
+html.testdev [class*="shadow-lg"][class*="border-b"] p {
+  color: hsl(180, 80%, 65%) !important;
+  text-shadow: 0 0 8px hsla(180, 100%, 50%, 0.5) !important;
+}
+
+/* Header buttons - neon style */
+html.testdev [class*="shadow-lg"][class*="border-b"] button {
+  background: hsla(140, 50%, 20%, 0.3) !important;
+  border: 1px solid hsla(140, 100%, 50%, 0.4) !important;
+  color: hsl(140, 80%, 70%) !important;
+  transition: all 0.2s ease !important;
+}
+
+/* Button text/spans - NO background */
+html.testdev [class*="shadow-lg"][class*="border-b"] button span,
+html.testdev [class*="shadow-lg"][class*="border-b"] button > *:not(svg) {
+  background: transparent !important;
+  background-color: transparent !important;
+  color: inherit !important;
+}
+
+html.testdev [class*="shadow-lg"][class*="border-b"] button:hover {
+  background: hsla(140, 100%, 50%, 0.2) !important;
+  border-color: hsl(140, 100%, 55%) !important;
+  box-shadow: 0 0 15px hsla(140, 100%, 50%, 0.4) !important;
+}
+
+/* Icons in header */
+html.testdev [class*="shadow-lg"][class*="border-b"] svg {
+  color: hsl(140, 100%, 60%) !important;
+  filter: drop-shadow(0 0 3px hsla(140, 100%, 50%, 0.5));
+}
+
+/* ============================================= */
+/* TESTDEV SWITCHES - Neon Toggle Styling       */
+/* ============================================= */
+
+/* Switch track - unchecked state */
+html.testdev [role="switch"],
+html.testdev [data-state="unchecked"] {
+  background-color: hsl(220, 20%, 18%) !important;
+  border: 2px solid hsl(140, 60%, 35%) !important;
+  box-shadow: inset 0 0 10px hsla(0, 0%, 0%, 0.5) !important;
+}
+
+/* Switch track - checked state */
+html.testdev [data-state="checked"] {
+  background: linear-gradient(135deg, hsl(140, 100%, 40%) 0%, hsl(160, 100%, 35%) 100%) !important;
+  border: 2px solid hsl(140, 100%, 55%) !important;
+  box-shadow: 
+    0 0 15px hsla(140, 100%, 50%, 0.5),
+    inset 0 0 10px hsla(140, 100%, 60%, 0.3) !important;
+}
+
+/* Switch thumb/knob */
+html.testdev [role="switch"] span,
+html.testdev [data-state] > span {
+  background: linear-gradient(180deg, hsl(0, 0%, 95%) 0%, hsl(0, 0%, 85%) 100%) !important;
+  box-shadow: 
+    0 2px 8px hsla(0, 0%, 0%, 0.4),
+    0 0 10px hsla(140, 100%, 50%, 0.3) !important;
+}
+
+/* Checked thumb - extra glow */
+html.testdev [data-state="checked"] > span {
+  background: linear-gradient(180deg, hsl(140, 50%, 95%) 0%, hsl(140, 30%, 85%) 100%) !important;
+  box-shadow: 
+    0 2px 8px hsla(0, 0%, 0%, 0.4),
+    0 0 15px hsla(140, 100%, 50%, 0.6) !important;
+}
+
+/* ============================================= */
+/* TESTDEV EDIT MODE - Neon Edit Bar Styling    */
+/* ============================================= */
+
+/* Edit mode container - neon orange/amber accent */
+html.testdev .bg-orange-500\/20 {
+  background: linear-gradient(135deg, hsla(30, 100%, 50%, 0.25) 0%, hsla(45, 100%, 45%, 0.2) 100%) !important;
+  border: 1px solid hsl(35, 100%, 55%) !important;
+  box-shadow: 
+    0 0 20px hsla(35, 100%, 50%, 0.3),
+    inset 0 0 15px hsla(35, 100%, 50%, 0.1) !important;
+}
+
+html.testdev .border-orange-400\/30 {
+  border-color: hsl(35, 100%, 55%) !important;
+}
+
+/* Edit mode text */
+html.testdev .text-orange-100 {
+  color: hsl(35, 100%, 75%) !important;
+  text-shadow: 0 0 8px hsla(35, 100%, 50%, 0.6) !important;
+}
+
+html.testdev .text-orange-100\/40 {
+  color: hsla(35, 80%, 60%, 0.5) !important;
+}
+
+/* Edit mode icons */
+html.testdev .bg-orange-500\/20 svg,
+html.testdev [class*="text-orange"] svg {
+  color: hsl(35, 100%, 65%) !important;
+  filter: drop-shadow(0 0 4px hsla(35, 100%, 50%, 0.5)) !important;
+}
+
+/* Edit mode buttons */
+html.testdev .bg-orange-500\/20 button {
+  background: hsla(35, 80%, 30%, 0.3) !important;
+  border: 1px solid hsla(35, 100%, 50%, 0.4) !important;
+  color: hsl(35, 100%, 70%) !important;
+}
+
+html.testdev .bg-orange-500\/20 button:hover:not(:disabled) {
+  background: hsla(35, 100%, 50%, 0.25) !important;
+  border-color: hsl(35, 100%, 60%) !important;
+  box-shadow: 0 0 12px hsla(35, 100%, 50%, 0.4) !important;
+}
+
+/* Edit mode dividers */
+html.testdev .bg-orange-300\/30 {
+  background-color: hsl(35, 100%, 55%) !important;
+  box-shadow: 0 0 5px hsla(35, 100%, 50%, 0.5) !important;
+}
+
+/* View mode container - neon green accent */
+html.testdev .bg-green-500\/20:not([class*="bg-green-50"]) {
+  background: linear-gradient(135deg, hsla(140, 100%, 45%, 0.25) 0%, hsla(160, 100%, 40%, 0.2) 100%) !important;
+  border: 1px solid hsl(140, 100%, 55%) !important;
+  box-shadow: 
+    0 0 20px hsla(140, 100%, 50%, 0.3),
+    inset 0 0 15px hsla(140, 100%, 50%, 0.1) !important;
+}
+
+html.testdev .border-green-400\/30 {
+  border-color: hsl(140, 100%, 55%) !important;
+}
+
+html.testdev .text-green-100 {
+  color: hsl(140, 100%, 75%) !important;
+  text-shadow: 0 0 8px hsla(140, 100%, 50%, 0.6) !important;
+}
+
+/* ============================================= */
+/* TESTDEV INPUTS & DROPDOWNS                   */
+/* ============================================= */
+
+/* Input fields */
+html.testdev input,
+html.testdev textarea,
+html.testdev select {
+  background-color: hsl(220, 20%, 14%) !important;
+  border: 1px solid hsl(140, 50%, 30%) !important;
+  color: hsl(140, 60%, 75%) !important;
+}
+
+html.testdev input:focus,
+html.testdev textarea:focus,
+html.testdev select:focus {
+  border-color: hsl(140, 100%, 50%) !important;
+  box-shadow: 0 0 10px hsla(140, 100%, 50%, 0.3) !important;
+  outline: none !important;
+}
+
+html.testdev input::placeholder,
+html.testdev textarea::placeholder {
+  color: hsl(140, 30%, 45%) !important;
+}
+
+/* Dropdown menus */
+html.testdev [role="menu"],
+html.testdev [role="listbox"],
+html.testdev [data-radix-popper-content-wrapper] > div,
+html.testdev [data-radix-select-content],
+html.testdev [data-radix-dropdown-menu-content],
+html.testdev [class*="SelectContent"],
+html.testdev [class*="DropdownMenuContent"] {
+  background-color: hsl(220, 22%, 12%) !important;
+  border: 1px solid hsl(140, 60%, 35%) !important;
+  box-shadow: 
+    0 4px 20px hsla(0, 0%, 0%, 0.5),
+    0 0 20px hsla(140, 100%, 50%, 0.15) !important;
+}
+
+/* Dropdown items - ALL states */
+html.testdev [role="menuitem"],
+html.testdev [role="option"],
+html.testdev [data-radix-select-item],
+html.testdev [data-radix-dropdown-menu-item],
+html.testdev [class*="SelectItem"],
+html.testdev [class*="DropdownMenuItem"] {
+  background-color: transparent !important;
+  color: hsl(140, 60%, 70%) !important;
+}
+
+/* Dropdown items - remove white backgrounds from children */
+html.testdev [role="menuitem"] *,
+html.testdev [role="option"] *,
+html.testdev [data-radix-select-item] *,
+html.testdev [data-radix-dropdown-menu-item] *,
+html.testdev [class*="SelectItem"] *,
+html.testdev [class*="DropdownMenuItem"] *,
+html.testdev [data-radix-popper-content-wrapper] *,
+html.testdev [role="menu"] *,
+html.testdev [role="listbox"] * {
+  background: transparent !important;
+  background-color: transparent !important;
+}
+
+/* Re-apply container background after wildcard reset */
+html.testdev [role="menu"],
+html.testdev [role="listbox"],
+html.testdev [data-radix-popper-content-wrapper] > div,
+html.testdev [data-radix-select-content],
+html.testdev [data-radix-dropdown-menu-content] {
+  background-color: hsl(220, 22%, 12%) !important;
+}
+
+html.testdev [role="menuitem"]:hover,
+html.testdev [role="menuitem"]:focus,
+html.testdev [role="option"]:hover,
+html.testdev [role="option"]:focus,
+html.testdev [data-highlighted],
+html.testdev [data-state="checked"],
+html.testdev [aria-selected="true"] {
+  background-color: hsla(140, 100%, 50%, 0.15) !important;
+  color: hsl(140, 100%, 75%) !important;
+}
+
+/* Select viewport/content area */
+html.testdev [data-radix-select-viewport],
+html.testdev [class*="SelectViewport"] {
+  background-color: hsl(220, 22%, 12%) !important;
+}
+
+/* ============================================= */
+/* TESTDEV SELECT/DROPDOWN - Complete Fix       */
+/* ============================================= */
+
+/* Select content portal - the actual dropdown */
+html.testdev [data-radix-select-content],
+html.testdev [data-radix-popper-content-wrapper] [role="listbox"] {
+  background-color: hsl(220, 22%, 12%) !important;
+  border: 1px solid hsl(140, 60%, 35%) !important;
+}
+
+/* All select items - transparent background */
+html.testdev [data-radix-select-item],
+html.testdev [role="option"] {
+  background: none !important;
+  background-color: transparent !important;
+  color: hsl(140, 60%, 70%) !important;
+}
+
+/* ALL children inside select items - completely transparent, no background at all */
+html.testdev [data-radix-select-item] *,
+html.testdev [data-radix-select-item] span,
+html.testdev [data-radix-select-item] div,
+html.testdev [data-radix-select-item] p,
+html.testdev [role="option"] *,
+html.testdev [role="option"] span,
+html.testdev [role="option"] div,
+html.testdev [role="option"] p,
+html.testdev [role="menuitem"] *,
+html.testdev [role="menuitem"] span,
+html.testdev [role="menuitem"] div,
+html.testdev [role="menuitem"] p {
+  background: none !important;
+  background-color: transparent !important;
+  box-shadow: none !important;
+  color: inherit !important;
+}
+
+/* Select item hover/focus states */
+html.testdev [data-radix-select-item]:hover,
+html.testdev [data-radix-select-item]:focus,
+html.testdev [data-radix-select-item][data-highlighted] {
+  background-color: hsla(140, 100%, 50%, 0.15) !important;
+  color: hsl(140, 100%, 75%) !important;
+}
+
+/* Fix bg-popover and bg-accent classes used in select */
+html.testdev .bg-popover,
+html.testdev [class*="bg-popover"] {
+  background-color: hsl(220, 22%, 12%) !important;
+}
+
+html.testdev .bg-accent,
+html.testdev [class*="bg-accent"],
+html.testdev .focus\:bg-accent:focus,
+html.testdev [class*="focus:bg-accent"]:focus {
+  background-color: hsla(140, 100%, 50%, 0.15) !important;
+}
+
+/* The checkmark indicator span */
+html.testdev [data-radix-select-item-indicator],
+html.testdev [data-radix-select-item] [class*="absolute"] {
+  background: none !important;
+  color: hsl(140, 100%, 60%) !important;
+}
+
+/* Select trigger button */
+html.testdev [data-radix-select-trigger],
+html.testdev button[role="combobox"] {
+  background-color: hsl(220, 20%, 16%) !important;
+  border: 1px solid hsl(140, 60%, 35%) !important;
+  color: hsl(140, 80%, 65%) !important;
+}
+
+html.testdev [data-radix-select-trigger] *,
+html.testdev button[role="combobox"] * {
+  background: transparent !important;
+  color: inherit !important;
+}
+
+/* ============================================= */
+/* TESTDEV WEEKEND CELLS - Dark Weekend Styling */
+/* ============================================= */
+
+/* Weekend day headers - dark black tint instead of purple */
+html.testdev .bg-gray-100,
+html.testdev .bg-gray-50,
+html.testdev .bg-gray-50\/80,
+html.testdev .bg-gray-100\/80 {
+  background-color: hsl(220, 15%, 10%) !important;
+  border-color: hsl(140, 40%, 25%) !important;
+}
+
+/* Weekend cells in dark mode classes - darker black */
+html.testdev [class*="dark:bg-gray-600"],
+html.testdev [class*="dark:bg-gray-700"],
+html.testdev [class*="dark:bg-gray-600/40"],
+html.testdev [class*="dark:bg-gray-700/50"] {
+  background-color: hsl(220, 15%, 8%) !important;
+}
+
+/* Labels */
+html.testdev label {
+  color: hsl(140, 60%, 65%) !important;
+}
+
+/* ============================================= */
+/* TESTDEV BUTTONS - Neon Button Styling        */
+/* ============================================= */
+
+/* All buttons - base neon style */
+html.testdev button,
+html.testdev [role="button"],
+html.testdev .btn {
+  background-color: hsl(220, 20%, 16%) !important;
+  border: 1px solid hsl(140, 60%, 35%) !important;
+  color: hsl(140, 80%, 65%) !important;
+  transition: all 0.2s ease !important;
+}
+
+html.testdev button:hover:not(:disabled),
+html.testdev [role="button"]:hover:not(:disabled),
+html.testdev .btn:hover:not(:disabled) {
+  background-color: hsla(140, 100%, 50%, 0.15) !important;
+  border-color: hsl(140, 100%, 50%) !important;
+  color: hsl(140, 100%, 70%) !important;
+  box-shadow: 0 0 12px hsla(140, 100%, 50%, 0.3) !important;
+}
+
+/* Primary/default variant buttons */
+html.testdev button[class*="bg-primary"],
+html.testdev button[class*="bg-blue"],
+html.testdev [class*="bg-primary"] {
+  background: linear-gradient(135deg, hsl(140, 80%, 30%) 0%, hsl(160, 70%, 25%) 100%) !important;
+  border: 1px solid hsl(140, 100%, 45%) !important;
+  color: white !important;
+  text-shadow: 0 0 8px hsla(140, 100%, 50%, 0.5) !important;
+}
+
+html.testdev button[class*="bg-primary"]:hover:not(:disabled),
+html.testdev button[class*="bg-blue"]:hover:not(:disabled) {
+  background: linear-gradient(135deg, hsl(140, 90%, 35%) 0%, hsl(160, 80%, 30%) 100%) !important;
+  box-shadow: 0 0 20px hsla(140, 100%, 50%, 0.4) !important;
+}
+
+/* Destructive/danger buttons */
+html.testdev button[class*="destructive"],
+html.testdev button[class*="bg-red"],
+html.testdev [class*="bg-destructive"] {
+  background: linear-gradient(135deg, hsl(0, 80%, 35%) 0%, hsl(350, 70%, 30%) 100%) !important;
+  border: 1px solid hsl(0, 100%, 50%) !important;
+  color: white !important;
+  text-shadow: 0 0 8px hsla(0, 100%, 50%, 0.5) !important;
+}
+
+html.testdev button[class*="destructive"]:hover:not(:disabled),
+html.testdev button[class*="bg-red"]:hover:not(:disabled) {
+  background: linear-gradient(135deg, hsl(0, 90%, 40%) 0%, hsl(350, 80%, 35%) 100%) !important;
+  box-shadow: 0 0 20px hsla(0, 100%, 50%, 0.4) !important;
+}
+
+/* Ghost/outline variant */
+html.testdev button[class*="ghost"],
+html.testdev button[class*="outline"] {
+  background-color: transparent !important;
+  border: 1px solid hsl(140, 50%, 35%) !important;
+  color: hsl(140, 70%, 60%) !important;
+}
+
+html.testdev button[class*="ghost"]:hover:not(:disabled),
+html.testdev button[class*="outline"]:hover:not(:disabled) {
+  background-color: hsla(140, 100%, 50%, 0.1) !important;
+  border-color: hsl(140, 100%, 50%) !important;
+  color: hsl(140, 100%, 65%) !important;
+}
+
+/* Secondary variant */
+html.testdev button[class*="secondary"],
+html.testdev [class*="bg-secondary"] {
+  background-color: hsl(220, 18%, 20%) !important;
+  border: 1px solid hsl(140, 40%, 30%) !important;
+  color: hsl(140, 60%, 65%) !important;
+}
+
+html.testdev button[class*="secondary"]:hover:not(:disabled) {
+  background-color: hsl(220, 18%, 25%) !important;
+  border-color: hsl(140, 70%, 45%) !important;
+}
+
+/* White background buttons - FIX */
+html.testdev button.bg-white,
+html.testdev button[class*="bg-white"],
+html.testdev .bg-white button,
+html.testdev [class*="bg-white"] {
+  background-color: hsl(220, 20%, 16%) !important;
+  border: 1px solid hsl(140, 60%, 35%) !important;
+  color: hsl(140, 80%, 65%) !important;
+}
+
+html.testdev button.bg-white:hover:not(:disabled),
+html.testdev button[class*="bg-white"]:hover:not(:disabled),
+html.testdev .bg-white button:hover:not(:disabled) {
+  background-color: hsla(140, 100%, 50%, 0.15) !important;
+  border-color: hsl(140, 100%, 50%) !important;
+}
+
+/* Disabled state */
+html.testdev button:disabled,
+html.testdev [role="button"]:disabled {
+  opacity: 0.4 !important;
+  cursor: not-allowed !important;
+  box-shadow: none !important;
+}
+
+/* ============================================= */
+/* TESTDEV - Remove ALL backgrounds from text   */
+/* inside buttons, dropdowns, menus, dialogs    */
+/* ============================================= */
+
+/* Universal fix - all child elements inside buttons - COMPLETELY TRANSPARENT */
+html.testdev button *,
+html.testdev button span,
+html.testdev button div,
+html.testdev button p,
+html.testdev button svg,
+html.testdev [role="button"] *,
+html.testdev [role="button"] span,
+html.testdev [role="button"] div,
+html.testdev [type="button"] *,
+html.testdev [type="button"] span {
+  background: none !important;
+  background-color: transparent !important;
+  box-shadow: none !important;
+}
+
+/* Keep button itself styled (re-apply after universal reset) */
+html.testdev button,
+html.testdev [role="button"] {
+  background-color: hsl(220, 20%, 16%) !important;
+}
+
+html.testdev button:hover:not(:disabled),
+html.testdev [role="button"]:hover:not(:disabled) {
+  background-color: hsla(140, 100%, 50%, 0.15) !important;
+}
+
+/* Edit mode toolbar buttons - extra specific */
+html.testdev .bg-orange-500\/20 button *,
+html.testdev .bg-orange-500\/20 button span,
+html.testdev .bg-orange-500\/20 [role="button"] *,
+html.testdev [class*="edit"] button *,
+html.testdev [class*="Edit"] button * {
+  background: none !important;
+  background-color: transparent !important;
+}
+
+/* Dropdown menu items and their children */
+html.testdev [role="menuitem"] *,
+html.testdev [role="option"] *,
+html.testdev [data-radix-collection-item] * {
+  background: transparent !important;
+  background-color: transparent !important;
+}
+
+/* Dialog/modal buttons */
+html.testdev [role="dialog"] button *,
+html.testdev [data-radix-dialog-content] button *,
+html.testdev [class*="Dialog"] button * {
+  background: transparent !important;
+  background-color: transparent !important;
+}
+
+/* Settings menu specific */
+html.testdev [class*="settings"] button *,
+html.testdev [class*="Settings"] button *,
+html.testdev [class*="dropdown"] button *,
+html.testdev [class*="Dropdown"] button * {
+  background: transparent !important;
+  background-color: transparent !important;
+}
+
+/* Popover content */
+html.testdev [data-radix-popper-content-wrapper] button *,
+html.testdev [data-state="open"] button *,
+html.testdev [class*="popover"] button *,
+html.testdev [class*="Popover"] button * {
+  background: transparent !important;
+  background-color: transparent !important;
+}
+
+/* Select triggers and content */
+html.testdev [role="combobox"] *,
+html.testdev [role="listbox"] * {
+  background: transparent !important;
+  background-color: transparent !important;
+}
+
+/* Re-style select/combobox container */
+html.testdev [role="combobox"],
+html.testdev [role="listbox"] {
+  background-color: hsl(220, 20%, 14%) !important;
+}
+
+/* Tabs and tab triggers */
+html.testdev [role="tab"] *,
+html.testdev [role="tablist"] button * {
+  background: transparent !important;
+  background-color: transparent !important;
+}
+
+/* Any element with bg-white or bg-background class - force transparent inside interactive elements */
+html.testdev button .bg-white,
+html.testdev button .bg-background,
+html.testdev button [class*="bg-white"],
+html.testdev button [class*="bg-background"],
+html.testdev [role="menuitem"] .bg-white,
+html.testdev [role="menuitem"] .bg-background,
+html.testdev [role="menuitem"] [class*="bg-white"],
+html.testdev [role="menuitem"] [class*="bg-background"] {
+  background: transparent !important;
+  background-color: transparent !important;
+}
+
+/* Override white text colors - but NOT in header */
+html.testdev .text-white:not([class*="bg-gradient-to-r"] .text-white) {
+  color: hsl(140 75% 70%) !important;
+}
+
+html.testdev [class*="dark:text-gray-100"],
+html.testdev [class*="dark:text-gray-200"],
+html.testdev [class*="dark:text-white"] {
+  color: hsl(140 75% 65%) !important;
+}
+
+/* Borders - make them green-tinted */
+html.testdev [class*="border-gray"],
+html.testdev [class*="dark:border-gray"] {
+  border-color: hsl(140 30% 25%) !important;
+}
+
+/* Fix availability cell backgrounds specifically */
+html.testdev .grid > div,
+html.testdev [class*="flex"][class*="flex-col"] > div {
+  border-color: hsl(140 30% 22%) !important;
+}
+
+/* Development theme - neon glow effect for availability colors */
+/* GREEN - Available */
+html.testdev .bg-green-50,
+html.testdev .bg-green-900\/20,
+html.testdev .bg-green-500\/20,
+html.testdev [class*="bg-green"]:not(.bg-green-600):not(.bg-green-700):not(.bg-green-800):not(.bg-green-900):not([class*="hover"]):not([class*="from-"]):not([class*="to-"]):not([class*="via-"]) { 
+  background-color: hsla(140, 100%, 40%, 0.4) !important; 
+  border-color: hsl(140, 100%, 50%) !important;
+  box-shadow: inset 0 0 25px hsla(140, 100%, 50%, 0.4), 0 0 15px hsla(140, 100%, 50%, 0.25) !important;
+}
+html.testdev .border-green-200,
+html.testdev .border-green-700\/50,
+html.testdev .border-green-400\/60,
+html.testdev [class*="border-green"]:not([class*="hover"]) { 
+  border-color: hsl(140, 100%, 50%) !important; 
+}
+html.testdev .text-green-700,
+html.testdev .text-green-300,
+html.testdev [class*="text-green"]:not([class*="hover"]) { 
+  color: hsl(140, 100%, 65%) !important;
+  text-shadow: 0 0 12px hsla(140, 100%, 50%, 0.9);
+}
+
+/* PURPLE - Absent */
+html.testdev .bg-purple-50,
+html.testdev .bg-purple-900\/20,
+html.testdev .bg-purple-500\/20,
+html.testdev [class*="bg-purple"]:not(.bg-purple-600):not(.bg-purple-700):not([class*="hover"]):not([class*="from-"]):not([class*="to-"]):not([class*="via-"]) { 
+  background-color: hsla(280, 100%, 45%, 0.4) !important; 
+  border-color: hsl(280, 100%, 60%) !important;
+  box-shadow: inset 0 0 25px hsla(280, 100%, 60%, 0.4), 0 0 15px hsla(280, 100%, 60%, 0.25) !important;
+}
+html.testdev .border-purple-200,
+html.testdev .border-purple-700\/50,
+html.testdev .border-purple-400\/60,
+html.testdev [class*="border-purple"]:not([class*="hover"]) { 
+  border-color: hsl(280, 100%, 60%) !important; 
+}
+html.testdev .text-purple-700,
+html.testdev .text-purple-300,
+html.testdev [class*="text-purple"]:not([class*="hover"]) { 
+  color: hsl(280, 100%, 75%) !important;
+  text-shadow: 0 0 12px hsla(280, 100%, 60%, 0.9);
+}
+
+/* RED - Unavailable */
+html.testdev .bg-red-50,
+html.testdev .bg-red-900\/20,
+html.testdev .bg-red-500\/20,
+html.testdev [class*="bg-red"]:not(.bg-red-600):not(.bg-red-700):not([class*="hover"]):not([class*="from-"]):not([class*="to-"]):not([class*="via-"]) { 
+  background-color: hsla(0, 100%, 45%, 0.4) !important; 
+  border-color: hsl(0, 100%, 55%) !important;
+  box-shadow: inset 0 0 25px hsla(0, 100%, 55%, 0.4), 0 0 15px hsla(0, 100%, 55%, 0.25) !important;
+}
+html.testdev .border-red-200,
+html.testdev .border-red-700\/50,
+html.testdev .border-red-400\/60,
+html.testdev [class*="border-red"]:not([class*="hover"]) { 
+  border-color: hsl(0, 100%, 55%) !important; 
+}
+html.testdev .text-red-700,
+html.testdev .text-red-300,
+html.testdev [class*="text-red"]:not([class*="hover"]) { 
+  color: hsl(0, 100%, 65%) !important;
+  text-shadow: 0 0 12px hsla(0, 100%, 55%, 0.9);
+}
+
+/* BLUE - Remote */
+html.testdev .bg-blue-50,
+html.testdev .bg-blue-900\/20,
+html.testdev .bg-blue-500\/20,
+html.testdev [class*="bg-blue"]:not(.bg-blue-600):not(.bg-blue-700):not([class*="hover"]):not([class*="from-"]):not([class*="to-"]):not([class*="via-"]) { 
+  background-color: hsla(210, 100%, 45%, 0.4) !important; 
+  border-color: hsl(210, 100%, 60%) !important;
+  box-shadow: inset 0 0 25px hsla(210, 100%, 60%, 0.4), 0 0 15px hsla(210, 100%, 60%, 0.25) !important;
+}
+html.testdev .border-blue-200,
+html.testdev .border-blue-700\/50,
+html.testdev .border-blue-400\/60,
+html.testdev [class*="border-blue"]:not([class*="hover"]) { 
+  border-color: hsl(210, 100%, 60%) !important; 
+}
+html.testdev .text-blue-700,
+html.testdev .text-blue-300,
+html.testdev [class*="text-blue"] { 
+  color: hsl(210, 95%, 65%) !important;
+  text-shadow: 0 0 10px hsla(210, 100%, 60%, 0.8);
+}
+
+/* YELLOW - Need to check status - NEON GLOW */
+html.testdev .bg-yellow-50:not([class*="from-"]):not([class*="via-"]):not([class*="to-"]),
+html.testdev .bg-yellow-900\/20:not([class*="from-"]):not([class*="via-"]):not([class*="to-"]),
+html.testdev .bg-yellow-500\/20:not([class*="from-"]):not([class*="via-"]):not([class*="to-"]),
+html.testdev [class*="bg-yellow"]:not(.bg-yellow-600):not(.bg-yellow-500):not([class*="from-"]):not([class*="via-"]):not([class*="to-"]) { 
+  background-color: hsla(50, 100%, 50%, 0.4) !important; 
+  border-color: hsl(50, 100%, 55%) !important;
+  box-shadow: inset 0 0 25px hsla(50, 100%, 55%, 0.4), 0 0 15px hsla(50, 100%, 55%, 0.25) !important;
+}
+html.testdev .border-yellow-200,
+html.testdev .border-yellow-700\/50,
+html.testdev .border-yellow-400\/60,
+html.testdev [class*="border-yellow"] { 
+  border-color: hsl(50, 100%, 55%) !important; 
+}
+html.testdev .text-yellow-700,
+html.testdev .text-yellow-300,
+html.testdev [class*="text-yellow"] { 
+  color: hsl(50, 100%, 60%) !important;
+  text-shadow: 0 0 10px hsla(50, 100%, 55%, 0.9);
+}
+
+/* ORANGE/AMBER - Holiday status - NEON GLOW */
+html.testdev .bg-orange-50:not([class*="from-"]):not([class*="via-"]):not([class*="to-"]),
+html.testdev .bg-orange-900\/20:not([class*="from-"]):not([class*="via-"]):not([class*="to-"]),
+html.testdev .bg-amber-50:not([class*="from-"]):not([class*="via-"]):not([class*="to-"]),
+html.testdev .bg-amber-900\/20:not([class*="from-"]):not([class*="via-"]):not([class*="to-"]),
+html.testdev [class*="bg-orange"]:not(.bg-orange-500):not(.bg-orange-600):not([class*="from-"]):not([class*="via-"]):not([class*="to-"]),
+html.testdev [class*="bg-amber"]:not(.bg-amber-500):not(.bg-amber-600):not([class*="from-"]):not([class*="via-"]):not([class*="to-"]) { 
+  background-color: hsla(30, 100%, 50%, 0.4) !important; 
+  border-color: hsl(30, 100%, 55%) !important;
+  box-shadow: inset 0 0 25px hsla(30, 100%, 55%, 0.4), 0 0 15px hsla(30, 100%, 55%, 0.25) !important;
+}
+html.testdev [class*="border-orange"],
+html.testdev [class*="border-amber"] { 
+  border-color: hsl(30, 100%, 55%) !important; 
+}
+html.testdev [class*="text-orange"],
+html.testdev [class*="text-amber"] { 
+  color: hsl(30, 100%, 60%) !important;
+  text-shadow: 0 0 10px hsla(30, 100%, 55%, 0.9);
+}
+
+/* Development theme comprehensive styling */
+.testdev {
+  font-weight: 400;
+  letter-spacing: 0.02em;
+}
+
+.testdev .btn, .testdev button {
+  background: hsl(var(--secondary));
+  border: 1px solid hsl(var(--border));
+  color: hsl(var(--foreground));
+  border-radius: 0.5rem;
+  font-weight: 500;
+  transition: all 0.2s ease;
+}
+
+.testdev .btn:hover, .testdev button:hover {
+  background: hsl(var(--accent));
+  color: hsl(var(--foreground));
+  border-color: hsl(var(--primary));
+}
+
+.testdev .card, .testdev [class*="card"] {
+  background: hsl(var(--card));
+  border: 1px solid hsl(var(--border));
+  border-radius: 0.75rem;
+}
+
+.testdev .avatar, .testdev [class*="avatar"] {
+  border: none !important;
+  box-shadow: none !important;
+  outline: none !important;
+  --tw-ring-offset-width: 0px !important;
+  --tw-ring-offset-color: transparent !important;
+  --tw-ring-shadow: 0 0 #0000 !important;
+  --tw-ring-offset-shadow: 0 0 #0000 !important;
+}
+
+.testdev input, .testdev select, .testdev textarea {
+  background: hsl(var(--input));
+  border: 1px solid hsl(var(--border));
+  color: hsl(var(--foreground));
+  border-radius: 0.5rem;
+  padding: 0.75rem;
+  transition: all 0.2s ease;
+}
+
+.testdev input:focus, .testdev select:focus, .testdev textarea:focus {
+  outline: none;
+  border-color: hsl(var(--primary));
+  box-shadow: 0 0 0 2px hsla(var(--primary), 0.25);
+}
+
+.testdev input::placeholder, .testdev textarea::placeholder {
+  color: hsl(var(--muted-foreground));
+}
+
+/* Better hover states for testdev - improved text readability */
+.testdev a:hover, .testdev [role="button"]:hover {
+  color: hsl(var(--primary)) !important;
+}
+
+.testdev tr:hover td {
+  background: hsla(140, 60%, 20%, 0.5) !important;
+}
+
+.testdev [class*="hover\\:bg-"]:hover {
+  background: hsla(140, 50%, 20%, 0.6) !important;
+}
+
+/* Calendar grid specific styling for testdev */
+html.testdev .overflow-x-auto,
+html.testdev .overflow-auto {
+  background-color: hsl(222 22% 10%) !important;
+}
+
+/* Member rows and cells */
+html.testdev [class*="flex"][class*="items-center"] {
+  color: hsl(140 70% 60%) !important;
+}
+
+/* Availability grid cells - ensure dark background */
+html.testdev .min-w-\[100px\],
+html.testdev .min-w-\[80px\],
+html.testdev [class*="min-w-"] {
+  background-color: hsl(222 22% 13%) !important;
+  border-color: hsl(140 30% 22%) !important;
+}
+
+/* Empty/unset availability cells */
+html.testdev .cursor-pointer:not([class*="bg-green"]):not([class*="bg-red"]):not([class*="bg-yellow"]):not([class*="bg-blue"]):not([class*="bg-purple"]):not([class*="bg-orange"]):not([class*="bg-amber"]) {
+  background-color: hsl(222 22% 15%) !important;
+}
+
+html.testdev .cursor-pointer:hover {
+  background-color: hsla(140, 50%, 20%, 0.4) !important;
+  border-color: hsl(140 70% 40%) !important;
+}
 
 /* Ensure sticky header stays properly positioned during scroll */
 .sticky {
@@ -498,7 +2019,7 @@ html.testdev .text-gray-900 { color: hsl(var(--foreground)) !important; }
   }
 }
 
-/* Custom loading animations */
+/* Custom loading animations - explicitly defined for production builds */
 @keyframes spin {
   0% { transform: rotate(0deg); }
   100% { transform: rotate(360deg); }
@@ -560,9 +2081,181 @@ html.testdev .text-gray-900 { color: hsl(var(--foreground)) !important; }
   -webkit-backdrop-filter: blur(4px);
 }
 
+/* Explicit animation classes for production builds - ensures animations work on Netlify/Vercel */
+.animate-spin {
+  animation: spin 1s linear infinite !important;
+}
+
+.animate-pulse {
+  animation: pulse 2s cubic-bezier(0.4, 0, 0.6, 1) infinite !important;
+}
+
+.animate-bounce {
+  animation: bounce 1s infinite !important;
+}
+
 /* ========================================
    COMPREHENSIVE THEME STYLING
    ======================================== */
+
+/* Winter theme - meerdere lagen constante sneeuwval */
+.winter {
+  position: relative;
+}
+
+/* Sneeuw container */
+.winter::before,
+.winter::after {
+  content: '';
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 200%;
+  pointer-events: none;
+  z-index: 9999;
+}
+
+/* Laag 1 - zeer langzame grote vlokken (verre achtergrond) */
+.winter::before {
+  opacity: 0.2;
+  background-image: 
+    radial-gradient(4px 4px at 3% 7%, white, transparent),
+    radial-gradient(3px 3px at 11% 23%, rgba(255,255,255,0.85), transparent),
+    radial-gradient(4px 4px at 19% 4%, white, transparent),
+    radial-gradient(3px 3px at 29% 18%, rgba(255,255,255,0.9), transparent),
+    radial-gradient(4px 4px at 37% 11%, white, transparent),
+    radial-gradient(3px 3px at 47% 26%, rgba(255,255,255,0.85), transparent),
+    radial-gradient(4px 4px at 53% 6%, white, transparent),
+    radial-gradient(3px 3px at 64% 21%, rgba(255,255,255,0.9), transparent),
+    radial-gradient(4px 4px at 71% 14%, white, transparent),
+    radial-gradient(3px 3px at 83% 9%, rgba(255,255,255,0.85), transparent),
+    radial-gradient(4px 4px at 91% 24%, white, transparent),
+    radial-gradient(3px 3px at 7% 41%, rgba(255,255,255,0.9), transparent),
+    radial-gradient(4px 4px at 23% 36%, white, transparent),
+    radial-gradient(3px 3px at 41% 47%, rgba(255,255,255,0.85), transparent),
+    radial-gradient(4px 4px at 59% 33%, white, transparent),
+    radial-gradient(3px 3px at 77% 44%, rgba(255,255,255,0.9), transparent),
+    radial-gradient(4px 4px at 97% 38%, white, transparent);
+  background-size: 347px 347px;
+  animation: snowfallVerySlow 55s linear infinite;
+}
+
+/* Laag 2 - medium snelheid medium vlokken */
+.winter::after {
+  opacity: 0.28;
+  background-image: 
+    radial-gradient(2px 2px at 2% 3%, white, transparent),
+    radial-gradient(3px 3px at 9% 17%, rgba(255,255,255,0.8), transparent),
+    radial-gradient(2px 2px at 17% 9%, white, transparent),
+    radial-gradient(3px 3px at 26% 21%, rgba(255,255,255,0.85), transparent),
+    radial-gradient(2px 2px at 34% 6%, white, transparent),
+    radial-gradient(3px 3px at 43% 19%, rgba(255,255,255,0.8), transparent),
+    radial-gradient(2px 2px at 51% 13%, white, transparent),
+    radial-gradient(3px 3px at 62% 24%, rgba(255,255,255,0.85), transparent),
+    radial-gradient(2px 2px at 69% 8%, white, transparent),
+    radial-gradient(3px 3px at 79% 22%, rgba(255,255,255,0.8), transparent),
+    radial-gradient(2px 2px at 88% 11%, white, transparent),
+    radial-gradient(3px 3px at 96% 27%, rgba(255,255,255,0.85), transparent),
+    radial-gradient(2px 2px at 6% 38%, white, transparent),
+    radial-gradient(3px 3px at 21% 44%, rgba(255,255,255,0.8), transparent),
+    radial-gradient(2px 2px at 38% 31%, white, transparent),
+    radial-gradient(3px 3px at 54% 48%, rgba(255,255,255,0.85), transparent),
+    radial-gradient(2px 2px at 73% 36%, white, transparent),
+    radial-gradient(3px 3px at 86% 41%, rgba(255,255,255,0.8), transparent);
+  background-size: 283px 283px;
+  animation: snowfallMedium 28s linear infinite;
+}
+
+/* Extra sneeuwlagen via box-shadow op body */
+html.winter body::before,
+html.winter body::after {
+  content: '';
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 200%;
+  pointer-events: none;
+  z-index: 9998;
+}
+
+/* Laag 3 - snelle kleine vlokken (voorgrond) */
+html.winter body::before {
+  opacity: 0.32;
+  background-image: 
+    radial-gradient(1px 1px at 4% 2%, white, transparent),
+    radial-gradient(2px 2px at 13% 11%, rgba(255,255,255,0.85), transparent),
+    radial-gradient(1px 1px at 21% 7%, white, transparent),
+    radial-gradient(2px 2px at 31% 16%, rgba(255,255,255,0.9), transparent),
+    radial-gradient(1px 1px at 39% 4%, white, transparent),
+    radial-gradient(2px 2px at 48% 13%, rgba(255,255,255,0.85), transparent),
+    radial-gradient(1px 1px at 57% 9%, white, transparent),
+    radial-gradient(2px 2px at 66% 18%, rgba(255,255,255,0.9), transparent),
+    radial-gradient(1px 1px at 74% 6%, white, transparent),
+    radial-gradient(2px 2px at 84% 14%, rgba(255,255,255,0.85), transparent),
+    radial-gradient(1px 1px at 93% 11%, white, transparent),
+    radial-gradient(2px 2px at 8% 29%, rgba(255,255,255,0.9), transparent),
+    radial-gradient(1px 1px at 19% 34%, white, transparent),
+    radial-gradient(2px 2px at 33% 26%, rgba(255,255,255,0.85), transparent),
+    radial-gradient(1px 1px at 46% 37%, white, transparent),
+    radial-gradient(2px 2px at 59% 31%, rgba(255,255,255,0.9), transparent),
+    radial-gradient(1px 1px at 71% 39%, white, transparent),
+    radial-gradient(2px 2px at 82% 28%, rgba(255,255,255,0.85), transparent),
+    radial-gradient(1px 1px at 94% 33%, white, transparent);
+  background-size: 197px 197px;
+  animation: snowfallFast 14s linear infinite;
+}
+
+/* Laag 4 - zeer snelle mini vlokken (dichtste voorgrond) */
+html.winter body::after {
+  opacity: 0.22;
+  background-image: 
+    radial-gradient(1px 1px at 1% 3%, white, transparent),
+    radial-gradient(1px 1px at 8% 9%, rgba(255,255,255,0.75), transparent),
+    radial-gradient(1px 1px at 14% 4%, white, transparent),
+    radial-gradient(1px 1px at 23% 11%, rgba(255,255,255,0.8), transparent),
+    radial-gradient(1px 1px at 29% 6%, white, transparent),
+    radial-gradient(1px 1px at 37% 13%, rgba(255,255,255,0.75), transparent),
+    radial-gradient(1px 1px at 44% 8%, white, transparent),
+    radial-gradient(1px 1px at 52% 14%, rgba(255,255,255,0.8), transparent),
+    radial-gradient(1px 1px at 61% 5%, white, transparent),
+    radial-gradient(1px 1px at 68% 12%, rgba(255,255,255,0.75), transparent),
+    radial-gradient(1px 1px at 76% 7%, white, transparent),
+    radial-gradient(1px 1px at 83% 15%, rgba(255,255,255,0.8), transparent),
+    radial-gradient(1px 1px at 91% 9%, white, transparent),
+    radial-gradient(1px 1px at 97% 4%, rgba(255,255,255,0.75), transparent),
+    radial-gradient(1px 1px at 6% 24%, white, transparent),
+    radial-gradient(1px 1px at 16% 29%, rgba(255,255,255,0.8), transparent),
+    radial-gradient(1px 1px at 27% 21%, white, transparent),
+    radial-gradient(1px 1px at 41% 27%, rgba(255,255,255,0.75), transparent),
+    radial-gradient(1px 1px at 56% 23%, white, transparent),
+    radial-gradient(1px 1px at 69% 31%, rgba(255,255,255,0.8), transparent),
+    radial-gradient(1px 1px at 79% 26%, white, transparent),
+    radial-gradient(1px 1px at 89% 22%, rgba(255,255,255,0.75), transparent);
+  background-size: 139px 139px;
+  animation: snowfallVeryFast 9s linear infinite;
+}
+
+@keyframes snowfallVerySlow {
+  0% { transform: translateY(-50%); }
+  100% { transform: translateY(0%); }
+}
+
+@keyframes snowfallMedium {
+  0% { transform: translateY(-50%); }
+  100% { transform: translateY(0%); }
+}
+
+@keyframes snowfallFast {
+  0% { transform: translateY(-50%); }
+  100% { transform: translateY(0%); }
+}
+
+@keyframes snowfallVeryFast {
+  0% { transform: translateY(-50%); }
+  100% { transform: translateY(0%); }
+}
 
 /* COZY THEME - Winter Living Room Styling */
 .cozy {
@@ -817,3 +2510,56 @@ html.testdev .text-gray-900 { color: hsl(var(--foreground)) !important; }
   box-shadow: 0 0 0 4px hsla(var(--stove-ember), 0.2),
               0 0 12px hsla(var(--stove-flame), 0.3);
 }
+
+/* ========================================
+   DARK MODE: Bulk Update Dialog Calendar
+   ======================================== */
+.dark [data-radix-dialog-content] .rdp-day,
+.dark [role="dialog"] .rdp-day {
+  color: #e5e7eb !important;
+}
+
+.dark [data-radix-dialog-content] .rdp-caption_label,
+.dark [role="dialog"] .rdp-caption_label {
+  color: #f3f4f6 !important;
+}
+
+.dark [data-radix-dialog-content] .rdp-button:hover,
+.dark [role="dialog"] .rdp-button:hover {
+  background-color: rgba(59, 130, 246, 0.3) !important;
+}
+
+.dark [data-radix-dialog-content] .rdp-nav_button,
+.dark [role="dialog"] .rdp-nav_button {
+  color: #9ca3af !important;
+}
+
+.dark [data-radix-dialog-content] .rdp-nav_button:hover,
+.dark [role="dialog"] .rdp-nav_button:hover {
+  background-color: rgba(107, 114, 128, 0.3) !important;
+  color: #f3f4f6 !important;
+}
+
+/* Override inline styles for calendar modifiers in dark mode */
+.dark [data-radix-dialog-content] [style*="background-color: rgb(254, 242, 242)"],
+.dark [role="dialog"] [style*="background-color: rgb(254, 242, 242)"] {
+  background-color: rgba(127, 29, 29, 0.4) !important;
+  color: #fca5a5 !important;
+}
+
+.dark [data-radix-dialog-content] [style*="background-color: rgb(240, 253, 244)"],
+.dark [role="dialog"] [style*="background-color: rgb(240, 253, 244)"] {
+  background-color: rgba(20, 83, 45, 0.4) !important;
+  color: #86efac !important;
+}
+
+/* Date inputs in dark mode */
+.dark input[type="date"] {
+  color-scheme: dark;
+}
+
+/* Bulk Update Dialog specific improvements for dark mode */
+.dark [data-radix-dialog-content] .bg-gradient-to-r.from-blue-50 {
+  background: linear-gradient(to right, rgba(30, 58, 138, 0.3), rgba(20, 83, 45, 0.3)) !important;
+}
+
