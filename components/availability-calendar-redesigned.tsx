@@ -50,6 +50,7 @@ import { LoginButton } from "@/components/auth/auth-dialog"
 import { BadgeNotificationComponent } from "@/components/badge-notification"
 import { BadgeDisplay } from "@/components/badge-display"
 import { useUndoRedo } from "@/hooks/use-undo-redo"
+import { Gamepad2 } from "lucide-react"
 
 interface Member {
   id: string
@@ -2652,6 +2653,23 @@ const AvailabilityCalendarRedesigned = ({
                       </DialogContent>
                     </Dialog>
 
+                    {/* Buddy Battle Button */}
+                    <Tooltip>
+                      <TooltipTrigger asChild>
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          className={`h-9 w-9 p-0 ${themeClasses.button}`}
+                          onClick={() => router.push(`/team/${team?.slug || teamId}/buddy`)}
+                        >
+                          <Gamepad2 className="h-4 w-4" />
+                        </Button>
+                      </TooltipTrigger>
+                      <TooltipContent>
+                        <p>My Buddy</p>
+                      </TooltipContent>
+                    </Tooltip>
+
                     <SettingsDropdown 
                       currentLocale={locale} 
                       members={members} 
@@ -2735,6 +2753,14 @@ const AvailabilityCalendarRedesigned = ({
                       <div className="flex items-center gap-2">
                         <Settings className="h-4 w-4" />
                         <span>Settings</span>
+                      </div>
+                    </HamburgerMenuItem>
+                    
+                    {/* Buddy Battle */}
+                    <HamburgerMenuItem onClick={() => router.push(`/team/${team?.slug || teamId}/buddy`)}>
+                      <div className="flex items-center gap-2">
+                        <Gamepad2 className="h-4 w-4" />
+                        <span>My Buddy</span>
                       </div>
                     </HamburgerMenuItem>
                     

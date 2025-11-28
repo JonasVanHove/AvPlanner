@@ -1,0 +1,975 @@
+/* =====================================================
+   BUDDY BATTLE - Retro CSS Styles
+   Game Boy Color inspired styling
+   
+   IMPORTANT: This game has its own isolated theme.
+   User theme preferences do NOT affect this game.
+   ===================================================== */
+
+/* 
+ * Theme Isolation: All variables are scoped to .buddy-battle-container
+ * This prevents user theme CSS variables from affecting the game
+ */
+.buddy-battle-container {
+  /* DMG Green Palette - Forced values, ignoring user theme */
+  --gb-dark: #0f380f;
+  --gb-dark-green: #306230;
+  --gb-light-green: #8bac0f;
+  --gb-lightest: #9bbc0f;
+  --gb-bg: #9bbc0f;
+  
+  /* Extended retro palette */
+  --retro-black: #1a1c2c;
+  --retro-purple: #5d275d;
+  --retro-red: #b13e53;
+  --retro-orange: #ef7d57;
+  --retro-yellow: #ffcd75;
+  --retro-lime: #a7f070;
+  --retro-green: #38b764;
+  --retro-teal: #257179;
+  --retro-blue: #29366f;
+  --retro-sky: #3b5dc9;
+  --retro-cyan: #41a6f6;
+  --retro-white: #f4f4f4;
+  --retro-gray: #94b0c2;
+  --retro-gray-dark: #566c86;
+  --retro-brown: #ab5236;
+  --retro-pink: #f77622;
+  
+  /* Override common theme variables that might leak in */
+  --background: #0f380f;
+  --foreground: #9bbc0f;
+  --card: #0f380f;
+  --card-foreground: #9bbc0f;
+  --primary: #38b764;
+  --primary-foreground: #1a1c2c;
+  --secondary: #306230;
+  --secondary-foreground: #9bbc0f;
+  --muted: #306230;
+  --muted-foreground: #8bac0f;
+  --accent: #ffcd75;
+  --accent-foreground: #1a1c2c;
+  --destructive: #b13e53;
+  --destructive-foreground: #f4f4f4;
+  --border: #306230;
+  --input: #306230;
+  --ring: #8bac0f;
+  
+  /* Container styling */
+  background: linear-gradient(135deg, var(--gb-dark) 0%, var(--retro-black) 100%) !important;
+  min-height: 100vh;
+  font-family: 'Press Start 2P', monospace;
+  image-rendering: pixelated;
+  color: var(--gb-lightest) !important;
+  
+  /* Ensure no theme inheritance */
+  color-scheme: dark;
+  
+  /* Reset any theme-based text colors */
+  -webkit-text-fill-color: initial;
+}
+
+/* Retro card/panel */
+.retro-panel {
+  background: var(--gb-dark);
+  border: 4px solid var(--gb-dark-green);
+  box-shadow: 
+    inset 2px 2px 0 var(--gb-light-green),
+    inset -2px -2px 0 var(--retro-black),
+    4px 4px 0 var(--retro-black);
+  padding: 12px;
+  position: relative;
+}
+
+.retro-panel::before {
+  content: '';
+  position: absolute;
+  top: 4px;
+  left: 4px;
+  right: 4px;
+  height: 2px;
+  background: var(--gb-light-green);
+  opacity: 0.5;
+}
+
+/* Retro button */
+.retro-btn {
+  font-family: 'Press Start 2P', monospace;
+  font-size: 10px;
+  padding: 8px 16px;
+  background: var(--gb-dark-green);
+  color: var(--gb-lightest);
+  border: 3px solid var(--gb-light-green);
+  box-shadow: 
+    inset 1px 1px 0 var(--gb-light-green),
+    inset -1px -1px 0 var(--gb-dark),
+    2px 2px 0 var(--retro-black);
+  cursor: pointer;
+  text-transform: uppercase;
+  letter-spacing: 1px;
+  transition: all 0.1s;
+  image-rendering: pixelated;
+}
+
+.retro-btn:hover {
+  background: var(--gb-light-green);
+  color: var(--gb-dark);
+  transform: translate(1px, 1px);
+  box-shadow: 
+    inset 1px 1px 0 var(--gb-lightest),
+    inset -1px -1px 0 var(--gb-dark-green),
+    1px 1px 0 var(--retro-black);
+}
+
+.retro-btn:active {
+  transform: translate(2px, 2px);
+  box-shadow: none;
+}
+
+.retro-btn:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.retro-btn-primary {
+  background: var(--retro-green);
+  border-color: var(--retro-lime);
+}
+
+.retro-btn-danger {
+  background: var(--retro-red);
+  border-color: var(--retro-orange);
+}
+
+.retro-btn-special {
+  background: var(--retro-purple);
+  border-color: var(--retro-pink);
+  animation: glow 1.5s ease-in-out infinite;
+}
+
+@keyframes glow {
+  0%, 100% { box-shadow: 0 0 5px var(--retro-pink), 2px 2px 0 var(--retro-black); }
+  50% { box-shadow: 0 0 15px var(--retro-pink), 0 0 25px var(--retro-purple), 2px 2px 0 var(--retro-black); }
+}
+
+/* =====================================================
+   SELECTION STATES - Enhanced UX feedback
+   ===================================================== */
+
+/* Selectable card - base state */
+.retro-selectable {
+  cursor: pointer;
+  transition: all 0.15s ease-out;
+  position: relative;
+}
+
+.retro-selectable:hover {
+  transform: translateY(-2px);
+  border-color: var(--gb-light-green) !important;
+  box-shadow: 
+    inset 2px 2px 0 var(--gb-light-green),
+    inset -2px -2px 0 var(--retro-black),
+    4px 6px 0 var(--retro-black),
+    0 0 10px rgba(139, 172, 15, 0.3);
+}
+
+/* Selected state - very prominent */
+.retro-selected {
+  border-color: var(--retro-yellow) !important;
+  background: linear-gradient(135deg, var(--gb-dark) 0%, rgba(255, 205, 117, 0.15) 100%) !important;
+  transform: translateY(-3px) scale(1.02);
+  box-shadow: 
+    inset 2px 2px 0 var(--retro-yellow),
+    inset -2px -2px 0 var(--retro-black),
+    0 0 20px rgba(255, 205, 117, 0.5),
+    0 0 40px rgba(255, 205, 117, 0.2),
+    6px 8px 0 var(--retro-black) !important;
+  animation: selectedPulse 1.5s ease-in-out infinite;
+}
+
+/* Selection indicator checkmark */
+.retro-selected::after {
+  content: '✓';
+  position: absolute;
+  top: -8px;
+  right: -8px;
+  width: 24px;
+  height: 24px;
+  background: var(--retro-yellow);
+  color: var(--retro-black);
+  border: 3px solid var(--retro-black);
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 12px;
+  font-weight: bold;
+  z-index: 10;
+  animation: checkPop 0.3s ease-out;
+}
+
+@keyframes selectedPulse {
+  0%, 100% { 
+    box-shadow: 
+      inset 2px 2px 0 var(--retro-yellow),
+      inset -2px -2px 0 var(--retro-black),
+      0 0 20px rgba(255, 205, 117, 0.5),
+      0 0 40px rgba(255, 205, 117, 0.2),
+      6px 8px 0 var(--retro-black);
+  }
+  50% { 
+    box-shadow: 
+      inset 2px 2px 0 var(--retro-yellow),
+      inset -2px -2px 0 var(--retro-black),
+      0 0 30px rgba(255, 205, 117, 0.7),
+      0 0 50px rgba(255, 205, 117, 0.3),
+      6px 8px 0 var(--retro-black);
+  }
+}
+
+@keyframes checkPop {
+  0% { transform: scale(0); }
+  50% { transform: scale(1.3); }
+  100% { transform: scale(1); }
+}
+
+/* Color swatch selection */
+.color-swatch {
+  width: 48px;
+  height: 48px;
+  border: 4px solid var(--gb-dark-green);
+  cursor: pointer;
+  transition: all 0.15s ease-out;
+  position: relative;
+}
+
+.color-swatch:hover {
+  transform: scale(1.1);
+  border-color: var(--gb-light-green);
+}
+
+.color-swatch.selected {
+  border-color: var(--retro-yellow) !important;
+  transform: scale(1.15);
+  box-shadow: 
+    0 0 15px rgba(255, 205, 117, 0.6),
+    0 0 30px rgba(255, 205, 117, 0.3);
+  animation: colorPulse 1s ease-in-out infinite;
+}
+
+.color-swatch.selected::after {
+  content: '✓';
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  color: white;
+  font-size: 16px;
+  font-weight: bold;
+  text-shadow: 
+    1px 1px 0 var(--retro-black),
+    -1px -1px 0 var(--retro-black),
+    1px -1px 0 var(--retro-black),
+    -1px 1px 0 var(--retro-black);
+}
+
+@keyframes colorPulse {
+  0%, 100% { box-shadow: 0 0 15px rgba(255, 205, 117, 0.6); }
+  50% { box-shadow: 0 0 25px rgba(255, 205, 117, 0.9); }
+}
+
+/* Focus states for accessibility */
+.retro-selectable:focus,
+.retro-btn:focus,
+.color-swatch:focus {
+  outline: 3px dashed var(--retro-yellow);
+  outline-offset: 3px;
+}
+
+/* Click feedback */
+.retro-selectable:active {
+  transform: translateY(0) scale(0.98);
+  transition: all 0.05s ease-out;
+}
+
+/* Retro text */
+.retro-text {
+  font-family: 'Press Start 2P', monospace;
+  font-size: 8px;
+  line-height: 1.8;
+  text-shadow: 1px 1px 0 var(--retro-black);
+}
+
+.retro-text-lg {
+  font-size: 12px;
+}
+
+.retro-text-xl {
+  font-size: 16px;
+}
+
+.retro-title {
+  font-size: 14px;
+  text-transform: uppercase;
+  letter-spacing: 2px;
+  color: var(--gb-lightest);
+  text-shadow: 
+    2px 2px 0 var(--gb-dark-green),
+    4px 4px 0 var(--retro-black);
+}
+
+/* HP Bar */
+.hp-bar-container {
+  width: 100%;
+  height: 12px;
+  background: var(--gb-dark);
+  border: 2px solid var(--gb-dark-green);
+  position: relative;
+  overflow: hidden;
+}
+
+.hp-bar {
+  height: 100%;
+  background: var(--retro-green);
+  transition: width 0.3s ease;
+}
+
+.hp-bar.low {
+  background: var(--retro-yellow);
+}
+
+.hp-bar.critical {
+  background: var(--retro-red);
+  animation: flash 0.5s infinite;
+}
+
+@keyframes flash {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.5; }
+}
+
+/* XP Bar */
+.xp-bar-container {
+  width: 100%;
+  height: 8px;
+  background: var(--gb-dark);
+  border: 2px solid var(--retro-blue);
+}
+
+.xp-bar {
+  height: 100%;
+  background: linear-gradient(90deg, var(--retro-sky), var(--retro-cyan));
+  transition: width 0.5s ease;
+}
+
+/* Stat display */
+.stat-item {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 4px 0;
+  border-bottom: 1px dashed var(--gb-dark-green);
+}
+
+.stat-label {
+  color: var(--gb-light-green);
+  font-size: 8px;
+}
+
+.stat-value {
+  color: var(--gb-lightest);
+  font-size: 10px;
+}
+
+/* Pixel border effect */
+.pixel-border {
+  position: relative;
+}
+
+.pixel-border::after {
+  content: '';
+  position: absolute;
+  top: -4px;
+  left: -4px;
+  right: -4px;
+  bottom: -4px;
+  background: 
+    linear-gradient(to right, var(--gb-dark-green) 4px, transparent 4px) 0 0,
+    linear-gradient(to right, var(--gb-dark-green) 4px, transparent 4px) 0 100%,
+    linear-gradient(to left, var(--gb-dark-green) 4px, transparent 4px) 100% 0,
+    linear-gradient(to left, var(--gb-dark-green) 4px, transparent 4px) 100% 100%,
+    linear-gradient(to bottom, var(--gb-dark-green) 4px, transparent 4px) 0 0,
+    linear-gradient(to bottom, var(--gb-dark-green) 4px, transparent 4px) 100% 0,
+    linear-gradient(to top, var(--gb-dark-green) 4px, transparent 4px) 0 100%,
+    linear-gradient(to top, var(--gb-dark-green) 4px, transparent 4px) 100% 100%;
+  background-repeat: no-repeat;
+  background-size: 8px 8px;
+  pointer-events: none;
+}
+
+/* Buddy sprite container */
+.buddy-sprite {
+  width: 128px;
+  height: 128px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: var(--gb-dark);
+  border: 4px solid var(--gb-dark-green);
+  image-rendering: pixelated;
+  animation: float 3s ease-in-out infinite;
+}
+
+@keyframes float {
+  0%, 100% { transform: translateY(0); }
+  50% { transform: translateY(-8px); }
+}
+
+.buddy-sprite.battle {
+  animation: battle-stance 0.5s ease-in-out infinite;
+}
+
+@keyframes battle-stance {
+  0%, 100% { transform: translateX(0); }
+  25% { transform: translateX(-2px); }
+  75% { transform: translateX(2px); }
+}
+
+/* Damage number animation */
+.damage-number {
+  position: absolute;
+  font-size: 16px;
+  font-weight: bold;
+  color: var(--retro-red);
+  text-shadow: 2px 2px 0 var(--retro-black);
+  animation: damage-pop 1s ease-out forwards;
+  pointer-events: none;
+}
+
+.damage-number.critical {
+  font-size: 24px;
+  color: var(--retro-yellow);
+}
+
+.damage-number.heal {
+  color: var(--retro-green);
+}
+
+@keyframes damage-pop {
+  0% {
+    opacity: 1;
+    transform: translateY(0) scale(0.5);
+  }
+  20% {
+    transform: translateY(-10px) scale(1.2);
+  }
+  100% {
+    opacity: 0;
+    transform: translateY(-40px) scale(0.8);
+  }
+}
+
+/* Dialog box */
+.dialog-box {
+  background: var(--gb-dark);
+  border: 4px solid var(--gb-lightest);
+  padding: 16px;
+  margin: 8px;
+  position: relative;
+}
+
+.dialog-box::before {
+  content: '';
+  position: absolute;
+  bottom: -12px;
+  left: 50%;
+  transform: translateX(-50%);
+  border-left: 8px solid transparent;
+  border-right: 8px solid transparent;
+  border-top: 8px solid var(--gb-lightest);
+}
+
+.dialog-text {
+  font-size: 10px;
+  line-height: 1.8;
+  color: var(--gb-lightest);
+}
+
+.dialog-text::after {
+  content: '▼';
+  margin-left: 4px;
+  animation: blink 1s step-end infinite;
+}
+
+@keyframes blink {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0; }
+}
+
+/* Menu grid */
+.menu-grid {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 8px;
+}
+
+/* Badge/achievement item */
+.badge-item {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px;
+  background: var(--gb-dark);
+  border: 2px solid var(--gb-dark-green);
+}
+
+.badge-icon {
+  width: 32px;
+  height: 32px;
+  background: var(--retro-purple);
+  border: 2px solid var(--retro-pink);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.badge-locked {
+  opacity: 0.3;
+  filter: grayscale(1);
+}
+
+/* Rarity colors */
+.rarity-common { color: var(--retro-gray); }
+.rarity-uncommon { color: var(--retro-green); }
+.rarity-rare { color: var(--retro-sky); }
+.rarity-epic { color: var(--retro-purple); }
+.rarity-legendary { 
+  color: var(--retro-yellow);
+  text-shadow: 0 0 10px var(--retro-orange);
+}
+
+/* Element type badges */
+.element-badge {
+  display: inline-block;
+  padding: 2px 6px;
+  font-size: 8px;
+  border-radius: 2px;
+  text-transform: uppercase;
+}
+
+.element-fire { background: var(--retro-orange); color: var(--retro-black); }
+.element-water { background: var(--retro-cyan); color: var(--retro-black); }
+.element-earth { background: var(--retro-brown); color: var(--retro-white); }
+.element-air { background: var(--retro-gray); color: var(--retro-black); }
+.element-electric { background: var(--retro-yellow); color: var(--retro-black); }
+
+/* Leaderboard */
+.leaderboard-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px;
+  border-bottom: 2px solid var(--gb-dark-green);
+}
+
+.leaderboard-rank {
+  width: 24px;
+  height: 24px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: var(--gb-dark-green);
+  border: 2px solid var(--gb-light-green);
+  font-size: 10px;
+}
+
+.leaderboard-rank.gold { background: var(--retro-yellow); color: var(--retro-black); }
+.leaderboard-rank.silver { background: var(--retro-gray); color: var(--retro-black); }
+.leaderboard-rank.bronze { background: var(--retro-brown); color: var(--retro-white); }
+
+/* Trainer card */
+.trainer-card {
+  background: linear-gradient(135deg, var(--gb-dark-green) 0%, var(--gb-dark) 100%);
+  border: 4px solid var(--gb-light-green);
+  padding: 16px;
+  position: relative;
+  overflow: hidden;
+}
+
+.trainer-card::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 40px;
+  background: linear-gradient(180deg, var(--gb-light-green) 0%, transparent 100%);
+  opacity: 0.1;
+}
+
+.trainer-avatar {
+  width: 64px;
+  height: 64px;
+  border: 3px solid var(--gb-lightest);
+  image-rendering: pixelated;
+}
+
+/* Shop item */
+.shop-item {
+  background: var(--gb-dark);
+  border: 3px solid var(--gb-dark-green);
+  padding: 12px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  transition: all 0.2s;
+}
+
+.shop-item:hover {
+  border-color: var(--gb-light-green);
+  transform: translateY(-2px);
+}
+
+.shop-item.limited {
+  border-color: var(--retro-orange);
+  animation: limited-pulse 2s infinite;
+}
+
+@keyframes limited-pulse {
+  0%, 100% { box-shadow: 0 0 0 0 rgba(239, 125, 87, 0.4); }
+  50% { box-shadow: 0 0 0 8px rgba(239, 125, 87, 0); }
+}
+
+/* Quest item */
+.quest-item {
+  background: var(--gb-dark);
+  border: 2px solid var(--gb-dark-green);
+  padding: 12px;
+}
+
+.quest-progress-bar {
+  height: 8px;
+  background: var(--retro-black);
+  border: 1px solid var(--gb-dark-green);
+  margin-top: 8px;
+  overflow: hidden;
+}
+
+.quest-progress-fill {
+  height: 100%;
+  background: var(--retro-lime);
+  transition: width 0.3s ease;
+}
+
+.quest-completed {
+  border-color: var(--retro-green);
+}
+
+.quest-completed .quest-progress-fill {
+  background: var(--retro-green);
+}
+
+/* Loading spinner retro style */
+.retro-loading {
+  width: 32px;
+  height: 32px;
+  border: 4px solid var(--gb-dark-green);
+  border-top-color: var(--gb-lightest);
+  animation: retro-spin 1s steps(8) infinite;
+}
+
+@keyframes retro-spin {
+  to { transform: rotate(360deg); }
+}
+
+/* Notification toast */
+.retro-toast {
+  position: fixed;
+  bottom: 20px;
+  right: 20px;
+  background: var(--gb-dark);
+  border: 4px solid var(--gb-light-green);
+  padding: 12px 16px;
+  z-index: 1000;
+  animation: toast-slide 0.3s ease-out;
+}
+
+@keyframes toast-slide {
+  from {
+    transform: translateX(100%);
+    opacity: 0;
+  }
+  to {
+    transform: translateX(0);
+    opacity: 1;
+  }
+}
+
+/* Sound toggle button */
+.sound-toggle {
+  position: fixed;
+  top: 16px;
+  right: 16px;
+  width: 40px;
+  height: 40px;
+  background: var(--gb-dark-green);
+  border: 3px solid var(--gb-light-green);
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 100;
+}
+
+.sound-toggle.muted {
+  opacity: 0.5;
+}
+
+/* Scanlines overlay for extra retro effect */
+.scanlines {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  pointer-events: none;
+  z-index: 9999;
+  background: repeating-linear-gradient(
+    0deg,
+    rgba(0, 0, 0, 0.1),
+    rgba(0, 0, 0, 0.1) 1px,
+    transparent 1px,
+    transparent 2px
+  );
+}
+
+/* =====================================================
+   THEME ISOLATION
+   Ensure ALL elements inside the game container use
+   the retro theme, regardless of user's selected theme
+   ===================================================== */
+
+/* Override all text colors inside the container */
+.buddy-battle-container,
+.buddy-battle-container * {
+  /* Force retro colors on all elements */
+  --tw-text-opacity: 1;
+}
+
+/* Ensure buttons don't inherit shadcn/theme styles */
+.buddy-battle-container button:not(.retro-btn) {
+  background-color: var(--gb-dark-green);
+  color: var(--gb-lightest);
+  border-color: var(--gb-light-green);
+}
+
+/* Override any Tailwind dark mode classes */
+.buddy-battle-container .dark,
+.buddy-battle-container .light,
+.dark .buddy-battle-container,
+.light .buddy-battle-container {
+  --background: var(--gb-dark);
+  --foreground: var(--gb-lightest);
+  --card: var(--gb-dark);
+  --card-foreground: var(--gb-lightest);
+  --popover: var(--gb-dark);
+  --popover-foreground: var(--gb-lightest);
+  --primary: var(--retro-green);
+  --primary-foreground: var(--retro-black);
+  --secondary: var(--gb-dark-green);
+  --secondary-foreground: var(--gb-lightest);
+  --muted: var(--gb-dark-green);
+  --muted-foreground: var(--gb-light-green);
+  --accent: var(--retro-yellow);
+  --accent-foreground: var(--retro-black);
+  --destructive: var(--retro-red);
+  --destructive-foreground: var(--retro-white);
+  --border: var(--gb-dark-green);
+  --input: var(--gb-dark-green);
+  --ring: var(--gb-light-green);
+}
+
+/* Ensure backgrounds are always dark retro */
+.buddy-battle-container div,
+.buddy-battle-container section,
+.buddy-battle-container article,
+.buddy-battle-container header,
+.buddy-battle-container footer,
+.buddy-battle-container main {
+  background-color: transparent;
+}
+
+/* Override text colors for common Tailwind classes */
+.buddy-battle-container .text-foreground {
+  color: var(--gb-lightest) !important;
+}
+
+.buddy-battle-container .text-muted-foreground {
+  color: var(--gb-light-green) !important;
+}
+
+.buddy-battle-container .text-primary {
+  color: var(--retro-green) !important;
+}
+
+.buddy-battle-container .text-secondary {
+  color: var(--gb-dark-green) !important;
+}
+
+/* Override background colors for common Tailwind classes */
+.buddy-battle-container .bg-background {
+  background-color: var(--gb-dark) !important;
+}
+
+.buddy-battle-container .bg-card {
+  background-color: var(--gb-dark) !important;
+}
+
+.buddy-battle-container .bg-muted {
+  background-color: var(--gb-dark-green) !important;
+}
+
+/* Border overrides */
+.buddy-battle-container .border {
+  border-color: var(--gb-dark-green) !important;
+}
+
+.buddy-battle-container .border-border {
+  border-color: var(--gb-dark-green) !important;
+}
+
+/* Ensure inputs maintain retro styling */
+.buddy-battle-container input,
+.buddy-battle-container textarea,
+.buddy-battle-container select {
+  background-color: var(--gb-dark) !important;
+  color: var(--gb-lightest) !important;
+  border-color: var(--gb-dark-green) !important;
+  font-family: 'Press Start 2P', monospace;
+}
+
+.buddy-battle-container input:focus,
+.buddy-battle-container textarea:focus,
+.buddy-battle-container select:focus {
+  border-color: var(--gb-light-green) !important;
+  outline: none;
+  box-shadow: 0 0 0 2px var(--gb-light-green);
+}
+
+.buddy-battle-container input::placeholder {
+  color: var(--gb-dark-green);
+}
+
+/* =====================================================
+   DIALOG & MODAL STYLES
+   Fixed positioning elements need explicit styling
+   ===================================================== */
+
+/* Dialog overlay/backdrop */
+.buddy-battle-container .fixed {
+  /* Inherit container variables */
+  --gb-dark: #0f380f;
+  --gb-dark-green: #306230;
+  --gb-light-green: #8bac0f;
+  --gb-lightest: #9bbc0f;
+  --retro-black: #1a1c2c;
+  --retro-lime: #a7f070;
+  --retro-green: #38b764;
+  --retro-yellow: #ffcd75;
+}
+
+/* Dialog backdrop */
+.buddy-battle-container .bg-black\/80 {
+  background-color: rgba(15, 56, 15, 0.9) !important;
+  backdrop-filter: blur(4px);
+}
+
+/* Dialog panel styling - ensure solid background */
+.buddy-battle-container .fixed .retro-panel {
+  background-color: #0f380f !important;
+  color: #9bbc0f !important;
+  border: 4px solid #306230 !important;
+  box-shadow: 
+    inset 2px 2px 0 #8bac0f,
+    inset -2px -2px 0 #1a1c2c,
+    8px 8px 0 rgba(0,0,0,0.5),
+    0 0 30px rgba(139, 172, 15, 0.3) !important;
+}
+
+/* Dialog title */
+.buddy-battle-container .fixed .retro-text-lg {
+  color: #a7f070 !important;
+  text-shadow: 2px 2px 0 #1a1c2c;
+}
+
+/* Dialog text */
+.buddy-battle-container .fixed .retro-text {
+  color: #9bbc0f !important;
+}
+
+/* Dialog buttons */
+.buddy-battle-container .fixed .retro-btn {
+  background-color: #306230 !important;
+  color: #9bbc0f !important;
+  border: 3px solid #8bac0f !important;
+}
+
+.buddy-battle-container .fixed .retro-btn:hover {
+  background-color: #8bac0f !important;
+  color: #0f380f !important;
+}
+
+.buddy-battle-container .fixed .retro-btn-primary {
+  background-color: #38b764 !important;
+  border-color: #a7f070 !important;
+}
+
+/* Dialog animation */
+@keyframes dialogSlideIn {
+  from {
+    opacity: 0;
+    transform: scale(0.9) translateY(-20px);
+  }
+  to {
+    opacity: 1;
+    transform: scale(1) translateY(0);
+  }
+}
+
+.buddy-battle-container .fixed .retro-panel {
+  animation: dialogSlideIn 0.2s ease-out;
+}
+
+/* Toast notifications */
+.retro-toast {
+  position: fixed;
+  bottom: 20px;
+  right: 20px;
+  background-color: #0f380f !important;
+  color: #9bbc0f !important;
+  border: 3px solid #306230;
+  padding: 12px 16px;
+  font-family: 'Press Start 2P', monospace;
+  font-size: 10px;
+  z-index: 100;
+  animation: toastSlideIn 0.3s ease-out;
+  box-shadow: 4px 4px 0 rgba(0,0,0,0.5);
+}
+
+@keyframes toastSlideIn {
+  from {
+    opacity: 0;
+    transform: translateX(100%);
+  }
+  to {
+    opacity: 1;
+    transform: translateX(0);
+  }
+}
+
+/* Welcome message styling */
+.buddy-battle-container .text-6xl,
+.buddy-battle-container .text-5xl,
+.buddy-battle-container .text-4xl {
+  text-shadow: 3px 3px 0 #1a1c2c;
+}
