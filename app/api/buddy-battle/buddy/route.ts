@@ -19,6 +19,9 @@ import { getCurrentQuarter, isBossBattleAvailable } from '@/lib/buddy-battle/gam
 
 const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!;
 const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!;
+// Use service role key if available, otherwise fall back to anon key
+const supabaseServiceKey = process.env.SUPABASE_SERVICE_ROLE_KEY || supabaseAnonKey;
+const isAdminKeyAvailable = !!process.env.SUPABASE_SERVICE_ROLE_KEY && process.env.SUPABASE_SERVICE_ROLE_KEY !== supabaseAnonKey;
 
 async function createClient() {
   const cookieStore = await cookies();
@@ -40,9 +43,9 @@ async function createClient() {
   );
 }
 
-// Create admin client for database operations
+// Create admin client for database operations (bypasses RLS)
 function createAdminClient() {
-  return createSupabaseClient(supabaseUrl, supabaseAnonKey, {
+  return createSupabaseClient(supabaseUrl, supabaseServiceKey, {
     auth: { persistSession: false }
   });
 }
@@ -132,16 +135,21 @@ export async function GET(request: NextRequest) {
       return NextResponse.json({ buddy: null, needsSetup: true });
     }
 
-    // Calculate and award any pending points
-    const pointsResult = await calculateAndAwardPoints(member.id, buddy.id, teamId);
+    // Calculate and award any pending points (safe - don't crash if this fails)
+    let pointsResult = { pointsAwarded: 0, breakdown: [] };
+    try {
+      pointsResult = await calculateAndAwardPoints(member.id, buddy.id, teamId);
+    } catch (pointsError) {
+      console.error('[buddy-battle/buddy] Points calculation failed:', pointsError);
+    }
 
-    // Update login streak
+    // Update login streak (safe - returns null if fails)
     const trainerProfile = await updateLoginStreak(buddy.id);
 
-    // Get active quests
+    // Get active quests (safe - returns empty array)
     const activeQuests = await getActiveQuests(buddy.id);
 
-    // Get team buffs
+    // Get team buffs (safe - returns empty array)
     const teamBuffs = await getActiveTeamBuffs(teamId);
 
     // Check boss availability using admin client
@@ -206,8 +214,12 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
-    // Get member for this team using admin client (bypass RLS)
-    const { data: member, error: memberError } = await adminClient
+    // Use authenticated client if admin key is missing, otherwise use admin client
+    // This ensures that if we don't have the service key, we rely on RLS policies for the user
+    const dbClient = isAdminKeyAvailable ? adminClient : supabase;
+
+    // Get member for this team using appropriate client
+    const { data: member, error: memberError } = await dbClient
       .from('members')
       .select('id')
       .eq('team_id', teamId)
@@ -224,8 +236,8 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'Member not found' }, { status: 404 });
     }
 
-    // Check if already has a buddy using admin client
-    const { data: existingBuddy } = await adminClient
+    // Check if already has a buddy using appropriate client
+    const { data: existingBuddy } = await dbClient
       .from('player_buddies')
       .select('id')
       .eq('member_id', member.id)
@@ -239,22 +251,46 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // Buddy type data with UUIDs
+    // Buddy types with LEVEL 1 starting stats (Pokemon-style)
+    // These are the actual stats a buddy has at level 1 with 0 experience
+    // Stats will grow through upgrades purchased with coins
     const BUDDY_TYPES: Record<string, { 
       name: string; 
       uuid: string;
-      base_hp: number; 
-      base_attack: number; 
-      base_defense: number; 
-      base_speed: number;
-      base_special_attack: number;
-      base_special_defense: number;
+      // Level 1 starting stats (low like real Pokemon starters)
+      hp: number; 
+      attack: number; 
+      defense: number; 
+      speed: number;
+      special_attack: number;
+      special_defense: number;
     }> = {
-      blazor: { name: 'Blazor', uuid: '11111111-1111-1111-1111-111111111111', base_hp: 85, base_attack: 95, base_defense: 70, base_speed: 85, base_special_attack: 90, base_special_defense: 65 },
-      aquabit: { name: 'Aquabit', uuid: '22222222-2222-2222-2222-222222222222', base_hp: 100, base_attack: 75, base_defense: 90, base_speed: 70, base_special_attack: 80, base_special_defense: 95 },
-      terrapix: { name: 'Terrapix', uuid: '33333333-3333-3333-3333-333333333333', base_hp: 120, base_attack: 80, base_defense: 100, base_speed: 50, base_special_attack: 60, base_special_defense: 90 },
-      zephyron: { name: 'Zephyron', uuid: '44444444-4444-4444-4444-444444444444', base_hp: 70, base_attack: 85, base_defense: 60, base_speed: 110, base_special_attack: 85, base_special_defense: 55 },
-      voltling: { name: 'Voltling', uuid: '55555555-5555-5555-5555-555555555555', base_hp: 80, base_attack: 90, base_defense: 75, base_speed: 95, base_special_attack: 95, base_special_defense: 70 },
+      // All buddies start weak but balanced - different strengths
+      blazor: { 
+        name: 'Blazor', 
+        uuid: '11111111-1111-1111-1111-111111111111', 
+        hp: 20, attack: 10, defense: 8, speed: 9, special_attack: 10, special_defense: 7 
+      },
+      aquabit: { 
+        name: 'Aquabit', 
+        uuid: '22222222-2222-2222-2222-222222222222', 
+        hp: 22, attack: 8, defense: 10, speed: 8, special_attack: 9, special_defense: 11 
+      },
+      terrapix: { 
+        name: 'Terrapix', 
+        uuid: '33333333-3333-3333-3333-333333333333', 
+        hp: 25, attack: 9, defense: 12, speed: 6, special_attack: 7, special_defense: 10 
+      },
+      zephyron: { 
+        name: 'Zephyron', 
+        uuid: '44444444-4444-4444-4444-444444444444', 
+        hp: 18, attack: 9, defense: 7, speed: 12, special_attack: 9, special_defense: 6 
+      },
+      voltling: { 
+        name: 'Voltling', 
+        uuid: '55555555-5555-5555-5555-555555555555', 
+        hp: 19, attack: 10, defense: 8, speed: 11, special_attack: 11, special_defense: 7 
+      },
     };
 
     const buddyType = BUDDY_TYPES[buddyTypeId];
@@ -262,21 +298,24 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: `Unknown buddy type: ${buddyTypeId}` }, { status: 400 });
     }
 
-    // Create buddy with admin client (bypass RLS)
-    const { data: buddy, error: createError } = await adminClient
+    // Create buddy with appropriate client
+    // Start at level 1 - only use columns that exist in database
+    const { data: buddy, error: createError } = await dbClient
       .from('player_buddies')
       .insert({
         member_id: member.id,
         team_id: teamId,
         buddy_type_id: buddyType.uuid,
         nickname: nickname || null,
-        max_hp: buddyType.base_hp,
-        current_hp: buddyType.base_hp,
-        attack: buddyType.base_attack,
-        defense: buddyType.base_defense,
-        speed: buddyType.base_speed,
-        special_attack: buddyType.base_special_attack,
-        special_defense: buddyType.base_special_defense,
+        level: 1,
+        max_hp: buddyType.hp,
+        current_hp: buddyType.hp,
+        attack: buddyType.attack,
+        defense: buddyType.defense,
+        speed: buddyType.speed,
+        special_attack: buddyType.special_attack,
+        special_defense: buddyType.special_defense,
+        critical_chance: 5,
         color_primary: colors?.primary || '#4CAF50',
         color_secondary: colors?.secondary || '#2196F3',
         color_accent: colors?.accent || '#FFC107',

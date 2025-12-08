@@ -8,10 +8,25 @@
 import React, { useState, useEffect } from 'react';
 import { useParams, useRouter } from 'next/navigation';
 import { useRetroSounds } from '@/hooks/use-retro-sounds';
+import { supabase } from '@/lib/supabase';
 import '@/styles/buddy-battle.css';
 
 import { RetroButton, RetroDialog, RetroTabs, RetroToast, RetroBadge } from './ui/retro-button';
 import type { MysteryBoxResult, BuddyItem, ItemRarity, ItemType } from '@/lib/buddy-battle/types';
+
+// Helper function to get auth headers
+async function getAuthHeaders(): Promise<HeadersInit> {
+  const { data: { session } } = await supabase.auth.getSession();
+  if (session?.access_token) {
+    return {
+      'Authorization': `Bearer ${session.access_token}`,
+      'Content-Type': 'application/json',
+    };
+  }
+  return {
+    'Content-Type': 'application/json',
+  };
+}
 
 // Flattened shop item interface for display (combines ShopItem with nested item fields)
 interface DisplayShopItem {
@@ -57,7 +72,7 @@ interface ShopState {
 export function ShopScreen() {
   const params = useParams();
   const router = useRouter();
-  const teamId = params?.teamId as string;
+  const teamId = params?.slug as string;
   
   const { sounds, initAudio, isInitialized } = useRetroSounds();
   
@@ -72,8 +87,13 @@ export function ShopScreen() {
   // Fetch shop data
   useEffect(() => {
     async function fetchShop() {
+      if (!teamId) return;
       try {
-        const response = await fetch('/api/buddy-battle/shop', { credentials: 'include' });
+        const headers = await getAuthHeaders();
+        const response = await fetch(`/api/buddy-battle/shop?teamId=${teamId}`, { 
+          credentials: 'include',
+          headers,
+        });
         const data = await response.json();
         setShopData(data);
       } catch (error) {
@@ -84,7 +104,7 @@ export function ShopScreen() {
     }
     
     fetchShop();
-  }, []);
+  }, [teamId]);
   
   // Handle item purchase
   const handlePurchase = async (item: DisplayShopItem) => {
@@ -98,9 +118,10 @@ export function ShopScreen() {
     sounds.purchase();
     
     try {
-      const response = await fetch('/api/buddy-battle/shop', {
+      const headers = await getAuthHeaders();
+      const response = await fetch(`/api/buddy-battle/shop?teamId=${teamId}`, {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers,
         credentials: 'include',
         body: JSON.stringify({
           action: 'purchase',
@@ -142,9 +163,10 @@ export function ShopScreen() {
     sounds.purchase();
     
     try {
-      const response = await fetch('/api/buddy-battle/shop', {
+      const headers = await getAuthHeaders();
+      const response = await fetch(`/api/buddy-battle/shop?teamId=${teamId}`, {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers,
         credentials: 'include',
         body: JSON.stringify({
           action: 'mystery_box',

@@ -76,7 +76,7 @@ export default async function AdminPage({ params }: PageProps) {
 // Metadata
 export function generateMetadata() {
   return {
-    title: 'Admin Dashboard | Buddy Battle',
+    title: 'AvPlanner Buddy | Admin Dashboard',
     description: 'Manage and monitor your team\'s Buddy Battle system',
   };
 }

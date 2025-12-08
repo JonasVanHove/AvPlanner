@@ -37,7 +37,7 @@ export default async function AchievementsPage({ params }: PageProps) {
 // Metadata
 export function generateMetadata() {
   return {
-    title: 'Achievements | Buddy Battle',
+    title: 'AvPlanner Buddy | Achievements',
     description: 'View your earned achievements and track your progress!',
   };
 }

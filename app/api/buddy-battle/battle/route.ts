@@ -35,10 +35,13 @@ import {
   ActiveEffect,
   BuddyBattle,
   NPCBoss,
+  BattleBuddyState,
 } from '@/lib/buddy-battle/types';
 
 const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!;
 const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!;
+// Use service role key if available, otherwise fall back to anon key
+const supabaseServiceKey = process.env.SUPABASE_SERVICE_ROLE_KEY || supabaseAnonKey;
 
 async function createClient() {
   const cookieStore = await cookies();
@@ -60,11 +63,11 @@ async function createClient() {
   );
 }
 
-// Create admin client for database operations
+// Create admin client for database operations (bypasses RLS)
 function createAdminClient() {
   return createSupabaseClient(
     supabaseUrl,
-    supabaseAnonKey,
+    supabaseServiceKey,
     { auth: { persistSession: false } }
   );
 }
@@ -286,6 +289,11 @@ async function handleStartBattle(
 
   // Create battle record
   console.log('[handleStartBattle] Creating battle record...');
+  
+  // Get initial HP values
+  const playerInitialHP = buddy.current_hp;
+  const opponentInitialHP = opponent.max_hp;
+  
   const { data: battle, error: battleError } = await supabase
     .from('buddy_battles')
     .insert({
@@ -296,6 +304,13 @@ async function handleStartBattle(
       opponent_npc_name: opponentNpcName,
       battle_log: [],
       quarter_year: battleType === 'boss' ? getCurrentQuarter() : null,
+      // HP tracking columns
+      challenger_hp: playerInitialHP,
+      opponent_hp: opponentInitialHP,
+      current_turn: 0,
+      active_effects: [],
+      player_cooldowns: {},
+      opponent_cooldowns: {},
     })
     .select()
     .single();
@@ -376,27 +391,423 @@ async function handleBattleTurn(
   abilityId?: string,
   itemId?: string
 ) {
-  // Get current battle
-  const { data: battle, error: battleError } = await supabase
-    .from('buddy_battles')
-    .select('*')
-    .eq('id', battleId)
-    .single();
+  try {
+    console.log('[handleBattleTurn] Starting turn:', { battleId, abilityId, buddyId: buddy.id });
+    
+    // Get current battle
+    const { data: battle, error: battleError } = await supabase
+      .from('buddy_battles')
+      .select('*')
+      .eq('id', battleId)
+      .single();
 
-  if (battleError || !battle) {
-    return NextResponse.json({ error: 'Battle not found' }, { status: 404 });
+    if (battleError || !battle) {
+      console.error('[handleBattleTurn] Battle not found:', battleError);
+      return NextResponse.json({ error: 'Battle not found' }, { status: 404 });
+    }
+
+    if (battle.ended_at) {
+      return NextResponse.json({ error: 'Battle already ended' }, { status: 400 });
+    }
+
+    // Get ability used by player - try by ID first, then by name
+    let abilityData = null;
+    
+    // First try to find by ID (UUID)
+    const isUUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(abilityId || '');
+    
+    if (isUUID) {
+      const { data, error } = await supabase
+        .from('buddy_abilities')
+        .select('*')
+        .eq('id', abilityId)
+        .single();
+      
+      if (!error && data) {
+        abilityData = data;
+      }
+    }
+    
+    // If not found by ID, try by name
+    if (!abilityData) {
+      const { data, error } = await supabase
+        .from('buddy_abilities')
+        .select('*')
+        .ilike('name', abilityId || '')
+        .single();
+      
+      if (!error && data) {
+        abilityData = data;
+      }
+    }
+    
+    // If still not found, get the first ability available for this buddy type
+    if (!abilityData) {
+      console.log('[handleBattleTurn] Ability not found, getting default ability for buddy type:', buddy.buddy_type_id);
+      const { data: defaultAbilities } = await supabase
+        .from('buddy_type_abilities')
+        .select('ability:buddy_abilities(*)')
+        .eq('buddy_type_id', buddy.buddy_type_id)
+        .lte('unlock_level', buddy.level)
+        .limit(1);
+      
+      if (defaultAbilities && defaultAbilities.length > 0) {
+        abilityData = defaultAbilities[0].ability;
+      }
+    }
+
+    if (!abilityData) {
+      console.error('[handleBattleTurn] No ability found');
+      return NextResponse.json({ error: 'Ability not found', details: { abilityId } }, { status: 404 });
+    }
+    
+    console.log('[handleBattleTurn] Using ability:', abilityData.name);
+
+    // Reconstruct battle state from battle record and buddy
+    const playerState: BattleBuddyState = {
+      buddy_id: buddy.id,
+      name: buddy.nickname || buddy.buddy_type?.name || 'Buddy',
+      is_npc: false,
+      current_hp: battle.challenger_hp ?? buddy.current_hp ?? buddy.max_hp,
+      max_hp: buddy.max_hp,
+      attack: buddy.attack,
+      defense: buddy.defense,
+      speed: buddy.speed,
+      special_attack: buddy.special_attack,
+      special_defense: buddy.special_defense,
+      critical_chance: buddy.critical_chance,
+      element: buddy.buddy_type?.element || 'productivity',
+      ability_cooldowns: battle.player_cooldowns || {},
+    };
+
+    // Get opponent state (NPC or PvP)
+    let opponentState: BattleBuddyState;
+    let opponentAbilities: BuddyAbility[];
+    
+    if (battle.opponent_npc_name) {
+      // NPC battle - get boss data
+      const boss: NPCBoss = battle.opponent_npc_name === 'Nikita' ? getTutorialBoss() : getQuarterlyBoss();
+      opponentState = {
+        buddy_id: 'npc',
+        name: boss.name,
+        is_npc: true,
+        current_hp: battle.opponent_hp ?? boss.hp,
+        max_hp: boss.hp,
+        attack: boss.attack,
+        defense: boss.defense,
+        speed: boss.speed,
+        special_attack: boss.special_attack,
+        special_defense: boss.special_defense,
+        critical_chance: boss.critical_chance,
+        element: boss.element,
+        ability_cooldowns: battle.opponent_cooldowns || {},
+      };
+      
+      // Boss abilities are stored as names, create simple ability objects
+      // Scale damage based on boss level (Pokemon-style)
+      const baseDamageForLevel = (level: number, isBasicAttack: boolean) => {
+        // Basic attacks like Tackle start at 10, scale +3 per level
+        // Special attacks start at 15, scale +4 per level
+        if (isBasicAttack) {
+          return 10 + Math.floor((level - 1) * 3);
+        }
+        return 15 + Math.floor((level - 1) * 4);
+      };
+      
+      opponentAbilities = boss.abilities.map((abilityName: string) => {
+        const isBasicAttack = abilityName === 'Tackle' || abilityName === 'Sand Attack';
+        return {
+          id: `npc-${abilityName.toLowerCase().replace(/\s+/g, '-')}`,
+          name: abilityName,
+          description: `${boss.name}'s ${abilityName} attack`,
+          element: boss.element,
+          damage_base: baseDamageForLevel(boss.level, isBasicAttack),
+          accuracy: isBasicAttack ? 100 : 85,
+          effect_type: 'damage' as const,
+          cooldown: isBasicAttack ? 0 : 1,
+          unlock_level: 1,
+        };
+      });
+    } else if (battle.opponent_buddy_id) {
+      // PvP battle - get opponent buddy
+      const { data: opponentBuddy, error: oppError } = await supabase
+        .from('player_buddies')
+        .select('*, buddy_type:buddy_types(*)')
+        .eq('id', battle.opponent_buddy_id)
+        .single();
+      
+      if (oppError || !opponentBuddy) {
+        return NextResponse.json({ error: 'Opponent not found' }, { status: 404 });
+      }
+      
+      opponentState = {
+        buddy_id: opponentBuddy.id,
+        name: opponentBuddy.nickname || opponentBuddy.buddy_type?.name || 'Opponent',
+        is_npc: false,
+        current_hp: battle.opponent_hp ?? opponentBuddy.current_hp,
+        max_hp: opponentBuddy.max_hp,
+        attack: opponentBuddy.attack,
+        defense: opponentBuddy.defense,
+        speed: opponentBuddy.speed,
+        special_attack: opponentBuddy.special_attack,
+        special_defense: opponentBuddy.special_defense,
+        critical_chance: opponentBuddy.critical_chance,
+        element: opponentBuddy.buddy_type?.element || 'productivity',
+        ability_cooldowns: battle.opponent_cooldowns || {},
+      };
+      
+      // Get opponent abilities
+      const { data: oppAbilities } = await supabase
+        .from('buddy_type_abilities')
+        .select('ability:buddy_abilities(*)')
+        .eq('buddy_type_id', opponentBuddy.buddy_type_id)
+        .lte('unlock_level', opponentBuddy.level);
+      
+      opponentAbilities = oppAbilities?.map((a: any) => a.ability) || [];
+    } else {
+      return NextResponse.json({ error: 'Invalid battle state' }, { status: 400 });
+    }
+    
+    console.log('[handleBattleTurn] Player HP:', playerState.current_hp, '/', playerState.max_hp);
+    console.log('[handleBattleTurn] Opponent HP:', opponentState.current_hp, '/', opponentState.max_hp);
+
+    const activeEffects: ActiveEffect[] = battle.active_effects || [];
+    let battleLog = battle.battle_log || [];
+    const currentTurn = (battle.current_turn || 0) + 1;
+    let message = '';
+    let playerDamage = 0;
+    let playerIsCritical = false;
+    let opponentDamage = 0;
+    let opponentIsCritical = false;
+
+  // === PLAYER'S TURN ===
+  // Check accuracy
+  if (checkAccuracy(abilityData.accuracy)) {
+    // Calculate damage
+    const damageResult = calculateDamage(
+      playerState,
+      opponentState,
+      abilityData,
+      buddy.level,
+      activeEffects
+    );
+    
+    playerDamage = damageResult.damage;
+    playerIsCritical = damageResult.isCritical;
+    opponentState.current_hp = Math.max(0, opponentState.current_hp - playerDamage);
+    
+    const critText = playerIsCritical ? ' Critical hit!' : '';
+    const effectivenessText = damageResult.effectiveness > 1 ? " It's super effective!" : 
+                              damageResult.effectiveness < 1 ? " It's not very effective..." : '';
+    message = `${playerState.name} used ${abilityData.name}! Dealt ${playerDamage} damage.${critText}${effectivenessText}`;
+    
+    battleLog.push({
+      turn: currentTurn,
+      actor: 'player',
+      action: 'ability',
+      ability_name: abilityData.name,
+      damage: playerDamage,
+      is_critical: playerIsCritical,
+    });
+  } else {
+    message = `${playerState.name} used ${abilityData.name}, but it missed!`;
+    battleLog.push({
+      turn: currentTurn,
+      actor: 'player',
+      action: 'ability',
+      ability_name: abilityData.name,
+      missed: true,
+    });
   }
 
-  if (battle.ended_at) {
-    return NextResponse.json({ error: 'Battle already ended' }, { status: 400 });
+  // Check if opponent is defeated
+  let isFinished = false;
+  let winner: 'player' | 'opponent' | null = null;
+  
+  if (opponentState.current_hp <= 0) {
+    isFinished = true;
+    winner = 'player';
+    message += ` ${opponentState.name} fainted! You win!`;
+  } else {
+    // === OPPONENT'S TURN ===
+    const opponentAbility = chooseNPCAbility(opponentState, playerState, opponentAbilities, activeEffects);
+    
+    if (checkAccuracy(opponentAbility.accuracy)) {
+      const oppDamageResult = calculateDamage(
+        opponentState,
+        playerState,
+        opponentAbility,
+        battle.opponent_npc_name ? (battle.opponent_npc_name === 'Nikita' ? 5 : 50) : 10,
+        activeEffects
+      );
+      
+      opponentDamage = oppDamageResult.damage;
+      opponentIsCritical = oppDamageResult.isCritical;
+      playerState.current_hp = Math.max(0, playerState.current_hp - opponentDamage);
+      
+      const oppCritText = opponentIsCritical ? ' Critical hit!' : '';
+      message += ` ${opponentState.name} used ${opponentAbility.name}! Dealt ${opponentDamage} damage.${oppCritText}`;
+      
+      battleLog.push({
+        turn: currentTurn,
+        actor: 'opponent',
+        action: 'ability',
+        ability_name: opponentAbility.name,
+        damage: opponentDamage,
+        is_critical: opponentIsCritical,
+      });
+    } else {
+      message += ` ${opponentState.name} used ${opponentAbility.name}, but it missed!`;
+      battleLog.push({
+        turn: currentTurn,
+        actor: 'opponent',
+        action: 'ability',
+        ability_name: opponentAbility.name,
+        missed: true,
+      });
+    }
+    
+    // Check if player is defeated
+    if (playerState.current_hp <= 0) {
+      isFinished = true;
+      winner = 'opponent';
+      message += ` ${playerState.name} fainted! You lose!`;
+    }
   }
-
-  // This would be a full turn implementation
-  // For brevity, returning a simplified response
-  return NextResponse.json({
-    message: 'Turn processed',
-    battle_id: battleId,
+  
+  console.log('[handleBattleTurn] Turn result:', { 
+    playerDamage, 
+    opponentDamage, 
+    playerHP: playerState.current_hp, 
+    opponentHP: opponentState.current_hp,
+    isFinished,
+    winner 
   });
+
+  // Update battle record with HP tracking
+  const updateData: any = {
+    battle_log: battleLog,
+    challenger_hp: playerState.current_hp,
+    opponent_hp: opponentState.current_hp,
+    current_turn: currentTurn,
+    player_cooldowns: playerState.ability_cooldowns || {},
+    opponent_cooldowns: opponentState.ability_cooldowns || {},
+    active_effects: activeEffects,
+  };
+  
+  if (isFinished) {
+    updateData.ended_at = new Date().toISOString();
+    updateData.winner_is_npc = winner === 'opponent';
+    
+    // Handle battle end rewards/penalties
+    if (winner === 'player') {
+      const isBoss = !!battle.opponent_npc_name;
+      const isTutorial = battle.battle_type === 'tutorial';
+      // Tutorial boss is level 1, Quarterly boss is level 50, PvP opponents default to 10
+      const opponentLevel = battle.opponent_npc_name === 'Nikita' ? 1 : (battle.opponent_npc_name ? 50 : 10);
+      const xpGained = calculateBattleXP(opponentLevel, buddy.level, true, isBoss, isTutorial);
+      const anxietyChange = calculateAnxietyChange(true, isBoss, buddy.anxiety_level);
+      
+      // Update buddy stats
+      await supabase
+        .from('player_buddies')
+        .update({
+          total_xp: buddy.total_xp + xpGained,
+          current_hp: playerState.current_hp,
+          anxiety_level: Math.max(0, buddy.anxiety_level + anxietyChange),
+        })
+        .eq('id', buddy.id);
+      
+      // Mark tutorial as completed if applicable
+      if (battle.battle_type === 'tutorial') {
+        await supabase
+          .from('buddy_trainer_profiles')
+          .update({ tutorial_completed: true })
+          .eq('player_buddy_id', buddy.id);
+      }
+      
+      // Log activity
+      await logActivity(buddy.id, buddy.team_id, 'battle_won', {
+        battle_type: battle.battle_type,
+        opponent: battle.opponent_npc_name || battle.opponent_buddy_id,
+        xp_gained: xpGained,
+      });
+    } else {
+      // Loss - update HP and anxiety
+      const anxietyChange = calculateAnxietyChange(false, !!battle.opponent_npc_name, buddy.anxiety_level);
+      
+      await supabase
+        .from('player_buddies')
+        .update({
+          current_hp: Math.max(1, Math.floor(buddy.max_hp * 0.1)), // Restore to 10% HP
+          anxiety_level: Math.min(100, buddy.anxiety_level + anxietyChange),
+        })
+        .eq('id', buddy.id);
+      
+      await logActivity(buddy.id, buddy.team_id, 'battle_lost', {
+        battle_type: battle.battle_type,
+        opponent: battle.opponent_npc_name || battle.opponent_buddy_id,
+      });
+    }
+  } else {
+    // Just update buddy's current HP
+    await supabase
+      .from('player_buddies')
+      .update({ current_hp: playerState.current_hp })
+      .eq('id', buddy.id);
+  }
+  
+  // Save battle update
+  const { error: updateError } = await supabase
+    .from('buddy_battles')
+    .update(updateData)
+    .eq('id', battleId);
+  
+  if (updateError) {
+    console.error('[handleBattleTurn] Update error:', updateError);
+    return NextResponse.json({ error: 'Failed to update battle' }, { status: 500 });
+  }
+
+  // Get player abilities for response
+  const { data: abilities } = await supabase
+    .from('buddy_type_abilities')
+    .select('ability:buddy_abilities(*)')
+    .eq('buddy_type_id', buddy.buddy_type_id)
+    .lte('unlock_level', buddy.level);
+
+  const playerAbilities = abilities?.map((a: any) => a.ability) || [];
+
+  // Return updated battle state
+  const battleState: BattleState = {
+    battle_id: battleId,
+    current_turn: currentTurn,
+    player_buddy: playerState,
+    opponent: opponentState,
+    is_player_turn: true, // Always player's turn after processing
+    active_effects: activeEffects,
+    available_abilities: playerAbilities,
+    available_items: [],
+    battle_log: battleLog,
+    is_finished: isFinished,
+    winner: winner,
+  };
+
+  return NextResponse.json({
+    battle_state: battleState,
+    message,
+    damage: playerDamage,
+    is_critical: playerIsCritical,
+    opponent_damage: opponentDamage,
+    opponent_is_critical: opponentIsCritical,
+  });
+  
+  } catch (error) {
+    console.error('[handleBattleTurn] Unexpected error:', error);
+    return NextResponse.json({ 
+      error: 'Battle turn failed', 
+      details: error instanceof Error ? error.message : 'Unknown error' 
+    }, { status: 500 });
+  }
 }
 
 async function handleFleeBattle(supabase: any, battleId: string, buddyId: string) {

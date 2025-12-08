@@ -37,7 +37,7 @@ export default async function LeaderboardPage({ params }: PageProps) {
 // Metadata
 export function generateMetadata() {
   return {
-    title: 'Leaderboard | Buddy Battle',
+    title: 'AvPlanner Buddy | Leaderboard',
     description: 'See the top trainers in your team!',
   };
 }

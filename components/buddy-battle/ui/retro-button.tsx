@@ -59,43 +59,56 @@ export function RetroDialog({
 }: RetroDialogProps) {
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
-      {/* Backdrop with retro green tint */}
+      {/* Backdrop - Habbo style darker overlay */}
       <div 
         className="absolute inset-0"
         style={{ 
-          backgroundColor: 'rgba(15, 56, 15, 0.92)',
+          backgroundColor: 'rgba(26, 26, 46, 0.92)',
           backdropFilter: 'blur(4px)'
         }}
         onClick={onClose}
       />
       
-      {/* Dialog with explicit retro styling */}
+      {/* Dialog - Habbo Hotel panel style */}
       <div 
         className="relative z-10 max-w-md w-full"
         style={{
-          backgroundColor: '#0f380f',
-          border: '4px solid #306230',
+          background: 'linear-gradient(180deg, #4a5568 0%, #3d4852 5%, #3d4852 95%, #2d3436 100%)',
+          border: '3px solid #5a6672',
+          borderRadius: '12px',
           boxShadow: `
-            inset 2px 2px 0 #8bac0f,
-            inset -2px -2px 0 #1a1c2c,
-            8px 8px 0 rgba(0,0,0,0.5),
-            0 0 30px rgba(139, 172, 15, 0.3)
+            inset 0 1px 0 rgba(255, 255, 255, 0.1),
+            0 6px 0 #1a1a2e,
+            0 10px 20px rgba(0,0,0,0.4)
           `,
-          padding: '16px',
+          padding: '20px',
           fontFamily: "'Press Start 2P', monospace",
           animation: 'dialogSlideIn 0.2s ease-out'
         }}
       >
-        {/* Header */}
+        {/* Top highlight line */}
         <div 
-          className="flex justify-between items-center mb-4 pb-2"
-          style={{ borderBottom: '2px solid #306230' }}
+          style={{
+            position: 'absolute',
+            top: 0,
+            left: 15,
+            right: 15,
+            height: '3px',
+            background: 'linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.2), transparent)',
+            borderRadius: '12px 12px 0 0'
+          }}
+        />
+        
+        {/* Header - Habbo style */}
+        <div 
+          className="flex justify-between items-center mb-4 pb-3"
+          style={{ borderBottom: '2px solid rgba(90, 102, 114, 0.5)' }}
         >
           <h2 
             style={{ 
-              color: '#a7f070',
-              fontSize: '14px',
-              textShadow: '2px 2px 0 #1a1c2c',
+              color: '#fdcb6e',
+              fontSize: '12px',
+              textShadow: '1px 1px 0 #1a1a2e, 0 0 10px rgba(253, 203, 110, 0.3)',
               fontFamily: "'Press Start 2P', monospace"
             }}
           >
@@ -103,13 +116,20 @@ export function RetroDialog({
           </h2>
           {showClose && onClose && (
             <button 
-              className="retro-btn text-xs px-2 py-1"
               style={{
-                backgroundColor: '#306230',
-                color: '#9bbc0f',
-                border: '2px solid #8bac0f',
+                background: 'linear-gradient(180deg, #d63031 0%, #c0392b 50%, #a93226 100%)',
+                color: '#ffffff',
+                border: '2px solid #ff7675',
+                borderRadius: '50%',
+                width: '28px',
+                height: '28px',
                 fontFamily: "'Press Start 2P', monospace",
-                cursor: 'pointer'
+                fontSize: '10px',
+                cursor: 'pointer',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                boxShadow: '0 2px 0 #8e2420, inset 0 1px 0 rgba(255,255,255,0.3)'
               }}
               onClick={onClose}
             >
@@ -118,8 +138,8 @@ export function RetroDialog({
           )}
         </div>
         
-        {/* Content with retro text color */}
-        <div style={{ color: '#9bbc0f' }}>
+        {/* Content - Habbo text color */}
+        <div style={{ color: '#dfe6e9' }}>
           {children}
         </div>
       </div>
@@ -203,6 +223,7 @@ interface RetroProgressProps {
   label?: string;
   variant?: 'hp' | 'xp' | 'default';
   showText?: boolean;
+  animate?: boolean;
 }
 
 export function RetroProgress({ 
@@ -210,9 +231,10 @@ export function RetroProgress({
   max, 
   label,
   variant = 'default',
-  showText = true 
+  showText = true,
+  animate = false
 }: RetroProgressProps) {
-  const percentage = Math.min(100, (value / max) * 100);
+  const percentage = Math.min(100, Math.max(0, (value / max) * 100));
   
   const containerClass = variant === 'xp' ? 'xp-bar-container' : 'hp-bar-container';
   const barClass = variant === 'xp' ? 'xp-bar' : 'hp-bar';
@@ -226,19 +248,38 @@ export function RetroProgress({
   
   return (
     <div>
-      {(label || showText) && (
+      {label && (
         <div className="flex justify-between items-center mb-1">
-          {label && <span className="retro-text text-xs">{label}</span>}
-          {showText && (
-            <span className="retro-text text-xs">{value}/{max}</span>
-          )}
+          <span className="retro-text text-xs">{label}</span>
         </div>
       )}
-      <div className={containerClass}>
+      <div className={`${containerClass} relative`}>
         <div 
-          className={`${barClass} ${hpStatus}`}
-          style={{ width: `${percentage}%` }}
+          className={`${barClass} ${hpStatus} ${animate ? 'hp-animate' : ''}`}
+          style={{ 
+            width: `${percentage}%`,
+            transition: animate ? 'width 0.5s ease-out' : 'none'
+          }}
         />
+        {/* HP numbers inside bar */}
+        {showText && variant === 'hp' && (
+          <div className="absolute inset-0 flex items-center justify-center">
+            <span 
+              className="retro-text text-xs font-bold"
+              style={{ 
+                color: '#fff', 
+                textShadow: '1px 1px 0 #000, -1px -1px 0 #000, 1px -1px 0 #000, -1px 1px 0 #000',
+                fontSize: '10px'
+              }}
+            >
+              {Math.floor(value)} / {max}
+            </span>
+          </div>
+        )}
+        {/* XP numbers to the right */}
+        {showText && variant !== 'hp' && (
+          <span className="ml-2 retro-text text-xs">{Math.floor(value)}/{max}</span>
+        )}
       </div>
     </div>
   );

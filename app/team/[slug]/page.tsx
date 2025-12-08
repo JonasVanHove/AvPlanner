@@ -107,19 +107,22 @@ export default function TeamPage({ params }: TeamPageProps) {
   const fetchTeamData = async () => {
     try {
       // First try to fetch team by invite_code, then by slug (friendly URL)
+      // Use maybeSingle() to avoid PostgREST returning 406 for the object Accept header
+      // (some PostgREST setups reject the object Accept header used by .single()).
       let { data: teamData, error: teamError } = await supabase
         .from("teams")
         .select("id,name,slug,invite_code,is_password_protected,password_hash")
         .eq("invite_code", resolvedParams.slug)
-        .single()
+        .maybeSingle()
 
       // If not found by invite_code, try by slug (friendly URL)
-      if (teamError && teamError.code === 'PGRST116') {
+      // With maybeSingle(), no match returns null data without error, so check both conditions
+      if (!teamData && !teamError) {
         const { data: teamBySlug, error: slugError } = await supabase
           .from("teams")
           .select("id,name,slug,invite_code,is_password_protected,password_hash")
           .eq("slug", resolvedParams.slug)
-          .single()
+          .maybeSingle()
 
         teamData = teamBySlug
         teamError = slugError

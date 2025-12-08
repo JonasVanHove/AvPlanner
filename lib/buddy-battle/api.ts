@@ -389,7 +389,7 @@ export async function getTrainerProfile(buddyId: string): Promise<TrainerProfile
 /**
  * Update login streak
  */
-export async function updateLoginStreak(buddyId: string): Promise<TrainerProfile> {
+export async function updateLoginStreak(buddyId: string): Promise<TrainerProfile | null> {
   const supabase = createClient();
   
   const { data: profile, error: fetchError } = await supabase
@@ -398,7 +398,33 @@ export async function updateLoginStreak(buddyId: string): Promise<TrainerProfile
     .eq('player_buddy_id', buddyId)
     .single();
   
-  if (fetchError) throw fetchError;
+  // If no profile exists, create one
+  if (fetchError && fetchError.code === 'PGRST116') {
+    const today = new Date().toISOString().split('T')[0];
+    const { data: newProfile, error: createError } = await supabase
+      .from('buddy_trainer_profiles')
+      .insert({
+        player_buddy_id: buddyId,
+        trainer_title: 'Rookie Trainer',
+        tutorial_completed: false,
+        current_login_streak: 1,
+        longest_login_streak: 1,
+        last_login_date: today,
+      })
+      .select()
+      .single();
+    
+    if (createError) {
+      console.error('Failed to create trainer profile:', createError);
+      return null;
+    }
+    return newProfile;
+  }
+  
+  if (fetchError) {
+    console.error('Failed to fetch trainer profile:', fetchError);
+    return null;
+  }
   
   const today = new Date().toISOString().split('T')[0];
   const lastLogin = profile.last_login_date;
@@ -432,7 +458,10 @@ export async function updateLoginStreak(buddyId: string): Promise<TrainerProfile
     .select()
     .single();
   
-  if (error) throw error;
+  if (error) {
+    console.error('Failed to update login streak:', error);
+    return profile; // Return existing profile if update fails
+  }
   
   // Log activity
   const { data: buddy } = await supabase
@@ -616,7 +645,10 @@ export async function getActiveQuests(buddyId: string): Promise<QuestProgress[]>
     .eq('player_buddy_id', buddyId)
     .eq('is_claimed', false);
   
-  if (error) throw error;
+  if (error) {
+    console.error('Failed to get active quests:', error);
+    return [];
+  }
   return data || [];
 }
 
@@ -889,7 +921,10 @@ export async function getActiveTeamBuffs(teamId: string): Promise<TeamBuff[]> {
     .lte('active_from', now)
     .gte('active_until', now);
   
-  if (error) throw error;
+  if (error) {
+    console.error('Failed to get team buffs:', error);
+    return [];
+  }
   return data || [];
 }
 

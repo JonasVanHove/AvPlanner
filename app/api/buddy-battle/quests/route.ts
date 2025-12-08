@@ -42,6 +42,13 @@ function getPeriodIdentifiers() {
 
 export async function GET(request: NextRequest) {
   try {
+    const { searchParams } = new URL(request.url);
+    const teamId = searchParams.get('teamId');
+    
+    if (!teamId) {
+      return NextResponse.json({ error: 'Team ID required' }, { status: 400 });
+    }
+    
     const supabase = await getSupabaseClient();
     
     // Get current user
@@ -50,11 +57,23 @@ export async function GET(request: NextRequest) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
     
+    // Get player's member for this team
+    const { data: member } = await supabase
+      .from('members')
+      .select('id')
+      .eq('auth_user_id', user.id)
+      .eq('team_id', teamId)
+      .single();
+    
+    if (!member) {
+      return NextResponse.json({ error: 'Member not found' }, { status: 404 });
+    }
+    
     // Get player's buddy
     const { data: buddy, error: buddyError } = await supabase
       .from('player_buddies')
       .select('id')
-      .eq('user_id', user.id)
+      .eq('member_id', member.id)
       .single();
     
     if (buddyError || !buddy) {
@@ -130,6 +149,13 @@ export async function GET(request: NextRequest) {
 
 export async function POST(request: NextRequest) {
   try {
+    const { searchParams } = new URL(request.url);
+    const teamId = searchParams.get('teamId');
+    
+    if (!teamId) {
+      return NextResponse.json({ error: 'Team ID required' }, { status: 400 });
+    }
+    
     const supabase = await getSupabaseClient();
     
     // Get current user
@@ -141,11 +167,23 @@ export async function POST(request: NextRequest) {
     const body = await request.json();
     const { action, questId } = body;
     
+    // Get player's member for this team
+    const { data: member } = await supabase
+      .from('members')
+      .select('id')
+      .eq('auth_user_id', user.id)
+      .eq('team_id', teamId)
+      .single();
+    
+    if (!member) {
+      return NextResponse.json({ error: 'Member not found' }, { status: 404 });
+    }
+    
     // Get player's buddy
     const { data: buddy, error: buddyError } = await supabase
       .from('player_buddies')
       .select('*')
-      .eq('user_id', user.id)
+      .eq('member_id', member.id)
       .single();
     
     if (buddyError || !buddy) {

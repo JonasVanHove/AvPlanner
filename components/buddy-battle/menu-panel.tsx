@@ -8,7 +8,7 @@
 import React from 'react';
 import { useRouter } from 'next/navigation';
 import { useRetroSounds } from '@/hooks/use-retro-sounds';
-import { isBossBattleAvailable, getCurrentQuarter } from '@/lib/buddy-battle/game-logic';
+import { isBossBattleAvailable, getCurrentQuarter, getBossBattleCountdown } from '@/lib/buddy-battle/game-logic';
 
 interface MenuPanelProps {
   teamId: string;
@@ -16,6 +16,8 @@ interface MenuPanelProps {
   canDoBoss?: boolean;
   bossAttempts?: number;
   maxBossAttempts?: number;
+  currentHp?: number;
+  maxHp?: number;
 }
 
 export function MenuPanel({ 
@@ -23,7 +25,9 @@ export function MenuPanel({
   canDoTutorial = false,
   canDoBoss = false,
   bossAttempts = 0,
-  maxBossAttempts = 2
+  maxBossAttempts = 2,
+  currentHp = 100,
+  maxHp = 100
 }: MenuPanelProps) {
   const router = useRouter();
   const { sounds } = useRetroSounds();
@@ -34,6 +38,8 @@ export function MenuPanel({
   };
   
   const bossAvailable = isBossBattleAvailable();
+  const bossCountdown = getBossBattleCountdown();
+  const needsHealing = currentHp < maxHp;
   
   return (
     <div className="retro-panel mt-4">
@@ -63,8 +69,17 @@ export function MenuPanel({
           label="Boss"
           onClick={() => navigate(`/team/${teamId}/buddy/battle?type=boss`)}
           disabled={!bossAvailable || !canDoBoss}
-          badge={bossAvailable ? `${bossAttempts}/${maxBossAttempts}` : 'Soon'}
-          variant={canDoBoss ? 'danger' : undefined}
+          badge={bossAvailable ? `${bossAttempts}/${maxBossAttempts}` : bossCountdown}
+          variant={canDoBoss && bossAvailable ? 'danger' : undefined}
+        />
+        
+        {/* Heal Center - NEW! */}
+        <MenuButton
+          icon="🏥"
+          label="Heal"
+          onClick={() => navigate(`/team/${teamId}/buddy/heal`)}
+          variant={needsHealing ? 'special' : undefined}
+          badge={needsHealing ? 'Need HP!' : undefined}
         />
         
         {/* Shop */}
@@ -95,12 +110,40 @@ export function MenuPanel({
           onClick={() => navigate(`/team/${teamId}/buddy/upgrade`)}
         />
         
-        {/* Team */}
+        {/* Team Overview */}
         <MenuButton
           icon="👥"
           label="Team"
           onClick={() => navigate(`/team/${teamId}/buddy/team`)}
         />
+        
+        {/* Achievements */}
+        <MenuButton
+          icon="🎖️"
+          label="Badges"
+          onClick={() => navigate(`/team/${teamId}/buddy/achievements`)}
+        />
+        
+        {/* Settings */}
+        <MenuButton
+          icon="⚙️"
+          label="Settings"
+          onClick={() => navigate(`/team/${teamId}/buddy/settings`)}
+        />
+      </div>
+      
+      {/* Back to AvPlanner button */}
+      <div className="border-t-2 border-gb-dark-green mt-4 pt-4">
+        <button
+          className="retro-btn w-full flex items-center justify-center gap-2 py-3 bg-gradient-to-r from-retro-red to-retro-orange hover:from-retro-orange hover:to-retro-red"
+          onClick={() => {
+            sounds.confirm();
+            router.push(`/team/${teamId}`);
+          }}
+        >
+          <span className="text-lg">🚪</span>
+          <span className="retro-text">Terug naar AvPlanner</span>
+        </button>
       </div>
       
       {/* Quarter info */}

@@ -5,26 +5,39 @@
 // =====================================================
 
 import { NextRequest, NextResponse } from 'next/server';
-import { createClient } from '@supabase/supabase-js';
+import { createServerClient } from '@supabase/ssr';
 import { cookies } from 'next/headers';
 
-const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!;
-const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!;
-
-async function getSupabaseClient() {
+async function createClient() {
   const cookieStore = await cookies();
-  return createClient(supabaseUrl, supabaseAnonKey, {
-    global: {
-      headers: {
-        cookie: cookieStore.toString(),
+  return createServerClient(
+    process.env.NEXT_PUBLIC_SUPABASE_URL!,
+    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
+    {
+      cookies: {
+        getAll() {
+          return cookieStore.getAll();
+        },
+        setAll(cookiesToSet) {
+          cookiesToSet.forEach(({ name, value, options }) =>
+            cookieStore.set(name, value, options)
+          );
+        },
       },
-    },
-  });
+    }
+  );
 }
 
 export async function GET(request: NextRequest) {
   try {
-    const supabase = await getSupabaseClient();
+    const { searchParams } = new URL(request.url);
+    const teamId = searchParams.get('teamId');
+    
+    if (!teamId) {
+      return NextResponse.json({ error: 'Team ID required' }, { status: 400 });
+    }
+    
+    const supabase = await createClient();
     
     // Get current user
     const { data: { user }, error: authError } = await supabase.auth.getUser();
@@ -32,15 +45,32 @@ export async function GET(request: NextRequest) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
     
+    // Get player's member record for this specific team
+    const { data: member } = await supabase
+      .from('members')
+      .select('id')
+      .eq('auth_user_id', user.id)
+      .eq('team_id', teamId)
+      .single();
+    
+    if (!member) {
+      return NextResponse.json({ error: 'Member not found' }, { status: 404 });
+    }
+    
     // Get player's buddy
     const { data: buddy, error: buddyError } = await supabase
       .from('player_buddies')
       .select('id')
-      .eq('user_id', user.id)
+      .eq('member_id', member.id)
       .single();
     
     if (buddyError || !buddy) {
-      return NextResponse.json({ error: 'No buddy found' }, { status: 404 });
+      return NextResponse.json({ 
+        achievements: [], 
+        grouped: { battle: [], level: [], streak: [], collector: [], team: [], special: [] },
+        total: 0,
+        earned: 0 
+      });
     }
     
     // Fetch all achievements
@@ -58,7 +88,7 @@ export async function GET(request: NextRequest) {
     const { data: earnedAchievements, error: earnedError } = await supabase
       .from('buddy_player_achievements')
       .select('achievement_id, earned_at')
-      .eq('player_buddy_id', buddy.id);
+      .eq('buddy_id', buddy.id);
     
     if (earnedError) {
       console.error('Error fetching earned achievements:', earnedError);
@@ -110,7 +140,14 @@ export async function GET(request: NextRequest) {
 
 export async function POST(request: NextRequest) {
   try {
-    const supabase = await getSupabaseClient();
+    const { searchParams } = new URL(request.url);
+    const teamId = searchParams.get('teamId');
+    
+    if (!teamId) {
+      return NextResponse.json({ error: 'Team ID required' }, { status: 400 });
+    }
+    
+    const supabase = await createClient();
     
     // Get current user
     const { data: { user }, error: authError } = await supabase.auth.getUser();
@@ -121,23 +158,28 @@ export async function POST(request: NextRequest) {
     const body = await request.json();
     const { action } = body;
     
+    // Get player's member record for this specific team
+    const { data: member } = await supabase
+      .from('members')
+      .select('id')
+      .eq('auth_user_id', user.id)
+      .eq('team_id', teamId)
+      .single();
+    
+    if (!member) {
+      return NextResponse.json({ error: 'Member not found' }, { status: 404 });
+    }
+    
     // Get player's buddy with stats
     const { data: buddy, error: buddyError } = await supabase
       .from('player_buddies')
       .select('*')
-      .eq('user_id', user.id)
+      .eq('member_id', member.id)
       .single();
     
     if (buddyError || !buddy) {
       return NextResponse.json({ error: 'No buddy found' }, { status: 404 });
     }
-    
-    // Get trainer profile
-    const { data: profile } = await supabase
-      .from('buddy_trainer_profiles')
-      .select('*')
-      .eq('player_buddy_id', buddy.id)
-      .single();
     
     switch (action) {
       case 'check_all': {
@@ -152,7 +194,7 @@ export async function POST(request: NextRequest) {
         const { data: earned } = await supabase
           .from('buddy_player_achievements')
           .select('achievement_id')
-          .eq('player_buddy_id', buddy.id);
+          .eq('buddy_id', buddy.id);
         
         const earnedIds = new Set(earned?.map(e => e.achievement_id) || []);
         
@@ -163,27 +205,27 @@ export async function POST(request: NextRequest) {
           
           switch (ach.achievement_type) {
             case 'first_battle':
-              shouldAward = (profile?.total_battles || 0) >= ach.requirement_value;
+              shouldAward = (buddy.battles_fought || 0) >= ach.requirement_value;
               break;
             case 'boss_slayer':
-              shouldAward = (profile?.bosses_defeated || 0) >= ach.requirement_value;
+              shouldAward = (buddy.boss_wins || 0) >= ach.requirement_value;
               break;
             case 'level_milestone':
               shouldAward = (buddy.level || 1) >= ach.requirement_value;
               break;
             case 'win_streak':
-              shouldAward = (profile?.longest_login_streak || 0) >= ach.requirement_value;
+              shouldAward = (buddy.win_streak || 0) >= ach.requirement_value;
               break;
             case 'collector':
               // Count unique items
               const { count } = await supabase
-                .from('buddy_player_inventory')
+                .from('buddy_inventory')
                 .select('*', { count: 'exact', head: true })
-                .eq('player_buddy_id', buddy.id);
+                .eq('buddy_id', buddy.id);
               shouldAward = (count || 0) >= ach.requirement_value;
               break;
             case 'legend':
-              shouldAward = (profile?.battles_won || 0) >= ach.requirement_value;
+              shouldAward = (buddy.wins || 0) >= ach.requirement_value;
               break;
           }
           
@@ -192,25 +234,11 @@ export async function POST(request: NextRequest) {
             await supabase
               .from('buddy_player_achievements')
               .insert({
-                player_buddy_id: buddy.id,
+                buddy_id: buddy.id,
                 achievement_id: ach.id,
               });
             
             newAchievements.push(ach.name);
-            
-            // Log activity
-            await supabase
-              .from('buddy_activity_log')
-              .insert({
-                player_buddy_id: buddy.id,
-                team_id: buddy.team_id,
-                action_type: 'achievement_earned',
-                action_data: {
-                  achievement_id: ach.id,
-                  achievement_name: ach.name,
-                  reward_title: ach.reward_title,
-                },
-              });
           }
         }
         

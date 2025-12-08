@@ -13,19 +13,53 @@ import { supabase } from '@/lib/supabase';
 import { User } from '@supabase/supabase-js';
 
 interface BuddyPageClientProps {
-  teamId: string;      // The actual team UUID
+  teamId?: string;      // The actual team UUID (optional, can be fetched client-side)
   teamSlug: string;    // The URL slug for navigation
 }
 
-export function BuddyPageClient({ teamId, teamSlug }: BuddyPageClientProps) {
+export function BuddyPageClient({ teamId: initialTeamId, teamSlug }: BuddyPageClientProps) {
   const router = useRouter();
+  const [teamId, setTeamId] = useState<string | undefined>(initialTeamId);
   const [user, setUser] = useState<User | null>(null);
   const [hasBuddy, setHasBuddy] = useState<boolean | null>(null);
   const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
-    async function checkBuddy() {
+    async function init() {
       try {
+        // 1. Resolve Team ID if missing
+        let currentTeamId = initialTeamId;
+        if (!currentTeamId) {
+          console.log('[BuddyClient] Fetching team ID for slug:', teamSlug);
+          // Try RPC first
+          const { data: rpcData } = await supabase
+            .rpc('get_team_public_info', { lookup_value: teamSlug })
+            .maybeSingle();
+            
+          if (rpcData) {
+            currentTeamId = rpcData.id;
+          } else {
+            // Fallback to direct query
+            const { data: teamData } = await supabase
+              .from('teams')
+              .select('id')
+              .or(`slug.eq.${teamSlug},invite_code.eq.${teamSlug}`)
+              .maybeSingle();
+              
+            if (teamData) currentTeamId = teamData.id;
+          }
+          
+          if (currentTeamId) {
+            setTeamId(currentTeamId);
+          } else {
+            setError('Team niet gevonden');
+            setLoading(false);
+            return;
+          }
+        }
+
+        // 2. Check User
         const { data: { user: currentUser } } = await supabase.auth.getUser();
         setUser(currentUser);
         
@@ -35,12 +69,13 @@ export function BuddyPageClient({ teamId, teamSlug }: BuddyPageClientProps) {
           return;
         }
 
+        // 3. Check Member & Buddy
         // First, get the member ID for this user in this team
         const { data: member } = await supabase
           .from('members')
           .select('id')
           .eq('auth_user_id', currentUser.id)
-          .eq('team_id', teamId)
+          .eq('team_id', currentTeamId)
           .single();
 
         if (!member) {
@@ -55,20 +90,21 @@ export function BuddyPageClient({ teamId, teamSlug }: BuddyPageClientProps) {
           .from('player_buddies')
           .select('id')
           .eq('member_id', member.id)
-          .eq('team_id', teamId)
+          .eq('team_id', currentTeamId)
           .single();
 
         setHasBuddy(!!buddy);
       } catch (error) {
         console.error('Error checking buddy:', error);
+        setError('Er ging iets mis bij het laden');
         setHasBuddy(false);
       } finally {
         setLoading(false);
       }
     }
 
-    checkBuddy();
-  }, [teamId]);
+    init();
+  }, [initialTeamId, teamSlug]);
 
   const handleSetupComplete = () => {
     setHasBuddy(true);
@@ -90,6 +126,21 @@ export function BuddyPageClient({ teamId, teamSlug }: BuddyPageClientProps) {
         <div className="retro-panel p-8">
           <div className="retro-loading mx-auto mb-4" />
           <p className="retro-text text-center">Loading Buddy Battle...</p>
+        </div>
+      </div>
+    );
+  }
+
+  if (error) {
+    return (
+      <div className="buddy-battle-container flex items-center justify-center min-h-screen">
+        <div className="scanlines" />
+        <div className="retro-panel p-8 border-red-500">
+          <div className="text-4xl mb-4 text-center">⚠️</div>
+          <p className="retro-text text-center text-red-400">{error}</p>
+          <button onClick={() => router.push('/')} className="retro-btn mt-4 w-full">
+            Terug naar Home
+          </button>
         </div>
       </div>
     );
@@ -128,15 +179,19 @@ export function BuddyPageClient({ teamId, teamSlug }: BuddyPageClientProps) {
     );
   }
 
-  if (hasBuddy) {
+  if (hasBuddy && teamId) {
     return <BuddyBattlePage teamId={teamId} teamSlug={teamSlug} />;
   }
 
   // Show setup with container
-  return (
-    <div className="buddy-battle-container min-h-screen p-4">
-      <div className="scanlines" />
-      <BuddySetup teamId={teamId} onComplete={handleSetupComplete} />
-    </div>
-  );
+  if (teamId) {
+    return (
+      <div className="buddy-battle-container min-h-screen p-4">
+        <div className="scanlines" />
+        <BuddySetup teamId={teamId} onComplete={handleSetupComplete} />
+      </div>
+    );
+  }
+  
+  return null;
 }

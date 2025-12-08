@@ -8,31 +8,64 @@
 import React, { useState, useEffect } from 'react';
 import { useParams, useRouter } from 'next/navigation';
 import { useRetroSounds } from '@/hooks/use-retro-sounds';
+import { supabase } from '@/lib/supabase';
 import '@/styles/buddy-battle.css';
 
 import { RetroButton, RetroProgress, RetroToast, RetroDialog } from './ui/retro-button';
 import { ELEMENT_COLORS, GAME_CONSTANTS } from '@/lib/buddy-battle/types';
-import type { PlayerBuddy, BuddyStat } from '@/lib/buddy-battle/types';
+import { PixelBuddy } from './buddy-display';
+import type { PlayerBuddy, BuddyStat, UpgradeCost } from '@/lib/buddy-battle/types';
 
-interface UpgradeInfo {
-  stat: BuddyStat;
-  current: number;
-  max: number;
-  cost: number;
-  can_upgrade: boolean;
+// Helper function to get auth headers
+async function getAuthHeaders(): Promise<HeadersInit> {
+  // First try to get session
+  const { data: { session } } = await supabase.auth.getSession();
+  
+  if (session?.access_token) {
+    console.log('[getAuthHeaders] Got session token');
+    return {
+      'Authorization': `Bearer ${session.access_token}`,
+      'Content-Type': 'application/json',
+    };
+  }
+  
+  // If no session, try to refresh
+  console.log('[getAuthHeaders] No session, trying to refresh...');
+  const { data: refreshData } = await supabase.auth.refreshSession();
+  
+  if (refreshData?.session?.access_token) {
+    console.log('[getAuthHeaders] Got refreshed session token');
+    return {
+      'Authorization': `Bearer ${refreshData.session.access_token}`,
+      'Content-Type': 'application/json',
+    };
+  }
+  
+  console.log('[getAuthHeaders] No session available');
+  return {
+    'Content-Type': 'application/json',
+  };
+}
+
+interface PointsBreakdown {
+  status: string;
+  count: number;
+  points: number;
 }
 
 interface UpgradeData {
-  buddy: PlayerBuddy;
+  buddy: PlayerBuddy & { name: string; element: string };
   available_points: number;
-  upgrades: UpgradeInfo[];
-  total_upgrades_today: number;
+  total_earned: number;
+  total_spent: number;
+  points_breakdown: PointsBreakdown[];
+  upgrades: UpgradeCost[];
 }
 
 export function UpgradeScreen() {
   const params = useParams();
   const router = useRouter();
-  const teamId = params?.teamId as string;
+  const teamId = params?.slug as string;
   
   const { sounds, initAudio, isInitialized } = useRetroSounds();
   
@@ -40,15 +73,34 @@ export function UpgradeScreen() {
   const [loading, setLoading] = useState(true);
   const [upgrading, setUpgrading] = useState<BuddyStat | null>(null);
   const [toast, setToast] = useState<{ message: string; type: 'success' | 'error' | 'info' } | null>(null);
-  const [showConfirm, setShowConfirm] = useState<UpgradeInfo | null>(null);
+  const [showConfirm, setShowConfirm] = useState<UpgradeCost | null>(null);
   
   // Fetch upgrade data
   useEffect(() => {
     async function fetchUpgradeData() {
+      if (!teamId) return;
       try {
-        const response = await fetch('/api/buddy-battle/upgrade', { credentials: 'include' });
+        const headers = await getAuthHeaders();
+        console.log('[UpgradeScreen] Fetching with headers:', { 
+          hasAuth: !!(headers as Record<string, string>)['Authorization'],
+          teamId 
+        });
+        
+        const response = await fetch(`/api/buddy-battle/upgrade?teamId=${teamId}`, { 
+          credentials: 'include',
+          headers,
+        });
+        
+        console.log('[UpgradeScreen] Response status:', response.status);
+        
         const result = await response.json();
-        setData(result);
+        
+        if (response.status === 401) {
+          console.error('[UpgradeScreen] Unauthorized - user may need to log in again');
+          setToast({ message: 'Please log in to view upgrades', type: 'error' });
+        } else {
+          setData(result);
+        }
       } catch (error) {
         console.error('Failed to fetch upgrade data:', error);
       } finally {
@@ -57,16 +109,22 @@ export function UpgradeScreen() {
     }
     
     fetchUpgradeData();
-  }, []);
+  }, [teamId]);
   
   // Handle upgrade
   const handleUpgrade = async (stat: BuddyStat) => {
     if (!data || upgrading) return;
     
-    const upgrade = data.upgrades.find(u => u.stat === stat);
-    if (!upgrade || !upgrade.can_upgrade) {
+    const upgrade = data.upgrades.find(u => u.stat_type === stat);
+    if (!upgrade || upgrade.is_maxed) {
       sounds.error();
       setToast({ message: 'Cannot upgrade this stat', type: 'error' });
+      return;
+    }
+    
+    if (data.available_points < upgrade.point_cost) {
+      sounds.error();
+      setToast({ message: 'Not enough points!', type: 'error' });
       return;
     }
     
@@ -74,9 +132,10 @@ export function UpgradeScreen() {
     sounds.select();
     
     try {
-      const response = await fetch('/api/buddy-battle/upgrade', {
+      const headers = await getAuthHeaders();
+      const response = await fetch(`/api/buddy-battle/upgrade?teamId=${teamId}`, {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers,
         credentials: 'include',
         body: JSON.stringify({ stat }),
       });
@@ -86,7 +145,7 @@ export function UpgradeScreen() {
       if (result.success) {
         sounds.levelUp();
         setToast({ 
-          message: `${stat.toUpperCase()} upgraded to ${result.new_value}!`, 
+          message: `${stat.toUpperCase().replace('_', ' ')} upgraded to ${result.new_value}!`, 
           type: 'success' 
         });
         setData(result.data);
@@ -177,10 +236,10 @@ export function UpgradeScreen() {
       
       <div className="max-w-2xl mx-auto">
         {/* Header */}
-        <div className="text-center mb-4">
-          <h1 className="retro-title">Upgrade Stats</h1>
-          <p className="retro-text text-xs text-retro-gray">
-            Spend points to make your buddy stronger
+        <div className="text-center mb-6">
+          <h1 className="retro-title text-3xl">⬆️ Upgrade Stats</h1>
+          <p className="retro-text text-base text-retro-gray mt-2">
+            Earn points by filling in your availability!
           </p>
         </div>
         
@@ -189,103 +248,133 @@ export function UpgradeScreen() {
           onClick={() => router.push(`/team/${teamId}/buddy`)}
           variant="default"
           size="small"
-          className="mb-4"
+          className="mb-5"
         >
           ← Back
         </RetroButton>
         
         {/* Buddy preview */}
-        <div className="retro-panel mb-4 p-4">
-          <div className="flex items-center gap-4">
-            {(() => {
-              const element = data.buddy.element || data.buddy.buddy_type?.element || 'fire';
-              return (
-                <div 
-                  className="buddy-sprite w-16 h-16"
-                  style={{
-                    background: `linear-gradient(135deg, ${ELEMENT_COLORS[element]} 0%, #1a1c2c 100%)`,
-                  }}
-                >
-                  <span className="text-2xl">
-                    {element === 'fire' && '🔥'}
-                    {element === 'water' && '💧'}
-                    {element === 'earth' && '🌍'}
-                    {element === 'air' && '💨'}
-                    {element === 'electric' && '⚡'}
-                  </span>
-                </div>
-              );
-            })()}
-            
-            <div className="flex-1">
-              <p className="retro-text-lg">{data.buddy.name}</p>
-              <p className="retro-text text-xs text-retro-gray">
-                Level {data.buddy.level} | {data.buddy.element || data.buddy.buddy_type?.element || 'unknown'}
-              </p>
+        <div className="retro-panel mb-4 p-5">
+          <div className="flex items-center gap-5">
+            {/* Use the actual PixelBuddy avatar */}
+            <div 
+              className="buddy-sprite w-24 h-24 flex-shrink-0"
+              style={{
+                background: `linear-gradient(180deg, ${data.buddy.color_primary || ELEMENT_COLORS[data.buddy.element || 'fire']}40 0%, transparent 100%)`,
+              }}
+            >
+              <PixelBuddy 
+                type={data.buddy.buddy_type?.name || 'Plannie'}
+                primaryColor={data.buddy.color_primary || ELEMENT_COLORS[data.buddy.element || 'fire']}
+                secondaryColor={data.buddy.color_secondary || '#2196F3'}
+                accentColor={data.buddy.color_accent || '#FFC107'}
+                element={data.buddy.element || data.buddy.buddy_type?.element}
+              />
             </div>
             
-            <div className="text-right">
-              <p className="retro-text text-xs text-retro-gray">Available Points</p>
-              <p className="retro-text-lg text-retro-lime">{data.available_points} ✨</p>
+            <div className="flex-1">
+              <p className="retro-text text-xl font-bold">{data.buddy.name}</p>
+              <p className="retro-text text-base text-retro-gray mt-1">
+                Level {data.buddy.level} • {(data.buddy.element || data.buddy.buddy_type?.element || 'unknown').toUpperCase()}
+              </p>
             </div>
           </div>
         </div>
         
-        {/* Daily upgrade limit indicator */}
-        <div className="retro-panel mb-4 p-3">
-          <div className="flex justify-between items-center">
-            <p className="retro-text text-xs">Daily Upgrades</p>
-            <p className="retro-text text-xs">
-              <span className={data.total_upgrades_today >= 5 ? 'text-retro-red' : 'text-retro-lime'}>
-                {data.total_upgrades_today}
-              </span>
-              <span className="text-retro-gray"> / 5</span>
-            </p>
+        {/* Points Overview Panel */}
+        <div className="retro-panel mb-4 p-5">
+          <h3 className="retro-text text-lg text-retro-yellow mb-4 flex items-center gap-2">
+            ✨ Points Overview
+          </h3>
+          
+          {/* Main points display */}
+          <div className="grid grid-cols-3 gap-4 mb-4">
+            <div className="text-center p-3 bg-black/20 rounded">
+              <p className="retro-text text-sm text-retro-gray mb-1">Earned</p>
+              <p className="retro-text text-2xl text-retro-lime font-bold">{data.total_earned || 0}</p>
+            </div>
+            <div className="text-center p-3 bg-black/20 rounded">
+              <p className="retro-text text-sm text-retro-gray mb-1">Spent</p>
+              <p className="retro-text text-2xl text-retro-red font-bold">{data.total_spent || 0}</p>
+            </div>
+            <div className="text-center p-3 bg-black/20 rounded border-2 border-retro-lime/50">
+              <p className="retro-text text-sm text-retro-gray mb-1">Available</p>
+              <p className="retro-text text-2xl text-retro-yellow font-bold">{data.available_points}</p>
+            </div>
           </div>
-          <RetroProgress 
-            value={data.total_upgrades_today}
-            max={5}
-            label=""
-            variant="default"
-          />
+          
+          {/* Points breakdown by availability status */}
+          {data.points_breakdown && data.points_breakdown.length > 0 && (
+            <details className="group">
+              <summary className="retro-text text-sm text-retro-gray cursor-pointer hover:text-retro-lime">
+                📊 How points are earned (click to expand)
+              </summary>
+              <div className="mt-3 space-y-2">
+                <p className="retro-text text-sm text-retro-gray mb-2">
+                  Points are based on your availability history:
+                </p>
+                {data.points_breakdown.map((item, idx) => (
+                  <div key={idx} className="flex justify-between items-center py-2 border-b border-gb-dark-green/30">
+                    <span className="retro-text text-base capitalize">
+                      {item.status === 'available' && '✅'}
+                      {item.status === 'remote' && '🏠'}
+                      {item.status === 'unavailable' && '❌'}
+                      {item.status === 'holiday' && '🏖️'}
+                      {item.status === 'absent' && '🚫'}
+                      {item.status === 'need_to_check' && '❓'}
+                      {' '}{item.status.replace('_', ' ')}
+                    </span>
+                    <span className="retro-text text-base text-retro-gray">
+                      {item.count}× = <span className="text-retro-lime font-bold">{item.points} pts</span>
+                    </span>
+                  </div>
+                ))}
+                <p className="retro-text text-sm text-retro-gray mt-3 opacity-75">
+                  💡 Available/Remote = 2pts • Unavailable/Holiday/Absent = 1pt
+                </p>
+              </div>
+            </details>
+          )}
         </div>
         
         {/* Stat upgrades */}
-        <div className="space-y-3">
+        <div className="space-y-4">
+          <h3 className="retro-text text-lg text-retro-yellow mb-2">
+            📈 Choose a Stat to Upgrade
+          </h3>
           {data.upgrades.map(upgrade => {
-            const percentage = (upgrade.current / upgrade.max) * 100;
-            const isMaxed = upgrade.current >= upgrade.max;
-            const canAfford = data.available_points >= upgrade.cost;
+            const isMaxed = upgrade.is_maxed;
+            const canAfford = data.available_points >= upgrade.point_cost;
             
             return (
               <div 
-                key={upgrade.stat}
-                className="retro-panel p-4"
+                key={upgrade.stat_type}
+                className="retro-panel p-5"
               >
-                <div className="flex items-center justify-between mb-2">
-                  <div className="flex items-center gap-2">
-                    <span className="text-2xl">{getStatIcon(upgrade.stat)}</span>
+                <div className="flex items-center justify-between mb-3">
+                  <div className="flex items-center gap-3">
+                    <span className="text-3xl">{getStatIcon(upgrade.stat_type)}</span>
                     <div>
-                      <p className="retro-text-lg uppercase">{upgrade.stat}</p>
-                      <p className="retro-text text-xxs text-retro-gray">
-                        {getStatDescription(upgrade.stat)}
+                      <p className="retro-text text-lg uppercase font-bold">{upgrade.stat_type.replace('_', ' ')}</p>
+                      <p className="retro-text text-sm text-retro-gray">
+                        {getStatDescription(upgrade.stat_type)}
                       </p>
                     </div>
                   </div>
                   
                   <div className="text-right">
-                    <p className="retro-text-lg">
-                      {upgrade.current}
-                      <span className="text-retro-gray text-xs"> / {upgrade.max}</span>
+                    <p className="retro-text text-xl font-bold">
+                      {upgrade.current_value}
+                      <span className="text-retro-gray text-base"> / {upgrade.max_value}</span>
                     </p>
                   </div>
                 </div>
                 
                 {/* Progress bar */}
-                <div className="mb-3">
+                <div className="mb-4">
                   <RetroProgress 
-                    value={upgrade.current}
-                    max={upgrade.max}
+                    value={upgrade.current_value}
+                    max={upgrade.max_value}
                     label=""
                     variant={isMaxed ? 'xp' : 'default'}
                   />
@@ -293,22 +382,22 @@ export function UpgradeScreen() {
                 
                 {/* Upgrade button */}
                 <div className="flex justify-between items-center">
-                  <p className="retro-text text-xs">
-                    Cost: <span className={canAfford ? 'text-retro-lime' : 'text-retro-red'}>
-                      {upgrade.cost} ✨
+                  <p className="retro-text text-base">
+                    Cost: <span className={canAfford ? 'text-retro-lime font-bold' : 'text-retro-red'}>
+                      {upgrade.point_cost} ✨
                     </span>
                   </p>
                   
                   {isMaxed ? (
-                    <span className="retro-text text-xs text-retro-yellow">MAXED</span>
+                    <span className="retro-text text-base text-retro-yellow font-bold">MAXED ⭐</span>
                   ) : (
                     <RetroButton 
                       onClick={() => setShowConfirm(upgrade)}
-                      disabled={!upgrade.can_upgrade || upgrading !== null}
+                      disabled={!canAfford || upgrading !== null}
                       variant={canAfford ? 'primary' : 'default'}
                       size="small"
                     >
-                      {upgrading === upgrade.stat ? 'Upgrading...' : '+1'}
+                      {upgrading === upgrade.stat_type ? 'Upgrading...' : 'Upgrade +1'}
                     </RetroButton>
                   )}
                 </div>
@@ -318,9 +407,9 @@ export function UpgradeScreen() {
         </div>
         
         {/* Info panel */}
-        <div className="retro-panel mt-6 p-4">
-          <p className="retro-text text-xs text-retro-gray text-center">
-            💡 Tip: Balance your stats for optimal battle performance!
+        <div className="retro-panel mt-6 p-5">
+          <p className="retro-text text-base text-retro-gray text-center leading-relaxed">
+            💡 <strong>Tip:</strong> Balance your stats for optimal battle performance!
             <br />
             <span className="text-retro-yellow">Attack</span> for damage, 
             <span className="text-retro-blue"> Defense</span> for survival,
@@ -336,21 +425,21 @@ export function UpgradeScreen() {
           onClose={() => setShowConfirm(null)}
         >
           <div className="text-center">
-            <span className="text-5xl block mb-4">{getStatIcon(showConfirm.stat)}</span>
+            <span className="text-5xl block mb-4">{getStatIcon(showConfirm.stat_type)}</span>
             
-            <p className="retro-text mb-2">
-              Upgrade <span className="text-retro-lime uppercase">{showConfirm.stat}</span>?
+            <p className="retro-text text-lg mb-3">
+              Upgrade <span className="text-retro-lime uppercase font-bold">{showConfirm.stat_type.replace('_', ' ')}</span>?
             </p>
             
-            <p className="retro-text-lg mb-4">
-              {showConfirm.current} → <span className="text-retro-lime">{showConfirm.current + 1}</span>
+            <p className="retro-text text-xl mb-4">
+              {showConfirm.current_value} → <span className="text-retro-lime font-bold">{showConfirm.next_value}</span>
             </p>
             
-            <p className="retro-text text-xs text-retro-gray mb-4">
-              Cost: {showConfirm.cost} ✨
+            <p className="retro-text text-base text-retro-gray mb-5">
+              Cost: <span className="text-retro-yellow font-bold">{showConfirm.point_cost} ✨</span>
             </p>
             
-            <div className="flex justify-center gap-3">
+            <div className="flex justify-center gap-4">
               <RetroButton 
                 onClick={() => setShowConfirm(null)}
                 variant="default"
@@ -358,7 +447,7 @@ export function UpgradeScreen() {
                 Cancel
               </RetroButton>
               <RetroButton 
-                onClick={() => handleUpgrade(showConfirm.stat)}
+                onClick={() => handleUpgrade(showConfirm.stat_type)}
                 variant="primary"
                 disabled={upgrading !== null}
               >

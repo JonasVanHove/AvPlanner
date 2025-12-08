@@ -48,7 +48,7 @@ interface DailyAnalytics {
 export function AdminDashboard() {
   const params = useParams();
   const router = useRouter();
-  const teamId = params?.teamId as string;
+  const teamId = params?.slug as string;
   
   const [activeTab, setActiveTab] = useState('overview');
   const [stats, setStats] = useState<DashboardStats | null>(null);

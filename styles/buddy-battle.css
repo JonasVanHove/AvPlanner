@@ -1,6 +1,6 @@
 /* =====================================================
    BUDDY BATTLE - Retro CSS Styles
-   Game Boy Color inspired styling
+   Habbo Hotel Inspired - Isometric Pixel Art Style
    
    IMPORTANT: This game has its own isolated theme.
    User theme preferences do NOT affect this game.
@@ -10,73 +10,92 @@
  * Theme Isolation: All variables are scoped to .buddy-battle-container
  * This prevents user theme CSS variables from affecting the game
  */
+
+/* Responsive base font size for the game */
+:root {
+  --buddy-font-base: clamp(10px, 1.5vw + 6px, 14px);
+  --buddy-font-sm: clamp(8px, 1.2vw + 5px, 11px);
+  --buddy-font-lg: clamp(12px, 1.8vw + 7px, 18px);
+  --buddy-font-xl: clamp(16px, 2.2vw + 9px, 24px);
+  --buddy-font-title: clamp(14px, 2vw + 8px, 22px);
+  --buddy-font-button: clamp(9px, 1.3vw + 5px, 13px);
+}
+
 .buddy-battle-container {
-  /* DMG Green Palette - Forced values, ignoring user theme */
-  --gb-dark: #0f380f;
-  --gb-dark-green: #306230;
-  --gb-light-green: #8bac0f;
-  --gb-lightest: #9bbc0f;
-  --gb-bg: #9bbc0f;
+  /* Habbo Hotel Color Palette */
+  --habbo-dark: #1a1a2e;
+  --habbo-bg: #2d3436;
+  --habbo-panel: #3d4852;
+  --habbo-border: #5a6672;
+  --habbo-light: #b2bec3;
+  --habbo-white: #dfe6e9;
   
-  /* Extended retro palette */
-  --retro-black: #1a1c2c;
-  --retro-purple: #5d275d;
-  --retro-red: #b13e53;
-  --retro-orange: #ef7d57;
-  --retro-yellow: #ffcd75;
-  --retro-lime: #a7f070;
-  --retro-green: #38b764;
-  --retro-teal: #257179;
-  --retro-blue: #29366f;
-  --retro-sky: #3b5dc9;
-  --retro-cyan: #41a6f6;
-  --retro-white: #f4f4f4;
-  --retro-gray: #94b0c2;
-  --retro-gray-dark: #566c86;
-  --retro-brown: #ab5236;
-  --retro-pink: #f77622;
+  /* Habbo Accent Colors */
+  --habbo-blue: #0984e3;
+  --habbo-blue-light: #74b9ff;
+  --habbo-green: #00b894;
+  --habbo-green-light: #55efc4;
+  --habbo-yellow: #fdcb6e;
+  --habbo-orange: #e17055;
+  --habbo-red: #d63031;
+  --habbo-pink: #fd79a8;
+  --habbo-purple: #a29bfe;
+  --habbo-teal: #81ecec;
   
-  /* Override common theme variables that might leak in */
-  --background: #0f380f;
-  --foreground: #9bbc0f;
-  --card: #0f380f;
-  --card-foreground: #9bbc0f;
-  --primary: #38b764;
-  --primary-foreground: #1a1c2c;
-  --secondary: #306230;
-  --secondary-foreground: #9bbc0f;
-  --muted: #306230;
-  --muted-foreground: #8bac0f;
-  --accent: #ffcd75;
-  --accent-foreground: #1a1c2c;
-  --destructive: #b13e53;
-  --destructive-foreground: #f4f4f4;
-  --border: #306230;
-  --input: #306230;
-  --ring: #8bac0f;
+  /* Habbo UI Colors */
+  --habbo-gold: #f9ca24;
+  --habbo-bronze: #d68910;
+  --habbo-silver: #95a5a6;
+  --habbo-credits: #f0932b;
   
-  /* Container styling */
-  background: linear-gradient(135deg, var(--gb-dark) 0%, var(--retro-black) 100%) !important;
+  /* Override common theme variables */
+  --background: #2d3436;
+  --foreground: #dfe6e9;
+  --card: #3d4852;
+  --card-foreground: #dfe6e9;
+  --primary: #0984e3;
+  --primary-foreground: #ffffff;
+  --secondary: #5a6672;
+  --secondary-foreground: #dfe6e9;
+  --muted: #3d4852;
+  --muted-foreground: #b2bec3;
+  --accent: #fdcb6e;
+  --accent-foreground: #1a1a2e;
+  --destructive: #d63031;
+  --destructive-foreground: #ffffff;
+  --border: #5a6672;
+  --input: #3d4852;
+  --ring: #0984e3;
+  
+  /* Container styling - Habbo room floor pattern */
+  background: 
+    linear-gradient(135deg, #2d3436 25%, transparent 25%),
+    linear-gradient(225deg, #2d3436 25%, transparent 25%),
+    linear-gradient(45deg, #2d3436 25%, transparent 25%),
+    linear-gradient(315deg, #2d3436 25%, #353b48 25%);
+  background-size: 20px 20px;
+  background-color: #353b48;
   min-height: 100vh;
-  font-family: 'Press Start 2P', monospace;
+  font-family: 'Press Start 2P', 'Volter', monospace;
   image-rendering: pixelated;
-  color: var(--gb-lightest) !important;
+  image-rendering: crisp-edges;
+  color: var(--habbo-white) !important;
   
   /* Ensure no theme inheritance */
   color-scheme: dark;
-  
-  /* Reset any theme-based text colors */
   -webkit-text-fill-color: initial;
 }
 
-/* Retro card/panel */
+/* Retro card/panel - Habbo Hotel style with rounded corners and soft shadows */
 .retro-panel {
-  background: var(--gb-dark);
-  border: 4px solid var(--gb-dark-green);
+  background: linear-gradient(180deg, #4a5568 0%, #3d4852 5%, #3d4852 95%, #2d3436 100%);
+  border: 3px solid #5a6672;
+  border-radius: 8px;
   box-shadow: 
-    inset 2px 2px 0 var(--gb-light-green),
-    inset -2px -2px 0 var(--retro-black),
-    4px 4px 0 var(--retro-black);
+    inset 0 1px 0 rgba(255, 255, 255, 0.1),
+    inset 0 -1px 0 rgba(0, 0, 0, 0.2),
+    0 4px 0 #1a1a2e,
+    0 6px 10px rgba(0, 0, 0, 0.3);
   padding: 12px;
   position: relative;
 }
@@ -84,76 +103,115 @@
 .retro-panel::before {
   content: '';
   position: absolute;
-  top: 4px;
-  left: 4px;
-  right: 4px;
-  height: 2px;
-  background: var(--gb-light-green);
-  opacity: 0.5;
+  top: 0;
+  left: 10px;
+  right: 10px;
+  height: 3px;
+  background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.15), transparent);
+  border-radius: 8px 8px 0 0;
 }
 
-/* Retro button */
+/* Retro button - Habbo Hotel rounded pill style */
 .retro-btn {
   font-family: 'Press Start 2P', monospace;
-  font-size: 10px;
-  padding: 8px 16px;
-  background: var(--gb-dark-green);
-  color: var(--gb-lightest);
-  border: 3px solid var(--gb-light-green);
+  font-size: var(--buddy-font-button);
+  padding: 12px 20px;
+  background: linear-gradient(180deg, #0984e3 0%, #0773c7 50%, #0667b3 100%);
+  color: #ffffff;
+  border: 2px solid #74b9ff;
+  border-radius: 20px;
   box-shadow: 
-    inset 1px 1px 0 var(--gb-light-green),
-    inset -1px -1px 0 var(--gb-dark),
-    2px 2px 0 var(--retro-black);
+    inset 0 1px 0 rgba(255, 255, 255, 0.3),
+    inset 0 -2px 0 rgba(0, 0, 0, 0.2),
+    0 3px 0 #045a9e,
+    0 5px 8px rgba(0, 0, 0, 0.3);
   cursor: pointer;
   text-transform: uppercase;
-  letter-spacing: 1px;
-  transition: all 0.1s;
-  image-rendering: pixelated;
+  letter-spacing: 0.5px;
+  transition: all 0.1s ease-out;
+  text-shadow: 0 1px 2px rgba(0, 0, 0, 0.3);
 }
 
 .retro-btn:hover {
-  background: var(--gb-light-green);
-  color: var(--gb-dark);
-  transform: translate(1px, 1px);
+  background: linear-gradient(180deg, #74b9ff 0%, #0984e3 50%, #0773c7 100%);
+  transform: translateY(-1px);
   box-shadow: 
-    inset 1px 1px 0 var(--gb-lightest),
-    inset -1px -1px 0 var(--gb-dark-green),
-    1px 1px 0 var(--retro-black);
+    inset 0 1px 0 rgba(255, 255, 255, 0.4),
+    inset 0 -2px 0 rgba(0, 0, 0, 0.2),
+    0 4px 0 #045a9e,
+    0 6px 12px rgba(0, 0, 0, 0.35);
 }
 
 .retro-btn:active {
-  transform: translate(2px, 2px);
-  box-shadow: none;
+  transform: translateY(2px);
+  box-shadow: 
+    inset 0 2px 4px rgba(0, 0, 0, 0.3),
+    0 1px 0 #045a9e;
 }
 
 .retro-btn:disabled {
   opacity: 0.5;
   cursor: not-allowed;
+  filter: grayscale(0.4);
 }
 
 .retro-btn-primary {
-  background: var(--retro-green);
-  border-color: var(--retro-lime);
+  background: linear-gradient(180deg, #00b894 0%, #00a085 50%, #009476 100%);
+  border-color: #55efc4;
+  box-shadow: 
+    inset 0 1px 0 rgba(255, 255, 255, 0.3),
+    inset 0 -2px 0 rgba(0, 0, 0, 0.2),
+    0 3px 0 #007a5e,
+    0 5px 8px rgba(0, 0, 0, 0.3);
+}
+
+.retro-btn-primary:hover {
+  background: linear-gradient(180deg, #55efc4 0%, #00b894 50%, #00a085 100%);
 }
 
 .retro-btn-danger {
-  background: var(--retro-red);
-  border-color: var(--retro-orange);
+  background: linear-gradient(180deg, #d63031 0%, #c0392b 50%, #a93226 100%);
+  border-color: #ff7675;
+  box-shadow: 
+    inset 0 1px 0 rgba(255, 255, 255, 0.3),
+    inset 0 -2px 0 rgba(0, 0, 0, 0.2),
+    0 3px 0 #8e2420,
+    0 5px 8px rgba(0, 0, 0, 0.3);
+}
+
+.retro-btn-danger:hover {
+  background: linear-gradient(180deg, #ff7675 0%, #d63031 50%, #c0392b 100%);
 }
 
 .retro-btn-special {
-  background: var(--retro-purple);
-  border-color: var(--retro-pink);
-  animation: glow 1.5s ease-in-out infinite;
+  background: linear-gradient(180deg, #fdcb6e 0%, #f9ca24 50%, #f0932b 100%);
+  border-color: #ffeaa7;
+  color: #1a1a2e;
+  text-shadow: 0 1px 0 rgba(255, 255, 255, 0.3);
+  animation: habboGlow 2s ease-in-out infinite;
 }
 
-@keyframes glow {
-  0%, 100% { box-shadow: 0 0 5px var(--retro-pink), 2px 2px 0 var(--retro-black); }
-  50% { box-shadow: 0 0 15px var(--retro-pink), 0 0 25px var(--retro-purple), 2px 2px 0 var(--retro-black); }
+@keyframes habboGlow {
+  0%, 100% { 
+    box-shadow: 
+      inset 0 1px 0 rgba(255, 255, 255, 0.4),
+      inset 0 -2px 0 rgba(0, 0, 0, 0.2),
+      0 3px 0 #d68910,
+      0 5px 8px rgba(0, 0, 0, 0.3),
+      0 0 10px rgba(253, 203, 110, 0.3);
+  }
+  50% { 
+    box-shadow: 
+      inset 0 1px 0 rgba(255, 255, 255, 0.5),
+      inset 0 -2px 0 rgba(0, 0, 0, 0.2),
+      0 3px 0 #d68910,
+      0 5px 8px rgba(0, 0, 0, 0.3),
+      0 0 20px rgba(253, 203, 110, 0.5);
+  }
 }
 
 /* =====================================================
-   SELECTION STATES - Enhanced UX feedback
+   SELECTION STATES - Habbo Hotel style feedback
    ===================================================== */
 
 /* Selectable card - base state */
@@ -164,97 +222,106 @@
 }
 
 .retro-selectable:hover {
-  transform: translateY(-2px);
-  border-color: var(--gb-light-green) !important;
+  transform: translateY(-3px);
+  border-color: var(--habbo-blue-light) !important;
   box-shadow: 
-    inset 2px 2px 0 var(--gb-light-green),
-    inset -2px -2px 0 var(--retro-black),
-    4px 6px 0 var(--retro-black),
-    0 0 10px rgba(139, 172, 15, 0.3);
+    inset 0 1px 0 rgba(255, 255, 255, 0.15),
+    0 6px 0 #1a1a2e,
+    0 8px 15px rgba(0, 0, 0, 0.4);
 }
 
-/* Selected state - very prominent */
+/* Selected state - Habbo gold highlight */
 .retro-selected {
-  border-color: var(--retro-yellow) !important;
-  background: linear-gradient(135deg, var(--gb-dark) 0%, rgba(255, 205, 117, 0.15) 100%) !important;
-  transform: translateY(-3px) scale(1.02);
+  border-color: var(--habbo-gold) !important;
+  background: linear-gradient(180deg, #4a5568 0%, #3d4852 5%, rgba(249, 202, 36, 0.1) 50%, #3d4852 95%, #2d3436 100%) !important;
+  transform: translateY(-3px);
   box-shadow: 
-    inset 2px 2px 0 var(--retro-yellow),
-    inset -2px -2px 0 var(--retro-black),
-    0 0 20px rgba(255, 205, 117, 0.5),
-    0 0 40px rgba(255, 205, 117, 0.2),
-    6px 8px 0 var(--retro-black) !important;
-  animation: selectedPulse 1.5s ease-in-out infinite;
+    inset 0 1px 0 rgba(255, 255, 255, 0.2),
+    0 0 0 3px rgba(249, 202, 36, 0.3),
+    0 6px 0 #1a1a2e,
+    0 8px 15px rgba(0, 0, 0, 0.4) !important;
+  animation: habboSelected 1.5s ease-in-out infinite;
 }
 
-/* Selection indicator checkmark */
+/* Selection indicator - Habbo checkmark badge */
 .retro-selected::after {
   content: '✓';
   position: absolute;
-  top: -8px;
-  right: -8px;
-  width: 24px;
-  height: 24px;
-  background: var(--retro-yellow);
-  color: var(--retro-black);
-  border: 3px solid var(--retro-black);
+  top: -10px;
+  right: -10px;
+  width: 28px;
+  height: 28px;
+  background: linear-gradient(180deg, #fdcb6e 0%, #f9ca24 50%, #f0932b 100%);
+  color: #1a1a2e;
+  border: 3px solid #ffeaa7;
   border-radius: 50%;
   display: flex;
   align-items: center;
   justify-content: center;
-  font-size: 12px;
+  font-size: 14px;
   font-weight: bold;
   z-index: 10;
   animation: checkPop 0.3s ease-out;
+  box-shadow: 
+    0 2px 0 #d68910,
+    0 4px 8px rgba(0, 0, 0, 0.3);
 }
 
-@keyframes selectedPulse {
+@keyframes habboSelected {
   0%, 100% { 
     box-shadow: 
-      inset 2px 2px 0 var(--retro-yellow),
-      inset -2px -2px 0 var(--retro-black),
-      0 0 20px rgba(255, 205, 117, 0.5),
-      0 0 40px rgba(255, 205, 117, 0.2),
-      6px 8px 0 var(--retro-black);
+      inset 0 1px 0 rgba(255, 255, 255, 0.2),
+      0 0 0 3px rgba(249, 202, 36, 0.3),
+      0 6px 0 #1a1a2e,
+      0 8px 15px rgba(0, 0, 0, 0.4);
   }
   50% { 
     box-shadow: 
-      inset 2px 2px 0 var(--retro-yellow),
-      inset -2px -2px 0 var(--retro-black),
-      0 0 30px rgba(255, 205, 117, 0.7),
-      0 0 50px rgba(255, 205, 117, 0.3),
-      6px 8px 0 var(--retro-black);
+      inset 0 1px 0 rgba(255, 255, 255, 0.2),
+      0 0 0 5px rgba(249, 202, 36, 0.4),
+      0 6px 0 #1a1a2e,
+      0 8px 15px rgba(0, 0, 0, 0.4);
   }
 }
 
 @keyframes checkPop {
   0% { transform: scale(0); }
-  50% { transform: scale(1.3); }
+  50% { transform: scale(1.2); }
   100% { transform: scale(1); }
 }
 
-/* Color swatch selection */
+/* Color swatch selection - Habbo style */
 .color-swatch {
   width: 48px;
   height: 48px;
-  border: 4px solid var(--gb-dark-green);
+  border: 3px solid #5a6672;
+  border-radius: 8px;
   cursor: pointer;
   transition: all 0.15s ease-out;
   position: relative;
+  box-shadow: 
+    inset 0 1px 0 rgba(255, 255, 255, 0.2),
+    0 2px 0 #1a1a2e;
 }
 
 .color-swatch:hover {
-  transform: scale(1.1);
-  border-color: var(--gb-light-green);
+  transform: translateY(-2px) scale(1.05);
+  border-color: var(--habbo-blue);
+  box-shadow: 
+    inset 0 1px 0 rgba(255, 255, 255, 0.3),
+    0 4px 0 #1a1a2e,
+    0 6px 10px rgba(0, 0, 0, 0.3);
 }
 
 .color-swatch.selected {
-  border-color: var(--retro-yellow) !important;
-  transform: scale(1.15);
+  border-color: var(--habbo-gold) !important;
+  transform: translateY(-2px) scale(1.1);
   box-shadow: 
-    0 0 15px rgba(255, 205, 117, 0.6),
-    0 0 30px rgba(255, 205, 117, 0.3);
-  animation: colorPulse 1s ease-in-out infinite;
+    inset 0 1px 0 rgba(255, 255, 255, 0.3),
+    0 0 0 3px rgba(249, 202, 36, 0.4),
+    0 4px 0 #1a1a2e,
+    0 6px 10px rgba(0, 0, 0, 0.3);
+  animation: colorPulseHabbo 1s ease-in-out infinite;
 }
 
 .color-swatch.selected::after {
@@ -264,83 +331,119 @@
   left: 50%;
   transform: translate(-50%, -50%);
   color: white;
-  font-size: 16px;
+  font-size: 18px;
   font-weight: bold;
   text-shadow: 
-    1px 1px 0 var(--retro-black),
-    -1px -1px 0 var(--retro-black),
-    1px -1px 0 var(--retro-black),
-    -1px 1px 0 var(--retro-black);
+    1px 1px 0 #1a1a2e,
+    -1px -1px 0 #1a1a2e,
+    1px -1px 0 #1a1a2e,
+    -1px 1px 0 #1a1a2e,
+    0 2px 4px rgba(0, 0, 0, 0.5);
 }
 
-@keyframes colorPulse {
-  0%, 100% { box-shadow: 0 0 15px rgba(255, 205, 117, 0.6); }
-  50% { box-shadow: 0 0 25px rgba(255, 205, 117, 0.9); }
+@keyframes colorPulseHabbo {
+  0%, 100% { box-shadow: 0 0 0 3px rgba(249, 202, 36, 0.4), 0 4px 0 #1a1a2e; }
+  50% { box-shadow: 0 0 0 5px rgba(249, 202, 36, 0.5), 0 4px 0 #1a1a2e; }
 }
 
 /* Focus states for accessibility */
 .retro-selectable:focus,
 .retro-btn:focus,
 .color-swatch:focus {
-  outline: 3px dashed var(--retro-yellow);
+  outline: 3px dashed var(--habbo-gold);
   outline-offset: 3px;
 }
 
 /* Click feedback */
 .retro-selectable:active {
-  transform: translateY(0) scale(0.98);
+  transform: translateY(0);
   transition: all 0.05s ease-out;
 }
 
-/* Retro text */
+/* Retro text - Habbo style with responsive sizing */
 .retro-text {
   font-family: 'Press Start 2P', monospace;
-  font-size: 8px;
+  font-size: var(--buddy-font-base);
   line-height: 1.8;
-  text-shadow: 1px 1px 0 var(--retro-black);
+  text-shadow: 1px 1px 0 #1a1a2e;
+  color: #dfe6e9;
 }
 
 .retro-text-lg {
-  font-size: 12px;
+  font-size: var(--buddy-font-lg);
 }
 
 .retro-text-xl {
-  font-size: 16px;
+  font-size: var(--buddy-font-xl);
 }
 
 .retro-title {
-  font-size: 14px;
+  font-size: var(--buddy-font-title);
   text-transform: uppercase;
   letter-spacing: 2px;
-  color: var(--gb-lightest);
+  color: #fdcb6e;
   text-shadow: 
-    2px 2px 0 var(--gb-dark-green),
-    4px 4px 0 var(--retro-black);
+    2px 2px 0 #2d3436,
+    0 4px 0 #1a1a2e;
 }
 
-/* HP Bar */
+/* Additional responsive text utilities */
+.retro-text-sm {
+  font-size: var(--buddy-font-sm);
+}
+
+.retro-text-xs {
+  font-size: clamp(7px, 1vw + 4px, 9px);
+}
+
+/* HP Bar - Habbo Hotel style with rounded corners */
 .hp-bar-container {
   width: 100%;
-  height: 12px;
-  background: var(--gb-dark);
-  border: 2px solid var(--gb-dark-green);
+  height: 22px;
+  background: linear-gradient(180deg, #2d3436 0%, #1a1a2e 100%);
+  border: 2px solid #5a6672;
+  border-radius: 11px;
   position: relative;
   overflow: hidden;
+  box-shadow: 
+    inset 0 2px 4px rgba(0,0,0,0.5),
+    0 2px 0 #1a1a2e;
 }
 
 .hp-bar {
   height: 100%;
-  background: var(--retro-green);
-  transition: width 0.3s ease;
+  background: linear-gradient(180deg, #55efc4 0%, #00b894 40%, #00a085 60%, #009476 100%);
+  border-radius: 9px;
+  box-shadow: 
+    inset 0 2px 0 rgba(255,255,255,0.3),
+    inset 0 -2px 0 rgba(0,0,0,0.2);
+  transition: width 0.5s ease-out;
+  position: relative;
+}
+
+.hp-bar::after {
+  content: '';
+  position: absolute;
+  top: 2px;
+  left: 4px;
+  right: 4px;
+  height: 4px;
+  background: linear-gradient(90deg, transparent, rgba(255,255,255,0.4), transparent);
+  border-radius: 2px;
 }
 
 .hp-bar.low {
-  background: var(--retro-yellow);
+  background: linear-gradient(180deg, #ffeaa7 0%, #fdcb6e 40%, #f9ca24 60%, #f0932b 100%);
 }
 
 .hp-bar.critical {
-  background: var(--retro-red);
-  animation: flash 0.5s infinite;
+  background: linear-gradient(180deg, #ff7675 0%, #d63031 40%, #c0392b 60%, #a93226 100%);
+  animation: criticalPulseHabbo 0.6s ease-in-out infinite;
+}
+
+@keyframes criticalPulseHabbo {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.7; }
 }
 
 @keyframes flash {
@@ -348,40 +451,45 @@
   50% { opacity: 0.5; }
 }
 
-/* XP Bar */
+/* XP Bar - Habbo blue style */
 .xp-bar-container {
   width: 100%;
-  height: 8px;
-  background: var(--gb-dark);
-  border: 2px solid var(--retro-blue);
+  height: 10px;
+  background: linear-gradient(180deg, #2d3436 0%, #1a1a2e 100%);
+  border: 2px solid #5a6672;
+  border-radius: 5px;
+  overflow: hidden;
+  box-shadow: inset 0 1px 2px rgba(0,0,0,0.4);
 }
 
 .xp-bar {
   height: 100%;
-  background: linear-gradient(90deg, var(--retro-sky), var(--retro-cyan));
+  background: linear-gradient(180deg, #74b9ff 0%, #0984e3 40%, #0773c7 60%, #0667b3 100%);
+  border-radius: 3px;
+  box-shadow: inset 0 1px 0 rgba(255,255,255,0.3);
   transition: width 0.5s ease;
 }
 
-/* Stat display */
+/* Stat display - Habbo style */
 .stat-item {
   display: flex;
   justify-content: space-between;
   align-items: center;
   padding: 4px 0;
-  border-bottom: 1px dashed var(--gb-dark-green);
+  border-bottom: 1px dashed rgba(90, 102, 114, 0.5);
 }
 
 .stat-label {
-  color: var(--gb-light-green);
+  color: #b2bec3;
   font-size: 8px;
 }
 
 .stat-value {
-  color: var(--gb-lightest);
+  color: #ffffff;
   font-size: 10px;
 }
 
-/* Pixel border effect */
+/* Pixel border effect - Habbo style */
 .pixel-border {
   position: relative;
 }
@@ -394,114 +502,215 @@
   right: -4px;
   bottom: -4px;
   background: 
-    linear-gradient(to right, var(--gb-dark-green) 4px, transparent 4px) 0 0,
-    linear-gradient(to right, var(--gb-dark-green) 4px, transparent 4px) 0 100%,
-    linear-gradient(to left, var(--gb-dark-green) 4px, transparent 4px) 100% 0,
-    linear-gradient(to left, var(--gb-dark-green) 4px, transparent 4px) 100% 100%,
-    linear-gradient(to bottom, var(--gb-dark-green) 4px, transparent 4px) 0 0,
-    linear-gradient(to bottom, var(--gb-dark-green) 4px, transparent 4px) 100% 0,
-    linear-gradient(to top, var(--gb-dark-green) 4px, transparent 4px) 0 100%,
-    linear-gradient(to top, var(--gb-dark-green) 4px, transparent 4px) 100% 100%;
+    linear-gradient(to right, #5a6672 4px, transparent 4px) 0 0,
+    linear-gradient(to right, #5a6672 4px, transparent 4px) 0 100%,
+    linear-gradient(to left, #5a6672 4px, transparent 4px) 100% 0,
+    linear-gradient(to left, #5a6672 4px, transparent 4px) 100% 100%,
+    linear-gradient(to bottom, #5a6672 4px, transparent 4px) 0 0,
+    linear-gradient(to bottom, #5a6672 4px, transparent 4px) 100% 0,
+    linear-gradient(to top, #5a6672 4px, transparent 4px) 0 100%,
+    linear-gradient(to top, #5a6672 4px, transparent 4px) 100% 100%;
   background-repeat: no-repeat;
   background-size: 8px 8px;
   pointer-events: none;
 }
 
-/* Buddy sprite container */
+/* Buddy sprite container - Habbo Hotel isometric style */
 .buddy-sprite {
   width: 128px;
   height: 128px;
   display: flex;
   align-items: center;
   justify-content: center;
-  background: var(--gb-dark);
-  border: 4px solid var(--gb-dark-green);
+  background: linear-gradient(180deg, #4a5568 0%, #3d4852 50%, #2d3436 100%);
+  border: 3px solid #5a6672;
+  border-radius: 12px;
   image-rendering: pixelated;
-  animation: float 3s ease-in-out infinite;
+  image-rendering: crisp-edges;
+  animation: habboFloat 2.5s ease-in-out infinite;
+  box-shadow: 
+    inset 0 2px 0 rgba(255, 255, 255, 0.1),
+    inset 0 -2px 0 rgba(0, 0, 0, 0.3),
+    0 4px 0 #1a1a2e,
+    0 8px 15px rgba(0, 0, 0, 0.4);
+  position: relative;
 }
 
-@keyframes float {
+/* Habbo-style floor shadow */
+.buddy-sprite::before {
+  content: '';
+  position: absolute;
+  bottom: -20px;
+  left: 50%;
+  transform: translateX(-50%);
+  width: 80%;
+  height: 20px;
+  background: radial-gradient(ellipse, rgba(0, 0, 0, 0.4) 0%, transparent 70%);
+  border-radius: 50%;
+}
+
+/* Habbo avatar bobbing animation */
+@keyframes habboFloat {
   0%, 100% { transform: translateY(0); }
-  50% { transform: translateY(-8px); }
+  50% { transform: translateY(-6px); }
 }
 
 .buddy-sprite.battle {
-  animation: battle-stance 0.5s ease-in-out infinite;
+  animation: habbo-battle-stance 0.4s ease-in-out infinite;
 }
 
-@keyframes battle-stance {
-  0%, 100% { transform: translateX(0); }
-  25% { transform: translateX(-2px); }
-  75% { transform: translateX(2px); }
+@keyframes habbo-battle-stance {
+  0%, 100% { transform: translateX(0) rotate(0deg); }
+  25% { transform: translateX(-3px) rotate(-1deg); }
+  75% { transform: translateX(3px) rotate(1deg); }
 }
 
-/* Damage number animation */
+/* Damage number animation - Habbo style */
 .damage-number {
   position: absolute;
+  font-family: 'Press Start 2P', monospace;
   font-size: 16px;
   font-weight: bold;
-  color: var(--retro-red);
-  text-shadow: 2px 2px 0 var(--retro-black);
-  animation: damage-pop 1s ease-out forwards;
+  color: #ff7675;
+  text-shadow: 
+    2px 2px 0 #1a1a2e,
+    -1px -1px 0 #1a1a2e,
+    1px -1px 0 #1a1a2e,
+    -1px 1px 0 #1a1a2e;
+  animation: habbo-damage-pop 1.2s ease-out forwards;
   pointer-events: none;
+  z-index: 100;
 }
 
 .damage-number.critical {
   font-size: 24px;
-  color: var(--retro-yellow);
+  color: #fdcb6e;
+  text-shadow: 
+    3px 3px 0 #1a1a2e,
+    -2px -2px 0 #1a1a2e,
+    2px -2px 0 #1a1a2e,
+    -2px 2px 0 #1a1a2e,
+    0 0 10px rgba(253, 203, 110, 0.6);
 }
 
 .damage-number.heal {
-  color: var(--retro-green);
+  color: #55efc4;
 }
 
-@keyframes damage-pop {
+@keyframes habbo-damage-pop {
   0% {
     opacity: 1;
     transform: translateY(0) scale(0.5);
   }
   20% {
-    transform: translateY(-10px) scale(1.2);
+    transform: translateY(-20px) scale(1.2);
+  }
+  40% {
+    transform: translateY(-30px) scale(1);
   }
   100% {
     opacity: 0;
-    transform: translateY(-40px) scale(0.8);
+    transform: translateY(-60px) scale(0.7);
   }
 }
 
-/* Dialog box */
+/* Shake animation when hit - Habbo style */
+.shake-hit {
+  animation: habbo-shake-hit 0.25s ease-in-out;
+}
+
+@keyframes habbo-shake-hit {
+  0%, 100% { transform: translateX(0); }
+  10% { transform: translateX(-8px) rotate(-2deg); }
+  20% { transform: translateX(8px) rotate(2deg); }
+  30% { transform: translateX(-6px) rotate(-1deg); }
+  40% { transform: translateX(6px) rotate(1deg); }
+  50% { transform: translateX(-4px); }
+  60% { transform: translateX(4px); }
+  70% { transform: translateX(-2px); }
+  80% { transform: translateX(2px); }
+}
+
+/* Flash when attacking */
+.flash-attack {
+  animation: flash-attack 0.2s ease-out;
+}
+
+@keyframes flash-attack {
+  0% { filter: brightness(1); }
+  50% { filter: brightness(2) saturate(1.5); }
+  100% { filter: brightness(1); }
+}
+
+/* Flash when taking damage */
+.flash-damage {
+  animation: flash-damage 0.3s ease-out;
+}
+
+@keyframes flash-damage {
+  0% { filter: brightness(1); opacity: 1; }
+  25% { filter: brightness(0.5) saturate(0) contrast(2); opacity: 0.5; }
+  50% { filter: brightness(1.5); opacity: 1; }
+  75% { filter: brightness(0.7); opacity: 0.7; }
+  100% { filter: brightness(1); opacity: 1; }
+}
+
+/* HP bar animation */
+.hp-animate {
+  transition: width 0.5s ease-out;
+}
+
+/* HP bar pulse when critical */
+.hp-bar.critical {
+  animation: hp-critical-pulse 0.5s ease-in-out infinite;
+}
+
+@keyframes hp-critical-pulse {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.6; }
+}
+
+/* Dialog box - Habbo Hotel style */
 .dialog-box {
-  background: var(--gb-dark);
-  border: 4px solid var(--gb-lightest);
-  padding: 16px;
+  background: linear-gradient(180deg, #6c5ce7 0%, #5f4dd0 100%);
+  border: 3px solid #a29bfe;
+  border-radius: 12px;
+  padding: 16px 20px;
   margin: 8px;
   position: relative;
+  box-shadow: 
+    inset 0 2px 0 rgba(255, 255, 255, 0.2),
+    0 4px 0 #3d2ba3,
+    0 6px 15px rgba(0, 0, 0, 0.3);
 }
 
 .dialog-box::before {
   content: '';
   position: absolute;
-  bottom: -12px;
+  bottom: -14px;
   left: 50%;
   transform: translateX(-50%);
-  border-left: 8px solid transparent;
-  border-right: 8px solid transparent;
-  border-top: 8px solid var(--gb-lightest);
+  border-left: 10px solid transparent;
+  border-right: 10px solid transparent;
+  border-top: 10px solid #5f4dd0;
+  filter: drop-shadow(0 2px 0 #3d2ba3);
 }
 
 .dialog-text {
   font-size: 10px;
   line-height: 1.8;
-  color: var(--gb-lightest);
+  color: #ffffff;
+  text-shadow: 1px 1px 0 rgba(0, 0, 0, 0.3);
 }
 
 .dialog-text::after {
   content: '▼';
   margin-left: 4px;
-  animation: blink 1s step-end infinite;
+  color: #fdcb6e;
+  animation: habbo-blink 1s step-end infinite;
 }
 
-@keyframes blink {
+@keyframes habbo-blink {
   0%, 100% { opacity: 1; }
   50% { opacity: 0; }
 }
@@ -513,87 +722,145 @@
   gap: 8px;
 }
 
-/* Badge/achievement item */
+/* Badge/achievement item - Habbo Hotel style */
 .badge-item {
   display: flex;
   align-items: center;
   gap: 8px;
-  padding: 8px;
-  background: var(--gb-dark);
-  border: 2px solid var(--gb-dark-green);
+  padding: 10px 12px;
+  background: linear-gradient(180deg, #4a5568 0%, #3d4852 100%);
+  border: 2px solid #5a6672;
+  border-radius: 10px;
+  box-shadow: 
+    inset 0 1px 0 rgba(255, 255, 255, 0.1),
+    0 3px 0 #2d3436;
 }
 
 .badge-icon {
   width: 32px;
   height: 32px;
-  background: var(--retro-purple);
-  border: 2px solid var(--retro-pink);
+  background: linear-gradient(180deg, #fdcb6e 0%, #e67e22 100%);
+  border: 2px solid #f9ca24;
+  border-radius: 8px;
   display: flex;
   align-items: center;
   justify-content: center;
+  box-shadow: 
+    inset 0 2px 0 rgba(255, 255, 255, 0.3),
+    0 2px 0 #d35400;
 }
 
 .badge-locked {
-  opacity: 0.3;
-  filter: grayscale(1);
+  opacity: 0.4;
+  filter: grayscale(1) brightness(0.8);
 }
 
-/* Rarity colors */
-.rarity-common { color: var(--retro-gray); }
-.rarity-uncommon { color: var(--retro-green); }
-.rarity-rare { color: var(--retro-sky); }
-.rarity-epic { color: var(--retro-purple); }
+/* Rarity colors - Habbo Hotel palette */
+.rarity-common { color: #b2bec3; }
+.rarity-uncommon { color: #55efc4; }
+.rarity-rare { color: #74b9ff; }
+.rarity-epic { color: #a29bfe; }
 .rarity-legendary { 
-  color: var(--retro-yellow);
-  text-shadow: 0 0 10px var(--retro-orange);
+  color: #fdcb6e;
+  text-shadow: 0 0 8px rgba(253, 203, 110, 0.6);
 }
 
-/* Element type badges */
+/* Element type badges - Habbo Hotel style */
 .element-badge {
   display: inline-block;
-  padding: 2px 6px;
+  padding: 3px 8px;
   font-size: 8px;
-  border-radius: 2px;
+  border-radius: 10px;
   text-transform: uppercase;
+  font-weight: bold;
+  box-shadow: 0 2px 0 rgba(0, 0, 0, 0.3);
 }
 
-.element-fire { background: var(--retro-orange); color: var(--retro-black); }
-.element-water { background: var(--retro-cyan); color: var(--retro-black); }
-.element-earth { background: var(--retro-brown); color: var(--retro-white); }
-.element-air { background: var(--retro-gray); color: var(--retro-black); }
-.element-electric { background: var(--retro-yellow); color: var(--retro-black); }
+.element-fire { 
+  background: linear-gradient(180deg, #ff7675 0%, #d63031 100%); 
+  color: #fff; 
+  border: 1px solid #e74c3c;
+}
+.element-water { 
+  background: linear-gradient(180deg, #74b9ff 0%, #0984e3 100%); 
+  color: #fff; 
+  border: 1px solid #3498db;
+}
+.element-earth { 
+  background: linear-gradient(180deg, #a0826d 0%, #6d4c41 100%); 
+  color: #fff; 
+  border: 1px solid #795548;
+}
+.element-air { 
+  background: linear-gradient(180deg, #dfe6e9 0%, #b2bec3 100%); 
+  color: #2d3436; 
+  border: 1px solid #bdc3c7;
+}
+.element-electric { 
+  background: linear-gradient(180deg, #fdcb6e 0%, #f39c12 100%); 
+  color: #2d3436; 
+  border: 1px solid #f1c40f;
+}
 
-/* Leaderboard */
+/* Leaderboard - Habbo Hotel style */
 .leaderboard-row {
   display: flex;
   align-items: center;
-  gap: 8px;
-  padding: 8px;
-  border-bottom: 2px solid var(--gb-dark-green);
+  gap: 10px;
+  padding: 10px 12px;
+  border-bottom: 2px solid #3d4852;
+  background: linear-gradient(90deg, rgba(255,255,255,0.02) 0%, transparent 100%);
+}
+
+.leaderboard-row:hover {
+  background: linear-gradient(90deg, rgba(255,255,255,0.05) 0%, transparent 100%);
 }
 
 .leaderboard-rank {
-  width: 24px;
-  height: 24px;
+  width: 28px;
+  height: 28px;
   display: flex;
   align-items: center;
   justify-content: center;
-  background: var(--gb-dark-green);
-  border: 2px solid var(--gb-light-green);
+  background: linear-gradient(180deg, #4a5568 0%, #3d4852 100%);
+  border: 2px solid #5a6672;
+  border-radius: 8px;
   font-size: 10px;
+  font-weight: bold;
+  box-shadow: 0 2px 0 #2d3436;
 }
 
-.leaderboard-rank.gold { background: var(--retro-yellow); color: var(--retro-black); }
-.leaderboard-rank.silver { background: var(--retro-gray); color: var(--retro-black); }
-.leaderboard-rank.bronze { background: var(--retro-brown); color: var(--retro-white); }
+.leaderboard-rank.gold { 
+  background: linear-gradient(180deg, #fdcb6e 0%, #f39c12 100%); 
+  color: #2d3436; 
+  border-color: #f9ca24;
+  box-shadow: 0 2px 0 #d68910;
+}
+.leaderboard-rank.silver { 
+  background: linear-gradient(180deg, #dfe6e9 0%, #b2bec3 100%); 
+  color: #2d3436; 
+  border-color: #bdc3c7;
+  box-shadow: 0 2px 0 #95a5a6;
+}
+.leaderboard-rank.bronze { 
+  background: linear-gradient(180deg, #cd6133 0%, #a04000 100%); 
+  color: #fff; 
+  border-color: #e67e22;
+  box-shadow: 0 2px 0 #873600;
+}
 
-/* Trainer card */
+/* Trainer card - Habbo Hotel style */
 .trainer-card {
-  background: linear-gradient(135deg, var(--gb-dark-green) 0%, var(--gb-dark) 100%);
-  border: 4px solid var(--gb-light-green);
-  padding: 16px;
+  background: linear-gradient(135deg, #0984e3 0%, #6c5ce7 100%);
+  border: 3px solid #74b9ff;
+  border-radius: 16px;
+  padding: 20px;
   position: relative;
   overflow: hidden;
+  box-shadow: 
+    inset 0 2px 0 rgba(255, 255, 255, 0.2),
+    0 4px 0 #2d3a8c,
+    0 8px 20px rgba(0, 0, 0, 0.3);
 }
 
 .trainer-card::before {
@@ -602,130 +869,166 @@
   top: 0;
   left: 0;
   right: 0;
-  height: 40px;
-  background: linear-gradient(180deg, var(--gb-light-green) 0%, transparent 100%);
-  opacity: 0.1;
+  height: 50px;
+  background: linear-gradient(180deg, rgba(255, 255, 255, 0.15) 0%, transparent 100%);
+  border-radius: 14px 14px 0 0;
 }
 
 .trainer-avatar {
   width: 64px;
   height: 64px;
-  border: 3px solid var(--gb-lightest);
+  border: 3px solid #fdcb6e;
+  border-radius: 12px;
   image-rendering: pixelated;
+  box-shadow: 
+    0 3px 0 #d68910,
+    0 5px 10px rgba(0, 0, 0, 0.3);
 }
 
-/* Shop item */
+/* Shop item - Habbo Hotel style */
 .shop-item {
-  background: var(--gb-dark);
-  border: 3px solid var(--gb-dark-green);
-  padding: 12px;
+  background: linear-gradient(180deg, #4a5568 0%, #3d4852 100%);
+  border: 3px solid #5a6672;
+  border-radius: 12px;
+  padding: 14px;
   display: flex;
   flex-direction: column;
   gap: 8px;
   transition: all 0.2s;
+  box-shadow: 
+    inset 0 1px 0 rgba(255, 255, 255, 0.1),
+    0 3px 0 #2d3436;
 }
 
 .shop-item:hover {
-  border-color: var(--gb-light-green);
-  transform: translateY(-2px);
+  border-color: #74b9ff;
+  transform: translateY(-3px);
+  box-shadow: 
+    inset 0 1px 0 rgba(255, 255, 255, 0.1),
+    0 6px 0 #2d3436,
+    0 10px 20px rgba(9, 132, 227, 0.2);
 }
 
 .shop-item.limited {
-  border-color: var(--retro-orange);
-  animation: limited-pulse 2s infinite;
+  border-color: #fdcb6e;
+  animation: habbo-limited-pulse 2s infinite;
 }
 
-@keyframes limited-pulse {
-  0%, 100% { box-shadow: 0 0 0 0 rgba(239, 125, 87, 0.4); }
-  50% { box-shadow: 0 0 0 8px rgba(239, 125, 87, 0); }
+@keyframes habbo-limited-pulse {
+  0%, 100% { box-shadow: 0 3px 0 #2d3436, 0 0 0 0 rgba(253, 203, 110, 0.4); }
+  50% { box-shadow: 0 3px 0 #2d3436, 0 0 0 8px rgba(253, 203, 110, 0); }
 }
 
-/* Quest item */
+/* Quest item - Habbo Hotel style */
 .quest-item {
-  background: var(--gb-dark);
-  border: 2px solid var(--gb-dark-green);
-  padding: 12px;
+  background: linear-gradient(180deg, #4a5568 0%, #3d4852 100%);
+  border: 2px solid #5a6672;
+  border-radius: 10px;
+  padding: 14px;
 }
 
 .quest-progress-bar {
-  height: 8px;
-  background: var(--retro-black);
-  border: 1px solid var(--gb-dark-green);
-  margin-top: 8px;
+  height: 10px;
+  background: #2d3436;
+  border: 2px solid #5a6672;
+  border-radius: 6px;
+  margin-top: 10px;
   overflow: hidden;
 }
 
 .quest-progress-fill {
   height: 100%;
-  background: var(--retro-lime);
+  background: linear-gradient(90deg, #55efc4 0%, #00b894 100%);
+  border-radius: 4px;
   transition: width 0.3s ease;
 }
 
 .quest-completed {
-  border-color: var(--retro-green);
+  border-color: #00b894;
+  background: linear-gradient(180deg, #4a5568 0%, #1e3d34 100%);
 }
 
 .quest-completed .quest-progress-fill {
-  background: var(--retro-green);
+  background: linear-gradient(90deg, #fdcb6e 0%, #f39c12 100%);
 }
 
-/* Loading spinner retro style */
+/* Loading spinner - Habbo Hotel style */
 .retro-loading {
   width: 32px;
   height: 32px;
-  border: 4px solid var(--gb-dark-green);
-  border-top-color: var(--gb-lightest);
-  animation: retro-spin 1s steps(8) infinite;
+  border: 4px solid #3d4852;
+  border-top-color: #fdcb6e;
+  border-radius: 50%;
+  animation: habbo-spin 0.8s linear infinite;
 }
 
-@keyframes retro-spin {
+@keyframes habbo-spin {
   to { transform: rotate(360deg); }
 }
 
-/* Notification toast */
+/* Notification toast - Habbo Hotel style */
 .retro-toast {
   position: fixed;
   bottom: 20px;
   right: 20px;
-  background: var(--gb-dark);
-  border: 4px solid var(--gb-light-green);
-  padding: 12px 16px;
+  background: linear-gradient(180deg, #4a5568 0%, #3d4852 100%);
+  border: 3px solid #74b9ff;
+  border-radius: 12px;
+  padding: 14px 18px;
   z-index: 1000;
-  animation: toast-slide 0.3s ease-out;
+  box-shadow: 
+    inset 0 1px 0 rgba(255, 255, 255, 0.1),
+    0 4px 0 #2d3436,
+    0 8px 20px rgba(0, 0, 0, 0.4);
+  animation: habbo-toast-slide 0.3s ease-out;
 }
 
-@keyframes toast-slide {
+@keyframes habbo-toast-slide {
   from {
-    transform: translateX(100%);
+    transform: translateX(100%) translateY(0);
     opacity: 0;
   }
   to {
-    transform: translateX(0);
+    transform: translateX(0) translateY(0);
     opacity: 1;
   }
 }
 
-/* Sound toggle button */
+/* Sound toggle button - Habbo Hotel style */
 .sound-toggle {
   position: fixed;
   top: 16px;
   right: 16px;
-  width: 40px;
-  height: 40px;
-  background: var(--gb-dark-green);
-  border: 3px solid var(--gb-light-green);
+  width: 44px;
+  height: 44px;
+  background: linear-gradient(180deg, #0984e3 0%, #0769b8 100%);
+  border: 3px solid #74b9ff;
+  border-radius: 12px;
   cursor: pointer;
   display: flex;
   align-items: center;
   justify-content: center;
   z-index: 100;
+  box-shadow: 
+    inset 0 2px 0 rgba(255, 255, 255, 0.2),
+    0 3px 0 #055a91;
+  transition: all 0.2s;
+}
+
+.sound-toggle:hover {
+  transform: translateY(-2px);
+  box-shadow: 
+    inset 0 2px 0 rgba(255, 255, 255, 0.2),
+    0 5px 0 #055a91;
 }
 
 .sound-toggle.muted {
   opacity: 0.5;
+  background: linear-gradient(180deg, #636e72 0%, #4a5568 100%);
+  border-color: #b2bec3;
 }
 
-/* Scanlines overlay for extra retro effect */
+/* Scanlines overlay - subtle for Habbo style */
 .scanlines {
   position: fixed;
   top: 0;
@@ -734,6 +1037,7 @@
   bottom: 0;
   pointer-events: none;
   z-index: 9999;
+  opacity: 0.03;
   background: repeating-linear-gradient(
     0deg,
     rgba(0, 0, 0, 0.1),
@@ -744,52 +1048,52 @@
 }
 
 /* =====================================================
-   THEME ISOLATION
+   HABBO HOTEL THEME ISOLATION
    Ensure ALL elements inside the game container use
-   the retro theme, regardless of user's selected theme
+   the Habbo Hotel theme, regardless of user's selected theme
    ===================================================== */
 
 /* Override all text colors inside the container */
 .buddy-battle-container,
 .buddy-battle-container * {
-  /* Force retro colors on all elements */
   --tw-text-opacity: 1;
 }
 
 /* Ensure buttons don't inherit shadcn/theme styles */
 .buddy-battle-container button:not(.retro-btn) {
-  background-color: var(--gb-dark-green);
-  color: var(--gb-lightest);
-  border-color: var(--gb-light-green);
+  background: linear-gradient(180deg, #0984e3 0%, #0769b8 100%);
+  color: #ffffff;
+  border: 2px solid #74b9ff;
+  border-radius: 20px;
 }
 
-/* Override any Tailwind dark mode classes */
+/* Override any Tailwind dark mode classes - Habbo Hotel palette */
 .buddy-battle-container .dark,
 .buddy-battle-container .light,
 .dark .buddy-battle-container,
 .light .buddy-battle-container {
-  --background: var(--gb-dark);
-  --foreground: var(--gb-lightest);
-  --card: var(--gb-dark);
-  --card-foreground: var(--gb-lightest);
-  --popover: var(--gb-dark);
-  --popover-foreground: var(--gb-lightest);
-  --primary: var(--retro-green);
-  --primary-foreground: var(--retro-black);
-  --secondary: var(--gb-dark-green);
-  --secondary-foreground: var(--gb-lightest);
-  --muted: var(--gb-dark-green);
-  --muted-foreground: var(--gb-light-green);
-  --accent: var(--retro-yellow);
-  --accent-foreground: var(--retro-black);
-  --destructive: var(--retro-red);
-  --destructive-foreground: var(--retro-white);
-  --border: var(--gb-dark-green);
-  --input: var(--gb-dark-green);
-  --ring: var(--gb-light-green);
+  --background: #1a1a2e;
+  --foreground: #ffffff;
+  --card: #2d3436;
+  --card-foreground: #ffffff;
+  --popover: #2d3436;
+  --popover-foreground: #ffffff;
+  --primary: #0984e3;
+  --primary-foreground: #ffffff;
+  --secondary: #4a5568;
+  --secondary-foreground: #ffffff;
+  --muted: #3d4852;
+  --muted-foreground: #b2bec3;
+  --accent: #fdcb6e;
+  --accent-foreground: #2d3436;
+  --destructive: #ff7675;
+  --destructive-foreground: #ffffff;
+  --border: #5a6672;
+  --input: #3d4852;
+  --ring: #74b9ff;
 }
 
-/* Ensure backgrounds are always dark retro */
+/* Ensure backgrounds are always Habbo dark */
 .buddy-battle-container div,
 .buddy-battle-container section,
 .buddy-battle-container article,
@@ -799,136 +1103,136 @@
   background-color: transparent;
 }
 
-/* Override text colors for common Tailwind classes */
+/* Override text colors for common Tailwind classes - Habbo Hotel style */
 .buddy-battle-container .text-foreground {
-  color: var(--gb-lightest) !important;
+  color: #ffffff !important;
 }
 
 .buddy-battle-container .text-muted-foreground {
-  color: var(--gb-light-green) !important;
+  color: #b2bec3 !important;
 }
 
 .buddy-battle-container .text-primary {
-  color: var(--retro-green) !important;
+  color: #74b9ff !important;
 }
 
 .buddy-battle-container .text-secondary {
-  color: var(--gb-dark-green) !important;
+  color: #dfe6e9 !important;
 }
 
-/* Override background colors for common Tailwind classes */
+/* Override background colors for common Tailwind classes - Habbo Hotel style */
 .buddy-battle-container .bg-background {
-  background-color: var(--gb-dark) !important;
+  background-color: #1a1a2e !important;
 }
 
 .buddy-battle-container .bg-card {
-  background-color: var(--gb-dark) !important;
+  background: linear-gradient(180deg, #4a5568 0%, #3d4852 100%) !important;
 }
 
 .buddy-battle-container .bg-muted {
-  background-color: var(--gb-dark-green) !important;
+  background-color: #3d4852 !important;
 }
 
-/* Border overrides */
+/* Border overrides - Habbo Hotel style */
 .buddy-battle-container .border {
-  border-color: var(--gb-dark-green) !important;
+  border-color: #5a6672 !important;
 }
 
 .buddy-battle-container .border-border {
-  border-color: var(--gb-dark-green) !important;
+  border-color: #5a6672 !important;
 }
 
-/* Ensure inputs maintain retro styling */
+/* Ensure inputs maintain Habbo styling */
 .buddy-battle-container input,
 .buddy-battle-container textarea,
 .buddy-battle-container select {
-  background-color: var(--gb-dark) !important;
-  color: var(--gb-lightest) !important;
-  border-color: var(--gb-dark-green) !important;
+  background: linear-gradient(180deg, #3d4852 0%, #2d3436 100%) !important;
+  color: #ffffff !important;
+  border: 2px solid #5a6672 !important;
+  border-radius: 8px !important;
   font-family: 'Press Start 2P', monospace;
 }
 
 .buddy-battle-container input:focus,
 .buddy-battle-container textarea:focus,
 .buddy-battle-container select:focus {
-  border-color: var(--gb-light-green) !important;
+  border-color: #74b9ff !important;
   outline: none;
-  box-shadow: 0 0 0 2px var(--gb-light-green);
+  box-shadow: 0 0 0 3px rgba(116, 185, 255, 0.3);
 }
 
 .buddy-battle-container input::placeholder {
-  color: var(--gb-dark-green);
+  color: #b2bec3;
 }
 
 /* =====================================================
-   DIALOG & MODAL STYLES
+   DIALOG & MODAL STYLES - HABBO HOTEL STYLE
    Fixed positioning elements need explicit styling
    ===================================================== */
 
 /* Dialog overlay/backdrop */
 .buddy-battle-container .fixed {
-  /* Inherit container variables */
-  --gb-dark: #0f380f;
-  --gb-dark-green: #306230;
-  --gb-light-green: #8bac0f;
-  --gb-lightest: #9bbc0f;
-  --retro-black: #1a1c2c;
-  --retro-lime: #a7f070;
-  --retro-green: #38b764;
-  --retro-yellow: #ffcd75;
+  /* Inherit container variables - Habbo Hotel colors */
+  --habbo-dark: #1a1a2e;
+  --habbo-panel: #3d4852;
+  --habbo-border: #5a6672;
+  --habbo-blue: #0984e3;
+  --habbo-gold: #fdcb6e;
+  --habbo-text: #ffffff;
 }
 
-/* Dialog backdrop */
+/* Dialog backdrop - Habbo Hotel style */
 .buddy-battle-container .bg-black\/80 {
-  background-color: rgba(15, 56, 15, 0.9) !important;
-  backdrop-filter: blur(4px);
+  background-color: rgba(26, 26, 46, 0.85) !important;
+  backdrop-filter: blur(6px);
 }
 
-/* Dialog panel styling - ensure solid background */
+/* Dialog panel styling - Habbo Hotel style */
 .buddy-battle-container .fixed .retro-panel {
-  background-color: #0f380f !important;
-  color: #9bbc0f !important;
-  border: 4px solid #306230 !important;
+  background: linear-gradient(180deg, #4a5568 0%, #3d4852 100%) !important;
+  color: #ffffff !important;
+  border: 3px solid #5a6672 !important;
+  border-radius: 16px !important;
   box-shadow: 
-    inset 2px 2px 0 #8bac0f,
-    inset -2px -2px 0 #1a1c2c,
-    8px 8px 0 rgba(0,0,0,0.5),
-    0 0 30px rgba(139, 172, 15, 0.3) !important;
+    inset 0 2px 0 rgba(255, 255, 255, 0.1),
+    0 4px 0 #2d3436,
+    0 12px 30px rgba(0, 0, 0, 0.5) !important;
 }
 
-/* Dialog title */
+/* Dialog title - Habbo Hotel style */
 .buddy-battle-container .fixed .retro-text-lg {
-  color: #a7f070 !important;
-  text-shadow: 2px 2px 0 #1a1c2c;
+  color: #fdcb6e !important;
+  text-shadow: 2px 2px 0 rgba(0, 0, 0, 0.5);
 }
 
 /* Dialog text */
 .buddy-battle-container .fixed .retro-text {
-  color: #9bbc0f !important;
+  color: #ffffff !important;
 }
 
-/* Dialog buttons */
+/* Dialog buttons - Habbo Hotel style */
 .buddy-battle-container .fixed .retro-btn {
-  background-color: #306230 !important;
-  color: #9bbc0f !important;
-  border: 3px solid #8bac0f !important;
+  background: linear-gradient(180deg, #4a5568 0%, #3d4852 100%) !important;
+  color: #ffffff !important;
+  border: 2px solid #5a6672 !important;
+  border-radius: 20px !important;
 }
 
 .buddy-battle-container .fixed .retro-btn:hover {
-  background-color: #8bac0f !important;
-  color: #0f380f !important;
+  background: linear-gradient(180deg, #5a6672 0%, #4a5568 100%) !important;
+  border-color: #74b9ff !important;
 }
 
 .buddy-battle-container .fixed .retro-btn-primary {
-  background-color: #38b764 !important;
-  border-color: #a7f070 !important;
+  background: linear-gradient(180deg, #0984e3 0%, #0769b8 100%) !important;
+  border-color: #74b9ff !important;
 }
 
-/* Dialog animation */
-@keyframes dialogSlideIn {
+/* Dialog animation - Habbo Hotel smooth */
+@keyframes habboDialogSlideIn {
   from {
     opacity: 0;
-    transform: scale(0.9) translateY(-20px);
+    transform: scale(0.95) translateY(-10px);
   }
   to {
     opacity: 1;
@@ -937,26 +1241,13 @@
 }
 
 .buddy-battle-container .fixed .retro-panel {
-  animation: dialogSlideIn 0.2s ease-out;
+  animation: habboDialogSlideIn 0.25s ease-out;
 }
 
-/* Toast notifications */
-.retro-toast {
-  position: fixed;
-  bottom: 20px;
-  right: 20px;
-  background-color: #0f380f !important;
-  color: #9bbc0f !important;
-  border: 3px solid #306230;
-  padding: 12px 16px;
-  font-family: 'Press Start 2P', monospace;
-  font-size: 10px;
-  z-index: 100;
-  animation: toastSlideIn 0.3s ease-out;
-  box-shadow: 4px 4px 0 rgba(0,0,0,0.5);
-}
+/* Toast notifications - already updated above, override duplicate */
+/* See .retro-toast above for Habbo Hotel styled notifications */
 
-@keyframes toastSlideIn {
+@keyframes habboToastSlideIn {
   from {
     opacity: 0;
     transform: translateX(100%);
@@ -967,9 +1258,121 @@
   }
 }
 
-/* Welcome message styling */
+/* Welcome message styling - Habbo Hotel style */
 .buddy-battle-container .text-6xl,
 .buddy-battle-container .text-5xl,
 .buddy-battle-container .text-4xl {
-  text-shadow: 3px 3px 0 #1a1c2c;
+  text-shadow: 3px 3px 0 rgba(0, 0, 0, 0.4);
+}
+
+/* =====================================================
+   RESPONSIVE FONT SIZING - Screen Size Adaptations
+   ===================================================== */
+
+/* Small screens (mobile) - minimum readable sizes */
+@media (max-width: 480px) {
+  :root {
+    --buddy-font-base: 10px;
+    --buddy-font-sm: 8px;
+    --buddy-font-lg: 13px;
+    --buddy-font-xl: 16px;
+    --buddy-font-title: 14px;
+    --buddy-font-button: 9px;
+  }
+  
+  .buddy-battle-container {
+    padding: 8px;
+  }
+  
+  .retro-panel {
+    padding: 10px;
+  }
+  
+  .retro-btn {
+    padding: 10px 14px;
+  }
+}
+
+/* Medium screens (tablets) */
+@media (min-width: 481px) and (max-width: 768px) {
+  :root {
+    --buddy-font-base: 11px;
+    --buddy-font-sm: 9px;
+    --buddy-font-lg: 14px;
+    --buddy-font-xl: 18px;
+    --buddy-font-title: 16px;
+    --buddy-font-button: 10px;
+  }
+  
+  .retro-panel {
+    padding: 12px;
+  }
+}
+
+/* Medium-large screens (small laptops) */
+@media (min-width: 769px) and (max-width: 1024px) {
+  :root {
+    --buddy-font-base: 12px;
+    --buddy-font-sm: 10px;
+    --buddy-font-lg: 16px;
+    --buddy-font-xl: 20px;
+    --buddy-font-title: 18px;
+    --buddy-font-button: 11px;
+  }
+}
+
+/* Large screens (desktops) */
+@media (min-width: 1025px) and (max-width: 1440px) {
+  :root {
+    --buddy-font-base: 13px;
+    --buddy-font-sm: 11px;
+    --buddy-font-lg: 17px;
+    --buddy-font-xl: 22px;
+    --buddy-font-title: 20px;
+    --buddy-font-button: 12px;
+  }
+}
+
+/* Extra large screens (large monitors) */
+@media (min-width: 1441px) {
+  :root {
+    --buddy-font-base: 14px;
+    --buddy-font-sm: 12px;
+    --buddy-font-lg: 18px;
+    --buddy-font-xl: 24px;
+    --buddy-font-title: 22px;
+    --buddy-font-button: 13px;
+  }
+  
+  .retro-panel {
+    padding: 16px;
+  }
+  
+  .retro-btn {
+    padding: 14px 24px;
+  }
+}
+
+/* Ultra-wide / 4K screens */
+@media (min-width: 1921px) {
+  :root {
+    --buddy-font-base: 16px;
+    --buddy-font-sm: 13px;
+    --buddy-font-lg: 20px;
+    --buddy-font-xl: 28px;
+    --buddy-font-title: 26px;
+    --buddy-font-button: 15px;
+  }
+  
+  .retro-panel {
+    padding: 20px;
+  }
+  
+  .retro-btn {
+    padding: 16px 28px;
+  }
+  
+  .buddy-sprite {
+    transform: scale(1.2);
+  }
 }

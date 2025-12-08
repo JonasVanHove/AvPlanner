@@ -37,7 +37,7 @@ export default async function UpgradePage({ params }: PageProps) {
 // Metadata
 export function generateMetadata() {
   return {
-    title: 'Upgrade Stats | Buddy Battle',
+    title: 'AvPlanner Buddy | Upgrade Stats',
     description: 'Spend points to upgrade your buddy stats!',
   };
 }

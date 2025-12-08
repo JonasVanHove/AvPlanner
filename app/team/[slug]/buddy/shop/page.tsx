@@ -37,7 +37,7 @@ export default async function ShopPage({ params }: PageProps) {
 // Metadata
 export function generateMetadata() {
   return {
-    title: 'Buddy Shop | Buddy Battle',
+    title: 'AvPlanner Buddy | Shop',
     description: 'Purchase items, upgrades, and mystery boxes for your buddy!',
   };
 }

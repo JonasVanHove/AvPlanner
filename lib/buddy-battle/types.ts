@@ -255,17 +255,17 @@ export const TUTORIAL_BOSS: NPCBoss = {
   title: 'The Training Master',
   description: 'A friendly trainer here to teach you the basics of battle.',
   element: 'earth',
-  level: 5,
-  hp: 80,
-  attack: 12,
-  defense: 10,
-  speed: 8,
-  special_attack: 10,
-  special_defense: 10,
-  critical_chance: 5,
-  abilities: ['Tackle', 'Rock Throw'],
+  level: 1,
+  hp: 18,        // Slightly lower than player buddies
+  attack: 7,     // Weaker attack
+  defense: 6,    // Lower defense so player can do damage
+  speed: 5,      // Slow so player usually goes first
+  special_attack: 6,
+  special_defense: 5,
+  critical_chance: 3,
+  abilities: ['Tackle', 'Sand Attack'],
   sprite_url: '/buddy-battle/npcs/nikita.png',
-  defeat_reward_points: 5,
+  defeat_reward_points: 15,  // Good reward for first win
   defeat_reward_items: ['Health Potion'],
   pre_battle_dialogue: [
     'Welcome, young trainer!',

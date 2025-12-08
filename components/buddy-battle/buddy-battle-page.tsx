@@ -225,6 +225,8 @@ export function BuddyBattlePage({ teamId: propTeamId, teamSlug }: BuddyBattlePag
             canDoBoss={available_battles?.can_do_boss}
             bossAttempts={available_battles?.boss_attempts_used || 0}
             maxBossAttempts={available_battles?.max_boss_attempts || 2}
+            currentHp={buddy.current_hp}
+            maxHp={buddy.max_hp}
           />
         </div>
         
@@ -233,7 +235,7 @@ export function BuddyBattlePage({ teamId: propTeamId, teamSlug }: BuddyBattlePag
           <StatsPanel buddy={buddy} />
           
           <div className="mt-4">
-            <QuestPanel quests={active_quests} buddyId={buddy.id} />
+            <QuestPanel quests={active_quests} buddyId={buddy.id} teamId={teamId} />
           </div>
         </div>
       </div>

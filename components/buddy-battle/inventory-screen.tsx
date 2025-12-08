@@ -8,10 +8,25 @@
 import React, { useState, useEffect } from 'react';
 import { useParams, useRouter } from 'next/navigation';
 import { useRetroSounds } from '@/hooks/use-retro-sounds';
+import { supabase } from '@/lib/supabase';
 import '@/styles/buddy-battle.css';
 
 import { RetroButton, RetroDialog, RetroTabs, RetroToast, RetroBadge } from './ui/retro-button';
 import type { BuddyItem, PlayerBuddy } from '@/lib/buddy-battle/types';
+
+// Helper function to get auth headers
+async function getAuthHeaders(): Promise<HeadersInit> {
+  const { data: { session } } = await supabase.auth.getSession();
+  if (session?.access_token) {
+    return {
+      'Authorization': `Bearer ${session.access_token}`,
+      'Content-Type': 'application/json',
+    };
+  }
+  return {
+    'Content-Type': 'application/json',
+  };
+}
 
 interface InventoryData {
   items: BuddyItem[];
@@ -25,7 +40,7 @@ interface InventoryData {
 export function InventoryScreen() {
   const params = useParams();
   const router = useRouter();
-  const teamId = params?.teamId as string;
+  const teamId = params?.slug as string;
   
   const { sounds, initAudio, isInitialized } = useRetroSounds();
   
@@ -38,8 +53,13 @@ export function InventoryScreen() {
   // Fetch inventory
   useEffect(() => {
     async function fetchInventory() {
+      if (!teamId) return;
       try {
-        const response = await fetch('/api/buddy-battle/inventory', { credentials: 'include' });
+        const headers = await getAuthHeaders();
+        const response = await fetch(`/api/buddy-battle/inventory?teamId=${teamId}`, { 
+          credentials: 'include',
+          headers,
+        });
         const data = await response.json();
         setInventory(data);
       } catch (error) {
@@ -50,7 +70,7 @@ export function InventoryScreen() {
     }
     
     fetchInventory();
-  }, []);
+  }, [teamId]);
   
   // Handle equip/unequip
   const handleEquip = async (item: BuddyItem) => {
@@ -59,9 +79,10 @@ export function InventoryScreen() {
     sounds.select();
     
     try {
-      const response = await fetch('/api/buddy-battle/inventory', {
+      const headers = await getAuthHeaders();
+      const response = await fetch(`/api/buddy-battle/inventory?teamId=${teamId}`, {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers,
         credentials: 'include',
         body: JSON.stringify({
           action: 'equip',
@@ -93,9 +114,10 @@ export function InventoryScreen() {
     sounds.select();
     
     try {
-      const response = await fetch('/api/buddy-battle/inventory', {
+      const headers = await getAuthHeaders();
+      const response = await fetch(`/api/buddy-battle/inventory?teamId=${teamId}`, {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers,
         credentials: 'include',
         body: JSON.stringify({
           action: 'use',

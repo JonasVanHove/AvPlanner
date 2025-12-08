@@ -37,7 +37,7 @@ export default async function InventoryPage({ params }: PageProps) {
 // Metadata
 export function generateMetadata() {
   return {
-    title: 'Inventory | Buddy Battle',
+    title: 'AvPlanner Buddy | Inventory',
     description: 'Manage your items and equipment!',
   };
 }

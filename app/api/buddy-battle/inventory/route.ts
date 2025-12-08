@@ -5,26 +5,39 @@
 // =====================================================
 
 import { NextRequest, NextResponse } from 'next/server';
-import { createClient } from '@supabase/supabase-js';
+import { createServerClient } from '@supabase/ssr';
 import { cookies } from 'next/headers';
 
-const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!;
-const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!;
-
-async function getSupabaseClient() {
+async function createClient() {
   const cookieStore = await cookies();
-  return createClient(supabaseUrl, supabaseAnonKey, {
-    global: {
-      headers: {
-        cookie: cookieStore.toString(),
+  return createServerClient(
+    process.env.NEXT_PUBLIC_SUPABASE_URL!,
+    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
+    {
+      cookies: {
+        getAll() {
+          return cookieStore.getAll();
+        },
+        setAll(cookiesToSet) {
+          cookiesToSet.forEach(({ name, value, options }) =>
+            cookieStore.set(name, value, options)
+          );
+        },
       },
-    },
-  });
+    }
+  );
 }
 
 export async function GET(request: NextRequest) {
   try {
-    const supabase = await getSupabaseClient();
+    const { searchParams } = new URL(request.url);
+    const teamId = searchParams.get('teamId');
+    
+    if (!teamId) {
+      return NextResponse.json({ error: 'Team ID required' }, { status: 400 });
+    }
+    
+    const supabase = await createClient();
     
     // Get current user
     const { data: { user }, error: authError } = await supabase.auth.getUser();
@@ -32,30 +45,42 @@ export async function GET(request: NextRequest) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
     
+    // Get player's member record for this specific team
+    const { data: member } = await supabase
+      .from('members')
+      .select('id')
+      .eq('auth_user_id', user.id)
+      .eq('team_id', teamId)
+      .single();
+    
+    if (!member) {
+      return NextResponse.json({ error: 'Member not found' }, { status: 404 });
+    }
+    
     // Get player's buddy
     const { data: buddy, error: buddyError } = await supabase
       .from('player_buddies')
-      .select('*')
-      .eq('user_id', user.id)
+      .select('*, buddy_type:buddy_types(*)')
+      .eq('member_id', member.id)
       .single();
     
     if (buddyError || !buddy) {
-      return NextResponse.json({ error: 'No buddy found' }, { status: 404 });
+      return NextResponse.json({ error: 'No buddy found', items: [], equipped: {} }, { status: 200 });
     }
     
     // Get player's inventory
     const { data: inventoryItems, error: invError } = await supabase
-      .from('buddy_player_inventory')
+      .from('buddy_inventory')
       .select(`
         id,
         quantity,
         is_equipped,
         acquired_at,
-        buddy_items (
+        item:buddy_items (
           id,
           name,
           description,
-          type,
+          item_type,
           rarity,
           stat_modifier,
           effect_type,
@@ -71,18 +96,18 @@ export async function GET(request: NextRequest) {
     
     // Transform inventory data
     const items = (inventoryItems || []).map(inv => {
-      // buddy_items can be an array or object depending on join
-      const itemData = Array.isArray(inv.buddy_items) 
-        ? inv.buddy_items[0] 
-        : inv.buddy_items;
+      // Handle both array and object formats from Supabase
+      const itemData = Array.isArray(inv.item) ? inv.item[0] : inv.item;
       return {
         id: inv.id,
         item_id: itemData?.id,
         name: itemData?.name || 'Unknown Item',
         description: itemData?.description || '',
-        type: itemData?.type || 'consumable',
+        type: itemData?.item_type || 'consumable',
         rarity: itemData?.rarity || 'common',
         stat_modifier: itemData?.stat_modifier,
+        effect_type: itemData?.effect_type,
+        effect_value: itemData?.effect_value,
         quantity: inv.quantity,
         is_equipped: inv.is_equipped,
         acquired_at: inv.acquired_at,
@@ -101,9 +126,9 @@ export async function GET(request: NextRequest) {
       },
       buddy: {
         id: buddy.id,
-        name: buddy.buddy_name,
-        element: buddy.element,
-        level: buddy.trainer_level,
+        name: buddy.nickname,
+        element: buddy.buddy_type?.element || 'fire',
+        level: buddy.level,
       },
     });
     
@@ -118,7 +143,14 @@ export async function GET(request: NextRequest) {
 
 export async function POST(request: NextRequest) {
   try {
-    const supabase = await getSupabaseClient();
+    const { searchParams } = new URL(request.url);
+    const teamId = searchParams.get('teamId');
+    
+    if (!teamId) {
+      return NextResponse.json({ error: 'Team ID required' }, { status: 400 });
+    }
+    
+    const supabase = await createClient();
     
     // Get current user
     const { data: { user }, error: authError } = await supabase.auth.getUser();
@@ -129,11 +161,23 @@ export async function POST(request: NextRequest) {
     const body = await request.json();
     const { action, itemId } = body;
     
+    // Get player's member record for this specific team
+    const { data: member } = await supabase
+      .from('members')
+      .select('id')
+      .eq('auth_user_id', user.id)
+      .eq('team_id', teamId)
+      .single();
+    
+    if (!member) {
+      return NextResponse.json({ error: 'Member not found' }, { status: 404 });
+    }
+    
     // Get player's buddy
     const { data: buddy, error: buddyError } = await supabase
       .from('player_buddies')
       .select('*')
-      .eq('user_id', user.id)
+      .eq('member_id', member.id)
       .single();
     
     if (buddyError || !buddy) {
@@ -142,10 +186,10 @@ export async function POST(request: NextRequest) {
     
     // Get the inventory item
     const { data: invItem, error: itemError } = await supabase
-      .from('buddy_player_inventory')
+      .from('buddy_inventory')
       .select(`
         *,
-        buddy_items (*)
+        item:buddy_items (*)
       `)
       .eq('id', itemId)
       .eq('buddy_id', buddy.id)
@@ -157,7 +201,7 @@ export async function POST(request: NextRequest) {
     
     switch (action) {
       case 'equip': {
-        const itemType = invItem.buddy_items.type;
+        const itemType = invItem.item?.item_type;
         
         // Only held and cosmetic items can be equipped
         if (itemType !== 'held' && itemType !== 'cosmetic') {
@@ -170,40 +214,47 @@ export async function POST(request: NextRequest) {
         if (invItem.is_equipped) {
           // Unequip
           await supabase
-            .from('buddy_player_inventory')
+            .from('buddy_inventory')
             .update({ is_equipped: false })
             .eq('id', itemId);
+          
+          return NextResponse.json({
+            success: true,
+            message: `Unequipped ${invItem.item?.name}!`,
+          });
         } else {
-          // Get all items of same type from player's inventory to unequip first
-          const { data: sameTypeItems } = await supabase
-            .from('buddy_items')
-            .select('id')
-            .eq('type', itemType);
+          // Unequip any other item of same type first
+          const { data: otherItems } = await supabase
+            .from('buddy_inventory')
+            .select('id, item:buddy_items(item_type)')
+            .eq('buddy_id', buddy.id)
+            .eq('is_equipped', true);
           
-          const sameTypeIds = (sameTypeItems || []).map(i => i.id);
-          
-          if (sameTypeIds.length > 0) {
-            // Unequip any other item of same type first
-            await supabase
-              .from('buddy_player_inventory')
-              .update({ is_equipped: false })
-              .eq('buddy_id', buddy.id)
-              .eq('is_equipped', true)
-              .in('item_id', sameTypeIds);
+          for (const other of (otherItems || [])) {
+            const otherItem = Array.isArray(other.item) ? other.item[0] : other.item;
+            if (otherItem?.item_type === itemType) {
+              await supabase
+                .from('buddy_inventory')
+                .update({ is_equipped: false })
+                .eq('id', other.id);
+            }
           }
           
           // Equip new item
           await supabase
-            .from('buddy_player_inventory')
+            .from('buddy_inventory')
             .update({ is_equipped: true })
             .eq('id', itemId);
+          
+          return NextResponse.json({
+            success: true,
+            message: `Equipped ${invItem.item?.name}!`,
+          });
         }
-        
-        break;
       }
       
       case 'use': {
-        if (invItem.buddy_items.type !== 'consumable') {
+        if (invItem.item?.item_type !== 'consumable') {
           return NextResponse.json({ 
             success: false, 
             message: 'This item cannot be used' 
@@ -211,13 +262,18 @@ export async function POST(request: NextRequest) {
         }
         
         // Apply item effect
-        const effectType = invItem.buddy_items.effect_type;
-        const effectValue = invItem.buddy_items.effect_value || 0;
+        const effectType = invItem.item?.effect_type;
+        const effectValue = invItem.item?.effect_value || 0;
         let message = '';
         
         switch (effectType) {
           case 'heal':
-            // Heal buddy (would apply in battle)
+            // Heal buddy HP
+            const newHp = Math.min(buddy.max_hp, buddy.current_hp + effectValue);
+            await supabase
+              .from('player_buddies')
+              .update({ current_hp: newHp })
+              .eq('id', buddy.id);
             message = `Healed ${effectValue} HP!`;
             break;
           case 'xp_boost':
@@ -225,98 +281,47 @@ export async function POST(request: NextRequest) {
             await supabase
               .from('player_buddies')
               .update({ 
-                trainer_xp: buddy.trainer_xp + effectValue 
+                total_xp: (buddy.total_xp || 0) + effectValue 
               })
               .eq('id', buddy.id);
             message = `Gained ${effectValue} XP!`;
             break;
-          case 'anxiety_reduce':
-            // Reduce anxiety
-            const newAnxiety = Math.max(0, (buddy.anxiety_level || 0) - effectValue);
+          case 'stat_points':
+            // Grant stat points
             await supabase
               .from('player_buddies')
-              .update({ anxiety_level: newAnxiety })
+              .update({ 
+                stat_points: (buddy.stat_points || 0) + effectValue 
+              })
               .eq('id', buddy.id);
-            message = `Anxiety reduced by ${effectValue}!`;
+            message = `Gained ${effectValue} stat points!`;
             break;
           default:
-            message = `Used ${invItem.buddy_items.name}!`;
+            message = `Used ${invItem.item?.name}!`;
         }
         
         // Reduce quantity or remove item
         if (invItem.quantity > 1) {
           await supabase
-            .from('buddy_player_inventory')
+            .from('buddy_inventory')
             .update({ quantity: invItem.quantity - 1 })
             .eq('id', itemId);
         } else {
           await supabase
-            .from('buddy_player_inventory')
+            .from('buddy_inventory')
             .delete()
             .eq('id', itemId);
         }
         
-        // Fetch updated inventory
-        const { data: updatedInv } = await supabase
-          .from('buddy_player_inventory')
-          .select(`
-            id,
-            quantity,
-            is_equipped,
-            buddy_items (*)
-          `)
-          .eq('buddy_id', buddy.id);
-        
         return NextResponse.json({
           success: true,
           message,
-          inventory: {
-            items: updatedInv || [],
-            equipped: {
-              held_item: updatedInv?.find((i: any) => i.is_equipped && i.buddy_items?.type === 'held') || null,
-              cosmetic: updatedInv?.find((i: any) => i.is_equipped && i.buddy_items?.type === 'cosmetic') || null,
-            },
-          },
         });
       }
       
       default:
         return NextResponse.json({ error: 'Invalid action' }, { status: 400 });
     }
-    
-    // Fetch updated inventory
-    const { data: updatedInv } = await supabase
-      .from('buddy_player_inventory')
-      .select(`
-        id,
-        quantity,
-        is_equipped,
-        buddy_items (*)
-      `)
-      .eq('buddy_id', buddy.id);
-    
-    const items = (updatedInv || []).map((inv: any) => ({
-      id: inv.id,
-      item_id: inv.buddy_items?.id,
-      name: inv.buddy_items?.name || 'Unknown',
-      description: inv.buddy_items?.description || '',
-      type: inv.buddy_items?.type || 'consumable',
-      rarity: inv.buddy_items?.rarity || 'common',
-      stat_modifier: inv.buddy_items?.stat_modifier,
-      quantity: inv.quantity,
-      is_equipped: inv.is_equipped,
-    }));
-    
-    return NextResponse.json({
-      success: true,
-      inventory: {
-        items,
-        equipped: {
-          held_item: items.find((i: any) => i.is_equipped && i.type === 'held') || null,
-          cosmetic: items.find((i: any) => i.is_equipped && i.type === 'cosmetic') || null,
-        },
-      },
-    });
     
   } catch (error) {
     console.error('Inventory POST error:', error);

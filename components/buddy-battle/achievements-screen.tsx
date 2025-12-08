@@ -8,9 +8,20 @@
 import React, { useState, useEffect } from 'react';
 import { useParams, useRouter } from 'next/navigation';
 import { useRetroSounds } from '@/hooks/use-retro-sounds';
+import { supabase } from '@/lib/supabase';
 import '@/styles/buddy-battle.css';
 
 import { RetroButton, RetroTabs, RetroProgress, RetroBadge, RetroCard } from './ui/retro-button';
+
+// Helper to get auth headers for API calls
+async function getAuthHeaders(): Promise<HeadersInit> {
+  const { data: { session } } = await supabase.auth.getSession();
+  const headers: HeadersInit = { 'Content-Type': 'application/json' };
+  if (session?.access_token) {
+    headers['Authorization'] = `Bearer ${session.access_token}`;
+  }
+  return headers;
+}
 
 interface Achievement {
   id: string;
@@ -41,7 +52,7 @@ interface AchievementsData {
 export function AchievementsScreen() {
   const params = useParams();
   const router = useRouter();
-  const teamId = params?.teamId as string;
+  const teamId = params?.slug as string;
   
   const { sounds, initAudio, isInitialized } = useRetroSounds();
   
@@ -52,8 +63,13 @@ export function AchievementsScreen() {
   // Fetch achievements
   useEffect(() => {
     async function fetchAchievements() {
+      if (!teamId) return;
       try {
-        const response = await fetch('/api/buddy-battle/achievements', { credentials: 'include' });
+        const headers = await getAuthHeaders();
+        const response = await fetch(`/api/buddy-battle/achievements?teamId=${teamId}`, { 
+          headers,
+          credentials: 'include' 
+        });
         const result = await response.json();
         setData(result);
       } catch (error) {
@@ -64,7 +80,7 @@ export function AchievementsScreen() {
     }
     
     fetchAchievements();
-  }, []);
+  }, [teamId]);
   
   // Get achievement icon
   const getAchievementIcon = (type: string, isEarned: boolean) => {

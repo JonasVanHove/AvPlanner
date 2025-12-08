@@ -69,16 +69,23 @@ export function getLevelFromXP(totalXP: number): { level: number; currentLevelXP
 
 /**
  * Calculate XP reward from a battle
+ * Tutorial battles give a bonus to help new players progress
  */
 export function calculateBattleXP(
   opponentLevel: number,
   playerLevel: number,
   isVictory: boolean,
-  isBoss: boolean = false
+  isBoss: boolean = false,
+  isTutorial: boolean = false
 ): number {
   if (!isVictory) return Math.floor(opponentLevel * 0.5); // Participation XP
   
   let baseXP = opponentLevel * 3;
+  
+  // Tutorial bonus - first few battles give more XP to kickstart progression
+  if (isTutorial) {
+    baseXP = Math.max(baseXP, 15); // Minimum 15 XP for tutorial win
+  }
   
   // Level difference modifier
   const levelDiff = opponentLevel - playerLevel;
@@ -161,15 +168,20 @@ export function calculatePointsForRange(
 
 /**
  * Calculate stat cap based on level
+ * Level 1 buddies start with ~8-12 in most stats, ~18-25 HP
+ * Stats can be upgraded within the cap for the current level
  */
 export function getStatCap(level: number, statType: StatType): number {
   switch (statType) {
     case 'hp':
-      return 100 + (level * 5); // Max 600 at level 100
+      // Level 1: 30, Level 50: 150, Level 100: 300
+      return 30 + Math.floor(level * 2.7);
     case 'critical_chance':
-      return Math.min(50, 5 + Math.floor(level / 2)); // Max 50%
+      // Level 1: 10%, Level 100: 50%
+      return Math.min(50, 10 + Math.floor(level * 0.4));
     default:
-      return 10 + (level * 2); // Max 210 at level 100
+      // Level 1: 15, Level 50: 65, Level 100: 115
+      return 15 + level;
   }
 }
 
@@ -442,6 +454,73 @@ export function isBossBattleAvailable(): boolean {
   const isLastWeek = day >= 24;
   
   return isQuarterEnd && isLastWeek;
+}
+
+/**
+ * Get days until next boss battle
+ * Returns 0 if boss battle is currently available
+ */
+export function getDaysUntilBossBattle(): number {
+  const now = new Date();
+  const month = now.getMonth() + 1; // 1-12
+  const day = now.getDate();
+  const year = now.getFullYear();
+  
+  // Check if boss is currently available
+  if (isBossBattleAvailable()) {
+    return 0;
+  }
+  
+  // Quarter end months when boss is available (24th-end of month)
+  const quarterEndMonths = [3, 6, 9, 12];
+  
+  // Find the next boss battle date
+  let nextBossMonth: number;
+  let nextBossYear = year;
+  
+  // Check if we're in a quarter end month but before the 24th
+  if (quarterEndMonths.includes(month) && day < 24) {
+    // Boss is later this month
+    nextBossMonth = month;
+  } else {
+    // Find the next quarter end month
+    nextBossMonth = quarterEndMonths.find(m => m > month) || 0;
+    
+    // If no month found this year, it's March next year
+    if (nextBossMonth === 0) {
+      nextBossMonth = 3; // March
+      nextBossYear = year + 1;
+    }
+  }
+  
+  // Boss starts on the 24th of the quarter end month
+  // Use UTC to avoid timezone issues
+  const nextBossDate = new Date(nextBossYear, nextBossMonth - 1, 24, 0, 0, 0);
+  const today = new Date(year, now.getMonth(), day, 0, 0, 0);
+  
+  // Calculate days difference
+  const diffTime = nextBossDate.getTime() - today.getTime();
+  const diffDays = Math.round(diffTime / (1000 * 60 * 60 * 24));
+  
+  return Math.max(0, diffDays);
+}
+
+/**
+ * Get formatted countdown string for boss battle
+ */
+export function getBossBattleCountdown(): string {
+  const days = getDaysUntilBossBattle();
+  
+  if (days === 0) {
+    return 'NU!';
+  } else if (days === 1) {
+    return '1 dag';
+  } else if (days < 30) {
+    return `${days} dagen`;
+  } else {
+    const months = Math.round(days / 30);
+    return `~${months} ${months === 1 ? 'maand' : 'maanden'}`;
+  }
 }
 
 /**

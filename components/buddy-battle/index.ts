@@ -13,6 +13,9 @@ export { InventoryScreen } from './inventory-screen';
 export { UpgradeScreen } from './upgrade-screen';
 export { AdminDashboard } from './admin-dashboard';
 export { AchievementsScreen } from './achievements-screen';
+export { HealCenter } from './heal-center';
+export { TeamOverview } from './team-overview';
+export { GameSettings } from './game-settings';
 
 // Display components
 export { BuddyDisplay, PixelBuddy } from './buddy-display';

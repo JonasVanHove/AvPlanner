@@ -8,14 +8,26 @@
 import React, { useState } from 'react';
 import type { QuestProgress } from '@/lib/buddy-battle/types';
 import { useRetroSounds } from '@/hooks/use-retro-sounds';
+import { supabase } from '@/lib/supabase';
+
+// Helper to get auth headers for API calls
+async function getAuthHeaders(): Promise<HeadersInit> {
+  const { data: { session } } = await supabase.auth.getSession();
+  const headers: HeadersInit = { 'Content-Type': 'application/json' };
+  if (session?.access_token) {
+    headers['Authorization'] = `Bearer ${session.access_token}`;
+  }
+  return headers;
+}
 
 interface QuestPanelProps {
   quests: QuestProgress[];
   buddyId: string;
+  teamId: string;
   onQuestClaimed?: () => void;
 }
 
-export function QuestPanel({ quests, buddyId, onQuestClaimed }: QuestPanelProps) {
+export function QuestPanel({ quests, buddyId, teamId, onQuestClaimed }: QuestPanelProps) {
   const { sounds } = useRetroSounds();
   const [claiming, setClaiming] = useState<string | null>(null);
   
@@ -26,11 +38,12 @@ export function QuestPanel({ quests, buddyId, onQuestClaimed }: QuestPanelProps)
     setClaiming(questProgressId);
     
     try {
-      const response = await fetch('/api/buddy-battle/quests/claim', {
+      const headers = await getAuthHeaders();
+      const response = await fetch(`/api/buddy-battle/quests?teamId=${teamId}`, {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers,
         credentials: 'include',
-        body: JSON.stringify({ buddyId, questProgressId }),
+        body: JSON.stringify({ action: 'claim', questId: questProgressId }),
       });
       
       if (response.ok) {

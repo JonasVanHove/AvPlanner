@@ -93,7 +93,7 @@ export async function generateMetadata({ params, searchParams }: PageProps) {
   };
   
   return {
-    title: `${titles[battleType] || 'Battle'} | Buddy Battle`,
+    title: `AvPlanner Buddy | ${titles[battleType] || 'Battle'}`,
     description: 'Engage in turn-based combat with your buddy!',
   };
 }
