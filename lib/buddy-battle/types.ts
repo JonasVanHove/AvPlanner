@@ -116,6 +116,7 @@ export interface PlayerBuddy {
   created_at: string;
   updated_at: string;
   last_points_calculated_date?: string;
+  last_hp_reset_date?: string;
   // Joined data
   buddy_type?: BuddyType;
   trainer_profile?: TrainerProfile;
@@ -251,7 +252,7 @@ export interface NPCBoss {
 }
 
 export const TUTORIAL_BOSS: NPCBoss = {
-  name: 'Nikita',
+  name: 'Nick Eetah',
   title: 'The Training Master',
   description: 'A friendly trainer here to teach you the basics of battle.',
   element: 'earth',
@@ -269,7 +270,7 @@ export const TUTORIAL_BOSS: NPCBoss = {
   defeat_reward_items: ['Health Potion'],
   pre_battle_dialogue: [
     'Welcome, young trainer!',
-    'I am Nikita, your training master.',
+    'I am Nick Eetah, your training master.',
     "Let's see what you've got!",
     'Remember: type advantages matter!'
   ],
@@ -670,12 +671,12 @@ export interface BattleResult {
 export const GAME_CONSTANTS = {
   MAX_LEVEL: 100,
   MAX_ANXIETY: 100,
-  BOSS_RETRY_COST: 25,
+  BOSS_RETRY_COST: 50,
   ANXIETY_LOSS_INCREASE: 10,
   XP_PER_LEVEL_BASE: 10,
   XP_PER_LEVEL_GROWTH: 5,
-  STAT_UPGRADE_COST_BASE: 1,
-  STAT_UPGRADE_COST_MULTIPLIER: 0.5,
+  STAT_UPGRADE_COST_BASE: 5,
+  STAT_UPGRADE_COST_MULTIPLIER: 1.2,
   ELEMENT_ADVANTAGE_MULTIPLIER: 1.5,
   ELEMENT_DISADVANTAGE_MULTIPLIER: 0.5,
   CRITICAL_DAMAGE_MULTIPLIER: 1.5,

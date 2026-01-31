@@ -1026,3 +1026,111 @@ export async function checkBossBattleAvailability(
     maxAttempts,
   };
 }
+/**
+ * Get HP reset countdown information for a buddy
+ * Returns time until next HP reset (24-hour cycle)
+ */
+export async function getHPResetCountdown(memberId: string): Promise<{
+  nextResetTime: Date;
+  hoursRemaining: number;
+  minutesRemaining: number;
+  secondsRemaining: number;
+  canResetNow: boolean;
+}> {
+  const supabase = createClient();
+  
+  const { data: buddy, error } = await supabase
+    .from('player_buddies')
+    .select('id, last_hp_reset_date')
+    .eq('member_id', memberId)
+    .single();
+  
+  if (error || !buddy) {
+    throw new Error('Buddy not found');
+  }
+
+  let nextResetTime: Date;
+
+  if (!buddy.last_hp_reset_date) {
+    // First time, reset is available now
+    nextResetTime = new Date(0);
+  } else {
+    // Next reset is 24 hours after last reset
+    const lastReset = new Date(buddy.last_hp_reset_date);
+    nextResetTime = new Date(lastReset.getTime() + 24 * 60 * 60 * 1000);
+
+    // If already passed, next reset is now
+    if (nextResetTime < new Date()) {
+      nextResetTime = new Date(0);
+    }
+  }
+
+  const now = new Date();
+  const diff = nextResetTime.getTime() - now.getTime();
+  
+  let hoursRemaining = 0, minutesRemaining = 0, secondsRemaining = 0;
+  
+  if (diff > 0) {
+    hoursRemaining = Math.floor(diff / (1000 * 60 * 60));
+    minutesRemaining = Math.floor((diff % (1000 * 60 * 60)) / (1000 * 60));
+    secondsRemaining = Math.floor((diff % (1000 * 60)) / 1000);
+  }
+
+  const canResetNow = diff <= 0;
+
+  return {
+    nextResetTime,
+    hoursRemaining,
+    minutesRemaining,
+    secondsRemaining,
+    canResetNow,
+  };
+}
+
+/**
+ * Reset buddy HP (only if 24+ hours since last reset)
+ */
+export async function resetBuddyHP(memberId: string): Promise<PlayerBuddy> {
+  const supabase = createClient();
+  
+  const { data: buddy, error: fetchError } = await supabase
+    .from('player_buddies')
+    .select('id, max_hp, current_hp, last_hp_reset_date')
+    .eq('member_id', memberId)
+    .single();
+
+  if (fetchError || !buddy) {
+    throw new Error('Buddy not found');
+  }
+
+  // Check if HP has already been reset today
+  const lastReset = buddy.last_hp_reset_date ? new Date(buddy.last_hp_reset_date) : null;
+  const today = new Date();
+  today.setHours(0, 0, 0, 0);
+
+  if (lastReset) {
+    const lastResetDate = new Date(lastReset);
+    lastResetDate.setHours(0, 0, 0, 0);
+
+    if (lastResetDate.getTime() === today.getTime()) {
+      throw new Error('HP already reset today');
+    }
+  }
+
+  // Reset the HP
+  const { data: updated, error: updateError } = await supabase
+    .from('player_buddies')
+    .update({
+      current_hp: buddy.max_hp,
+      last_hp_reset_date: new Date().toISOString(),
+    })
+    .eq('id', buddy.id)
+    .select()
+    .single();
+
+  if (updateError) {
+    throw new Error(`Failed to reset HP: ${updateError.message}`);
+  }
+
+  return updated;
+}

@@ -214,6 +214,9 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
+    // Create authenticated client for non-admin operations
+    const supabase = await createClient();
+
     // Use authenticated client if admin key is missing, otherwise use admin client
     // This ensures that if we don't have the service key, we rely on RLS policies for the user
     const dbClient = isAdminKeyAvailable ? adminClient : supabase;

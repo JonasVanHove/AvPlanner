@@ -196,17 +196,17 @@ export function calculateUpgradeCost(
   const maxValue = getStatCap(level, statType);
   const isMaxed = currentValue >= maxValue;
   
-  // Cost increases with current value
+  // Cost increases with current value - increased to encourage saving
   let baseCost: number;
   if (statType === 'critical_chance') {
-    baseCost = Math.ceil(currentValue / 5); // 1 point per 5% crit
+    baseCost = Math.ceil((currentValue / 5) * 3); // 3 points per 5% crit
   } else if (statType === 'hp') {
-    baseCost = Math.ceil(currentValue / 50); // 1 point per 50 HP
+    baseCost = Math.ceil((currentValue / 50) * 2); // 2 points per 50 HP
   } else {
-    baseCost = Math.ceil(currentValue / 10); // 1 point per 10 stat
+    baseCost = Math.ceil((currentValue / 10) * 2.5); // 2.5 points per 10 stat
   }
   
-  const pointCost = Math.max(1, baseCost);
+  const pointCost = Math.max(5, baseCost); // Minimum 5 points per upgrade
   
   // Calculate next value
   let nextValue: number;
@@ -550,6 +550,22 @@ export function chooseNPCAbility(
   availableAbilities: BuddyAbility[],
   activeEffects: ActiveEffect[]
 ): BuddyAbility {
+  // Safety check - if no abilities available, create a basic Tackle ability
+  if (!availableAbilities || availableAbilities.length === 0) {
+    return {
+      id: 'fallback-tackle',
+      name: 'Tackle',
+      description: 'A basic physical attack',
+      element: 'neutral',
+      damage_base: 15,
+      accuracy: 100,
+      cooldown_turns: 0,
+      is_special: false,
+      effect_type: 'damage',
+      unlock_level: 1,
+    };
+  }
+  
   // Filter out abilities on cooldown
   const usableAbilities = availableAbilities.filter(
     ability => !npc.ability_cooldowns[ability.id] || npc.ability_cooldowns[ability.id] <= 0

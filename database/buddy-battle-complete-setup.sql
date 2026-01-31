@@ -7,10 +7,40 @@
 -- PART 1: SEED BUDDY TYPES (with fixed UUIDs)
 -- =====================================================
 
--- First, delete existing buddy types and re-insert with correct UUIDs
+-- Delete in the correct order to avoid foreign key violations
+
+-- First, delete buddy_type_abilities
 DELETE FROM public.buddy_type_abilities WHERE buddy_type_id IN (
   SELECT id FROM public.buddy_types WHERE name IN ('Blazor', 'Aquabit', 'Terrapix', 'Zephyron', 'Voltling')
 );
+
+-- Then delete battles that reference player_buddies
+DELETE FROM public.buddy_battles WHERE challenger_buddy_id IN (
+  SELECT id FROM public.player_buddies WHERE buddy_type_id IN (
+    SELECT id FROM public.buddy_types WHERE name IN ('Blazor', 'Aquabit', 'Terrapix', 'Zephyron', 'Voltling')
+  )
+);
+
+-- Then delete boss battle attempts
+DELETE FROM public.boss_battle_attempts WHERE player_buddy_id IN (
+  SELECT id FROM public.player_buddies WHERE buddy_type_id IN (
+    SELECT id FROM public.buddy_types WHERE name IN ('Blazor', 'Aquabit', 'Terrapix', 'Zephyron', 'Voltling')
+  )
+);
+
+-- Then delete trainer profiles
+DELETE FROM public.buddy_trainer_profiles WHERE player_buddy_id IN (
+  SELECT id FROM public.player_buddies WHERE buddy_type_id IN (
+    SELECT id FROM public.buddy_types WHERE name IN ('Blazor', 'Aquabit', 'Terrapix', 'Zephyron', 'Voltling')
+  )
+);
+
+-- Then delete the buddy instances themselves
+DELETE FROM public.player_buddies WHERE buddy_type_id IN (
+  SELECT id FROM public.buddy_types WHERE name IN ('Blazor', 'Aquabit', 'Terrapix', 'Zephyron', 'Voltling')
+);
+
+-- Finally, delete the buddy types
 DELETE FROM public.buddy_types WHERE name IN ('Blazor', 'Aquabit', 'Terrapix', 'Zephyron', 'Voltling');
 
 -- Seed the 5 buddy types with fixed UUIDs

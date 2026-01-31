@@ -240,21 +240,11 @@ async function handleStartBattle(
   let opponentNpcName: string | null = null;
 
   if (battleType === 'tutorial') {
-    // Check if already completed tutorial
-    const { data: profile } = await supabase
-      .from('buddy_trainer_profiles')
-      .select('tutorial_completed')
-      .eq('player_buddy_id', buddy.id)
-      .single();
-
-    console.log('[handleStartBattle] Tutorial profile:', profile);
-
-    if (profile?.tutorial_completed) {
-      return NextResponse.json({ error: 'Tutorial already completed' }, { status: 400 });
-    }
-
+    // Allow tutorial battles to be replayed for practice
+    console.log('[handleStartBattle] Starting tutorial battle...');
+    
     opponent = createNPCBattleState(getTutorialBoss());
-    opponentNpcName = 'Nikita';
+    opponentNpcName = 'Nick Eetah';
   } else if (battleType === 'boss') {
     const quarter = getCurrentQuarter();
     const availability = await checkBossBattleAvailability(buddy.id, quarter);
@@ -345,7 +335,7 @@ async function handleStartBattle(
   const { data: abilities } = await supabase
     .from('buddy_type_abilities')
     .select('ability:buddy_abilities(*)')
-    .eq('buddy_type_id', buddy.buddy_type_id)
+    .eq('buddy_type_id', buddy.buddy_type.id)
     .lte('unlock_level', buddy.level);
 
   const playerAbilities = abilities?.map((a: any) => a.ability) || [];
@@ -443,11 +433,11 @@ async function handleBattleTurn(
     
     // If still not found, get the first ability available for this buddy type
     if (!abilityData) {
-      console.log('[handleBattleTurn] Ability not found, getting default ability for buddy type:', buddy.buddy_type_id);
+      console.log('[handleBattleTurn] Ability not found, getting default ability for buddy type:', buddy.buddy_type.id);
       const { data: defaultAbilities } = await supabase
         .from('buddy_type_abilities')
         .select('ability:buddy_abilities(*)')
-        .eq('buddy_type_id', buddy.buddy_type_id)
+        .eq('buddy_type_id', buddy.buddy_type.id)
         .lte('unlock_level', buddy.level)
         .limit(1);
       
@@ -486,7 +476,7 @@ async function handleBattleTurn(
     
     if (battle.opponent_npc_name) {
       // NPC battle - get boss data
-      const boss: NPCBoss = battle.opponent_npc_name === 'Nikita' ? getTutorialBoss() : getQuarterlyBoss();
+      const boss: NPCBoss = battle.opponent_npc_name === 'Nick Eetah' ? getTutorialBoss() : getQuarterlyBoss();
       opponentState = {
         buddy_id: 'npc',
         name: boss.name,
@@ -524,7 +514,8 @@ async function handleBattleTurn(
           damage_base: baseDamageForLevel(boss.level, isBasicAttack),
           accuracy: isBasicAttack ? 100 : 85,
           effect_type: 'damage' as const,
-          cooldown: isBasicAttack ? 0 : 1,
+          cooldown_turns: isBasicAttack ? 0 : 1,
+          is_special: !isBasicAttack,
           unlock_level: 1,
         };
       });
@@ -560,7 +551,7 @@ async function handleBattleTurn(
       const { data: oppAbilities } = await supabase
         .from('buddy_type_abilities')
         .select('ability:buddy_abilities(*)')
-        .eq('buddy_type_id', opponentBuddy.buddy_type_id)
+        .eq('buddy_type_id', opponentBuddy.buddy_type.id)
         .lte('unlock_level', opponentBuddy.level);
       
       opponentAbilities = oppAbilities?.map((a: any) => a.ability) || [];
@@ -637,7 +628,7 @@ async function handleBattleTurn(
         opponentState,
         playerState,
         opponentAbility,
-        battle.opponent_npc_name ? (battle.opponent_npc_name === 'Nikita' ? 5 : 50) : 10,
+        battle.opponent_npc_name ? (battle.opponent_npc_name === 'Nick Eetah' ? 5 : 50) : 10,
         activeEffects
       );
       
@@ -704,7 +695,7 @@ async function handleBattleTurn(
       const isBoss = !!battle.opponent_npc_name;
       const isTutorial = battle.battle_type === 'tutorial';
       // Tutorial boss is level 1, Quarterly boss is level 50, PvP opponents default to 10
-      const opponentLevel = battle.opponent_npc_name === 'Nikita' ? 1 : (battle.opponent_npc_name ? 50 : 10);
+      const opponentLevel = battle.opponent_npc_name === 'Nick Eetah' ? 1 : (battle.opponent_npc_name ? 50 : 10);
       const xpGained = calculateBattleXP(opponentLevel, buddy.level, true, isBoss, isTutorial);
       const anxietyChange = calculateAnxietyChange(true, isBoss, buddy.anxiety_level);
       

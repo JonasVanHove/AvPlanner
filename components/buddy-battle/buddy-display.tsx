@@ -5,7 +5,7 @@
 // Shows the buddy sprite with level/HP info
 // =====================================================
 
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import type { PlayerBuddyWithDetails } from '@/lib/buddy-battle/types';
 import { ELEMENT_COLORS } from '@/lib/buddy-battle/types';
 
@@ -16,12 +16,29 @@ interface BuddyDisplayProps {
   showStats?: boolean;
 }
 
+interface CountdownState {
+  hours: number;
+  minutes: number;
+  seconds: number;
+  canResetNow: boolean;
+  isLoading: boolean;
+}
+
 export function BuddyDisplay({ 
   buddy, 
   onUpgrade,
   size = 'medium',
   showStats = true 
 }: BuddyDisplayProps) {
+  const [countdown, setCountdown] = useState<CountdownState>({
+    hours: 0,
+    minutes: 0,
+    seconds: 0,
+    canResetNow: false,
+    isLoading: true,
+  });
+  const [isResetting, setIsResetting] = useState(false);
+
   const sizeClasses = {
     small: 'w-16 h-16',
     medium: 'w-32 h-32',
@@ -32,6 +49,87 @@ export function BuddyDisplay({
   const hpClass = hpPercent <= 20 ? 'critical' : hpPercent <= 50 ? 'low' : '';
   
   const elementColor = ELEMENT_COLORS[buddy.buddy_type?.element || 'earth'];
+
+  // Load countdown timer
+  useEffect(() => {
+    const fetchCountdown = async () => {
+      try {
+        const response = await fetch(`/api/buddy-battle/hp-reset?action=get-countdown`);
+        const data = await response.json();
+        
+        if (data.countdown) {
+          setCountdown({
+            hours: data.countdown.hours_remaining,
+            minutes: data.countdown.minutes_remaining,
+            seconds: data.countdown.seconds_remaining,
+            canResetNow: data.countdown.can_reset_now,
+            isLoading: false,
+          });
+        }
+      } catch (error) {
+        console.error('Failed to load countdown:', error);
+        setCountdown(prev => ({ ...prev, isLoading: false }));
+      }
+    };
+
+    fetchCountdown();
+
+    // Update countdown every second
+    const interval = setInterval(() => {
+      setCountdown(prev => {
+        if (prev.canResetNow) return prev;
+
+        let { hours, minutes, seconds } = prev;
+        
+        if (seconds > 0) {
+          seconds--;
+        } else if (minutes > 0) {
+          minutes--;
+          seconds = 59;
+        } else if (hours > 0) {
+          hours--;
+          minutes = 59;
+          seconds = 59;
+        } else {
+          // Time's up!
+          return { ...prev, canResetNow: true, hours: 0, minutes: 0, seconds: 0 };
+        }
+
+        return { ...prev, hours, minutes, seconds };
+      });
+    }, 1000);
+
+    return () => clearInterval(interval);
+  }, [buddy.id]);
+
+  const handleResetHP = async () => {
+    setIsResetting(true);
+    try {
+      const response = await fetch(`/api/buddy-battle/hp-reset?action=reset-hp`, {
+        method: 'GET',
+      });
+      const data = await response.json();
+
+      if (response.ok && data.success) {
+        // Reload countdown
+        const countdownResponse = await fetch(`/api/buddy-battle/hp-reset?action=get-countdown`);
+        const countdownData = await countdownResponse.json();
+        if (countdownData.countdown) {
+          setCountdown({
+            hours: countdownData.countdown.hours_remaining,
+            minutes: countdownData.countdown.minutes_remaining,
+            seconds: countdownData.countdown.seconds_remaining,
+            canResetNow: false,
+            isLoading: false,
+          });
+        }
+      }
+    } catch (error) {
+      console.error('Failed to reset HP:', error);
+    } finally {
+      setIsResetting(false);
+    }
+  };
   
   return (
     <div className="retro-panel">
@@ -88,6 +186,35 @@ export function BuddyDisplay({
                 style={{ width: `${hpPercent}%` }}
               />
             </div>
+          </div>
+
+          {/* HP Reset Countdown */}
+          <div className="mb-3 p-2 bg-gray-800 rounded border border-gray-600">
+            {countdown.isLoading ? (
+              <div className="retro-text text-xs text-center">Loading...</div>
+            ) : countdown.canResetNow ? (
+              <div className="flex flex-col gap-2">
+                <div className="retro-text text-xs text-center animate-pulse" style={{ color: '#00ff00' }}>
+                  ✨ HP Reset Available! ✨
+                </div>
+                <button
+                  onClick={handleResetHP}
+                  disabled={isResetting}
+                  className="retro-btn retro-btn-primary text-xs py-2"
+                >
+                  {isResetting ? 'Resetting...' : '💚 Reset HP Now'}
+                </button>
+              </div>
+            ) : (
+              <div className="text-center">
+                <div className="retro-text text-xxs mb-1">Next HP Reset</div>
+                <div className="retro-text text-sm font-semibold" style={{ color: '#fdcb6e' }}>
+                  {String(countdown.hours).padStart(2, '0')}:
+                  {String(countdown.minutes).padStart(2, '0')}:
+                  {String(countdown.seconds).padStart(2, '0')}
+                </div>
+              </div>
+            )}
           </div>
           
           {/* XP Bar */}

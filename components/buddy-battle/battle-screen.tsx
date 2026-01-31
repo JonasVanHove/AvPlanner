@@ -542,6 +542,21 @@ export function BattleScreen({ teamId }: BattleScreenProps) {
     }
   }, [dialogue, phase, sounds]);
   
+  // Handle keyboard for dialogue advancement
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (dialogue && (e.key === 'Enter' || e.code === 'Space')) {
+        e.preventDefault();
+        advanceDialogue();
+      }
+    };
+    
+    if (dialogue) {
+      window.addEventListener('keydown', handleKeyDown);
+      return () => window.removeEventListener('keydown', handleKeyDown);
+    }
+  }, [dialogue, advanceDialogue]);
+  
   // Handle ability selection
   const handleAbilitySelect = (ability: BuddyAbility) => {
     sounds.select();
@@ -903,13 +918,15 @@ export function BattleScreen({ teamId }: BattleScreenProps) {
                       selectedAbility === ability.id 
                         ? 'ring-2 ring-[#fdcb6e]' 
                         : ''
-                    } ${isOnCooldown ? 'opacity-50' : ''}`}
+                    } ${isOnCooldown ? 'opacity-50 cursor-not-allowed' : ''}`}
                     onClick={() => !isOnCooldown && handleAbilitySelect(ability)}
                     disabled={isOnCooldown}
+                    title={isOnCooldown ? `On cooldown for ${battleState.player_buddy.ability_cooldowns[ability.id]} more turns` : ''}
                   >
                     <div className="flex items-center justify-center gap-1">
                       {ability.name}
                       {isHealing && <span>💚</span>}
+                      {isOnCooldown && <span>❌</span>}
                     </div>
                     <div className="text-xxs mt-1 opacity-75">
                       {ability.element !== 'neutral' && (
@@ -922,8 +939,8 @@ export function BattleScreen({ teamId }: BattleScreenProps) {
                       {ability.cooldown_turns > 0 && ` • CD: ${ability.cooldown_turns}`}
                     </div>
                     {isOnCooldown && (
-                      <div className="text-xs mt-1" style={{ color: '#ff7675' }}>
-                        Wait: {battleState.player_buddy.ability_cooldowns[ability.id]} turns
+                      <div className="text-xs mt-1 font-semibold" style={{ color: '#ff7675' }}>
+                        Cooldown: {battleState.player_buddy.ability_cooldowns[ability.id]} turns left
                       </div>
                     )}
                   </button>
