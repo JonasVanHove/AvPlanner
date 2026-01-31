@@ -50,6 +50,7 @@ import { LoginButton } from "@/components/auth/auth-dialog"
 import { BadgeNotificationComponent } from "@/components/badge-notification"
 import { BadgeDisplay } from "@/components/badge-display"
 import { useUndoRedo } from "@/hooks/use-undo-redo"
+import { Gamepad2 } from "lucide-react"
 
 interface Member {
   id: string
@@ -132,6 +133,12 @@ const AvailabilityCalendarRedesigned = ({
   const [isPasswordVerified, setIsPasswordVerified] = useState(false)
   const [passwordError, setPasswordError] = useState("")
   const [isPasswordLoading, setIsPasswordLoading] = useState(false)
+  const [showBuddyPasswordDialog, setShowBuddyPasswordDialog] = useState(false)
+  const [buddyPasswordInput, setBuddyPasswordInput] = useState("")
+  const [buddyPasswordError, setBuddyPasswordError] = useState("")
+  const [isBuddyPasswordLoading, setIsBuddyPasswordLoading] = useState(false)
+  const [buddyPasswordAttempts, setBuddyPasswordAttempts] = useState(0)
+  const [showBuddyLoginRequired, setShowBuddyLoginRequired] = useState(false)
   const [showDatePicker, setShowDatePicker] = useState(false)
   const [showKeyboardHelp, setShowKeyboardHelp] = useState(false)
   const [openSettings, setOpenSettings] = useState(false)
@@ -540,6 +547,11 @@ const AvailabilityCalendarRedesigned = ({
 
   const activeMembersForAnalytics = getActiveMembersForAnalytics()
 
+  // Get current user's member info
+  const getCurrentUserMember = () => {
+    return members.find(m => m.email && userEmail && m.email.toLowerCase() === userEmail.toLowerCase())
+  }
+
   // Check if a date is within the bulk selection range for visual highlighting
   const isDateInBulkRange = (date: Date) => {
     if (!bulkSelectionRange.isActive || !bulkSelectionRange.startDate || !bulkSelectionRange.endDate) {
@@ -574,6 +586,15 @@ const AvailabilityCalendarRedesigned = ({
       window.removeEventListener('simplifiedModeChanged', handleSimplifiedModeChange as EventListener)
     }
   }, [])
+
+  // Reset buddy password attempts when dialog opens
+  useEffect(() => {
+    if (!showBuddyPasswordDialog) {
+      setBuddyPasswordAttempts(0)
+      setBuddyPasswordInput("")
+      setBuddyPasswordError("")
+    }
+  }, [showBuddyPasswordDialog])
 
   // Undo handler - reverts to previous availability state (defined early for keyboard shortcuts)
   const handleUndo = useCallback(async () => {
@@ -975,6 +996,43 @@ const AvailabilityCalendarRedesigned = ({
     setShowPasswordDialog(false)
     setPasswordError("")
     setEditMode(true)
+  }
+
+  const handleBuddyPasswordSubmit = async (e: React.FormEvent) => {
+    e.preventDefault()
+    
+    setIsBuddyPasswordLoading(true)
+    setBuddyPasswordError("")
+    
+    try {
+      const correctPassword = "PapaYvo"
+      
+      if (buddyPasswordInput === correctPassword) {
+        // Password correct, navigate to buddy page
+        setShowBuddyPasswordDialog(false)
+        setBuddyPasswordInput("")
+        setBuddyPasswordError("")
+        setBuddyPasswordAttempts(0)
+        router.push(`/team/${team?.slug || teamId}/buddy`)
+      } else {
+        const newAttempts = buddyPasswordAttempts + 1
+        setBuddyPasswordAttempts(newAttempts)
+        setBuddyPasswordError("Incorrect password")
+      }
+    } catch (error) {
+      console.error('Error verifying buddy password:', error)
+      setBuddyPasswordError("An error occurred while verifying the password")
+    } finally {
+      setIsBuddyPasswordLoading(false)
+    }
+  }
+
+  const handleBuddyButtonClick = () => {
+    if (!userEmail) {
+      setShowBuddyLoginRequired(true)
+      return
+    }
+    setShowBuddyPasswordDialog(true)
   }
 
   const updateAvailability = async (
@@ -2652,6 +2710,23 @@ const AvailabilityCalendarRedesigned = ({
                       </DialogContent>
                     </Dialog>
 
+                    {/* Buddy Battle Button */}
+                    <Tooltip>
+                      <TooltipTrigger asChild>
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          className={`h-9 w-9 p-0 ${themeClasses.button}`}
+                          onClick={handleBuddyButtonClick}
+                        >
+                          <Gamepad2 className="h-4 w-4" />
+                        </Button>
+                      </TooltipTrigger>
+                      <TooltipContent>
+                        <p>My Buddy</p>
+                      </TooltipContent>
+                    </Tooltip>
+
                     <SettingsDropdown 
                       currentLocale={locale} 
                       members={members} 
@@ -2735,6 +2810,14 @@ const AvailabilityCalendarRedesigned = ({
                       <div className="flex items-center gap-2">
                         <Settings className="h-4 w-4" />
                         <span>Settings</span>
+                      </div>
+                    </HamburgerMenuItem>
+                    
+                    {/* Buddy Battle */}
+                    <HamburgerMenuItem onClick={handleBuddyButtonClick}>
+                      <div className="flex items-center gap-2">
+                        <Gamepad2 className="h-4 w-4" />
+                        <span>My Buddy</span>
                       </div>
                     </HamburgerMenuItem>
                     
@@ -2918,6 +3001,89 @@ const AvailabilityCalendarRedesigned = ({
         error={passwordError}
         locale={locale}
       />
+
+      {/* Buddy Login Required Dialog */}
+      <Dialog open={showBuddyLoginRequired} onOpenChange={setShowBuddyLoginRequired}>
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle className="text-center">Login Required</DialogTitle>
+          </DialogHeader>
+          <div className="text-center space-y-4">
+            <p className="text-sm text-gray-600 dark:text-gray-400">
+              You must be logged in to access Buddy Battle.
+            </p>
+            <p className="text-sm text-gray-500 dark:text-gray-500">
+              Please log in first to join the game.
+            </p>
+          </div>
+          <div className="flex gap-2">
+            <Button
+              type="button"
+              className="w-full"
+              onClick={() => setShowBuddyLoginRequired(false)}
+              variant="outline"
+            >
+              Close
+            </Button>
+            <LoginButton />
+          </div>
+        </DialogContent>
+      </Dialog>
+
+      {/* Buddy Password Dialog */}
+      <Dialog open={showBuddyPasswordDialog} onOpenChange={setShowBuddyPasswordDialog}>
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle className="text-center">Welcome you curious mosterdpot!</DialogTitle>
+            <p className="text-center text-sm text-gray-600 dark:text-gray-400 pt-2">
+              Only early access members :)
+              <br />
+              please enter the password
+            </p>
+          </DialogHeader>
+          <form onSubmit={handleBuddyPasswordSubmit} className="space-y-4">
+            <div>
+              <Label htmlFor="buddy-password" className="sr-only">Password</Label>
+              <Input
+                id="buddy-password"
+                type="password"
+                placeholder="Enter password"
+                value={buddyPasswordInput}
+                onChange={(e) => setBuddyPasswordInput(e.target.value)}
+                disabled={isBuddyPasswordLoading}
+                autoFocus
+              />
+            </div>
+            {buddyPasswordError && (
+              <div className="space-y-2">
+                <div className="text-sm text-red-600 dark:text-red-400 text-center">{buddyPasswordError}</div>
+                {buddyPasswordAttempts >= 3 && buddyPasswordAttempts < 5 && (
+                  <div className="text-sm text-orange-600 dark:text-orange-400 text-center">
+                    Hey, niet teveel proberen he
+                  </div>
+                )}
+                {buddyPasswordAttempts >= 5 && buddyPasswordAttempts < 10 && (
+                  <div className="text-sm text-orange-600 dark:text-orange-400 text-center">
+                    Ge wilt echt niet opgeven?
+                  </div>
+                )}
+                {buddyPasswordAttempts >= 10 && (
+                  <div className="text-sm text-red-600 dark:text-red-400 text-center font-semibold">
+                    {getCurrentUserMember()?.first_name || 'Hey'}, back to work bitch
+                  </div>
+                )}
+              </div>
+            )}
+            <Button 
+              type="submit" 
+              className="w-full" 
+              disabled={isBuddyPasswordLoading}
+            >
+              {isBuddyPasswordLoading ? "Verifying..." : "Enter"}
+            </Button>
+          </form>
+        </DialogContent>
+      </Dialog>
 
       {/* Badge Notifications */}
       {showBadgeNotification && newBadges.map((badge, index) => (

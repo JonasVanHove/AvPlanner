@@ -262,7 +262,7 @@ export function MemberAvatar({
           <Tooltip>
             <TooltipTrigger asChild>
               <div 
-                className={`absolute -bottom-0.5 -right-0.5 w-3 h-3 rounded-full border-2 border-white dark:border-gray-800 cursor-help ${
+                className={`absolute -bottom-0.5 -right-0.5 w-3 h-3 rounded-full border-2 border-white dark:border-gray-600 cursor-help ${
                   statusIndicator.status ? statusColors[statusIndicator.status] : "bg-gray-400"
                 }`}
               />
