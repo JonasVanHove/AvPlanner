@@ -25,17 +25,6 @@ interface BadgeDisplayProps {
   layout?: "wrap" | "row" // row = single-line horizontal group
 }
 
-const badgeConfig: Record<
-  BadgeType,
-interface BadgeDisplayProps {
-  badges: Badge[]
-  locale: Locale
-  className?: string
-  size?: "sm" | "md" | "lg"
-  showCount?: boolean
-  layout?: "wrap" | "row" // row = single-line horizontal group
-}
-
 function BadgeDisplayComponent({ badges, locale, className, size = "md", showCount = true, layout = "wrap" }: BadgeDisplayProps) {
   // Memoize badge counts calculation
   const badgeCounts = useMemo(() => {
