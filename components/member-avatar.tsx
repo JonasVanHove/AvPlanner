@@ -1,6 +1,6 @@
 "use client"
 
-import { useState, useEffect } from "react"
+import React, { useState, useEffect } from "react"
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip"
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog"
@@ -32,7 +32,7 @@ interface MemberAvatarProps {
   clickable?: boolean // Whether avatar is clickable for badge dialog
 }
 
-export function MemberAvatar({ 
+function MemberAvatarComponent({ 
   firstName, 
   lastName, 
   profileImage, 
@@ -434,3 +434,22 @@ export function MemberAvatar({
     </TooltipProvider>
   )
 }
+
+// Memoize with deep prop comparison for frequently re-rendered component
+export const MemberAvatar = React.memo(MemberAvatarComponent, (prevProps, nextProps) => {
+  return (
+    prevProps.firstName === nextProps.firstName &&
+    prevProps.lastName === nextProps.lastName &&
+    prevProps.profileImage === nextProps.profileImage &&
+    prevProps.size === nextProps.size &&
+    prevProps.className === nextProps.className &&
+    prevProps.isBirthdayToday === nextProps.isBirthdayToday &&
+    prevProps.locale === nextProps.locale &&
+    prevProps.memberId === nextProps.memberId &&
+    prevProps.teamId === nextProps.teamId &&
+    prevProps.email === nextProps.email &&
+    prevProps.birthDate === nextProps.birthDate &&
+    prevProps.clickable === nextProps.clickable &&
+    JSON.stringify(prevProps.statusIndicator) === JSON.stringify(nextProps.statusIndicator)
+  )
+})

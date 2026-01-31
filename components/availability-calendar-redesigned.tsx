@@ -1,5 +1,5 @@
 "use client"
-import { useState, useEffect, useCallback, useRef } from "react"
+import { useState, useEffect, useCallback, useRef, useMemo, lazy, Suspense } from "react"
 import { Button } from "@/components/ui/button"
 import { useRouter } from "next/navigation"
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip"
@@ -33,7 +33,6 @@ import { useTranslation, type Locale } from "@/lib/i18n"
 import { cn } from "@/lib/utils"
 import { MemberForm } from "./member-form"
 import { MemberAvatar } from "./member-avatar"
-import { BulkUpdateDialog, AnalyticsButton, PlannerButton } from "./bulk-update-dialog"
 import { SettingsDropdown } from "./settings-dropdown"
 import { checkAndAwardBadgesClientSide } from "@/lib/badge-checker-client"
 import { EditModePasswordDialog } from "./edit-mode-password-dialog"
@@ -51,6 +50,11 @@ import { BadgeNotificationComponent } from "@/components/badge-notification"
 import { BadgeDisplay } from "@/components/badge-display"
 import { useUndoRedo } from "@/hooks/use-undo-redo"
 import { Gamepad2 } from "lucide-react"
+
+// Lazy load heavy dialogs for better initial load performance
+const BulkUpdateDialog = lazy(() => import("./bulk-update-dialog").then(m => ({ default: m.BulkUpdateDialog })))
+const AnalyticsButton = lazy(() => import("./bulk-update-dialog").then(m => ({ default: m.AnalyticsButton })))
+const PlannerButton = lazy(() => import("./bulk-update-dialog").then(m => ({ default: m.PlannerButton })))
 
 interface Member {
   id: string
@@ -196,8 +200,8 @@ const AvailabilityCalendarRedesigned = ({
     return () => window.removeEventListener('weekendsAsWeekdaysChanged', handler as EventListener)
   }, [teamId])
 
-  // Get theme-specific colors for background and header
-  const getThemeColors = () => {
+  // Memoized theme colors - only recalculate when theme changes
+  const themeColors = useMemo(() => {
     switch (theme) {
       case 'autumn':
         return {
@@ -254,12 +258,10 @@ const AvailabilityCalendarRedesigned = ({
           headerBorder: 'border-blue-500/20 dark:border-gray-700'
         }
     }
-  }
+  }, [theme])
 
-  const themeColors = getThemeColors()
-
-  // Get comprehensive theme-specific styling
-  const getThemeClasses = () => {
+  // Memoized theme classes - only recalculate when theme changes
+  const themeClasses = useMemo(() => {
     switch (theme) {
       case 'cozy':
         return {
@@ -312,10 +314,7 @@ const AvailabilityCalendarRedesigned = ({
           accent: 'bg-gray-100 dark:bg-gray-700 text-gray-800 dark:text-gray-200',
         }
     }
-  }
-
-  const themeClasses = getThemeClasses()
-
+  }, [theme])
 
   // Memoized callback for bulk range selection changes
   const handleRangeSelectionChange = useCallback((startDate?: Date, endDate?: Date, isActive?: boolean) => {
@@ -1709,7 +1708,7 @@ const AvailabilityCalendarRedesigned = ({
                                       memberId={member.id}
                                       teamId={teamId}
                                       email={member.email}
-                                      birthDate={member.birth_date}
+                                      birthDate={member.birth_date ?? undefined}
                                       clickable={true}
                                     />
                                     <div className="min-w-0 flex-1">
@@ -1867,7 +1866,7 @@ const AvailabilityCalendarRedesigned = ({
                             memberId={member.id}
                             teamId={teamId}
                             email={member.email}
-                            birthDate={member.birth_date}
+                            birthDate={member.birth_date ?? undefined}
                             clickable={true}
                           />
                         </div>
@@ -2130,7 +2129,7 @@ const AvailabilityCalendarRedesigned = ({
                             memberId={member.id}
                             teamId={teamId}
                             email={member.email}
-                            birthDate={member.birth_date}
+                            birthDate={member.birth_date ?? undefined}
                             clickable={true}
                           />
                         </div>

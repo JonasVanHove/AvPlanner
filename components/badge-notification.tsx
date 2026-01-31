@@ -1,28 +1,13 @@
 "use client"
 
 import { useEffect, useState } from "react"
-import { Award, HelpingHand, Flame, Star, Trophy, X, Target, Crown, Zap } from "lucide-react"
+import { X } from "lucide-react"
 import { Card, CardContent } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { type Locale } from "@/lib/i18n"
 import { cn } from "@/lib/utils"
 import { createConfetti } from "@/lib/confetti"
-
-export type BadgeType =
-  | "timely_completion"
-  | "helped_other"
-  | "streak_3"
-  | "streak_10"
-  | "perfect_month"
-  | "collaboration"
-  | "early_bird"
-  | "consistency_30"
-  | "consistency_90"
-  | "attendance_100"
-  | "time_1h"
-  | "time_10h"
-  | "time_50h"
-  | "time_200h"
+import { badgeConfig, type BadgeType } from "@/lib/badge-config"
 
 interface BadgeNotification {
   type: BadgeType
@@ -262,16 +247,6 @@ const badgeConfig: Record<
     bgColor: "bg-red-100 dark:bg-red-900/20",
     emoji: "🌟",
     title: {
-      en: "200 Hour Legend Badge!",
-      nl: "200 Uur Legende Badge!",
-      fr: "Badge Légende 200 Heures!",
-    },
-    message: {
-      en: "Legendary — 200 hours of planner use!",
-      nl: "Legendarisch — 200 uur plannergebruik!",
-      fr: "Légendaire — 200 heures d'utilisation!",
-    },
-  },
 }
 
 export function BadgeNotificationComponent({ badge, locale, onClose }: BadgeNotificationProps) {

@@ -1,0 +1,7 @@
+/site.webmanifest
+  Access-Control-Allow-Origin: *
+  Content-Type: application/manifest+json
+
+/manifest.json
+  Access-Control-Allow-Origin: *
+  Content-Type: application/manifest+json
