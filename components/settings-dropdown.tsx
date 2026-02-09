@@ -74,6 +74,10 @@ function SettingsPanelContent(props: {
   hideQR: () => void
   copyToClipboard: (text: string) => Promise<void>
   shareUrl: string
+  shareReadOnlyUrl: string
+  shareReadOnlyWithPasswordUrl: string
+  sharePasswordInput: string
+  onSharePasswordInput: (val: string) => void
   notifications: boolean
   onNotificationsToggle: (enabled: boolean) => void
   testNotificationMessage: string
@@ -108,6 +112,10 @@ function SettingsPanelContent(props: {
     hideQR,
     copyToClipboard,
     shareUrl,
+    shareReadOnlyUrl,
+    shareReadOnlyWithPasswordUrl,
+    sharePasswordInput,
+    onSharePasswordInput,
     notifications,
     onNotificationsToggle,
     testNotificationMessage,
@@ -211,6 +219,52 @@ function SettingsPanelContent(props: {
               >
                 <Copy className="h-3 w-3" />
               </Button>
+            </div>
+          </div>
+        )}
+
+        {team?.invite_code && (
+          <div className="mb-3">
+            <Label className="text-xs text-gray-600 dark:text-gray-400 mb-1 block">
+              {currentLocale === "en" ? "Read-only share link" : currentLocale === "nl" ? "Alleen-lezen deel-link" : "Lien de partage en lecture seule"}
+            </Label>
+            <div className="flex items-center gap-2">
+              <Input
+                value={shareReadOnlyUrl}
+                readOnly
+                className="flex-1 h-8 text-xs bg-gray-50 dark:bg-gray-700 border-gray-200 dark:border-gray-600"
+              />
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => copyToClipboard(shareReadOnlyUrl)}
+                className="h-8 w-8 p-0 border-gray-200 dark:border-gray-600"
+              >
+                <Copy className="h-3 w-3" />
+              </Button>
+            </div>
+            <div className="mt-2">
+              <Label className="text-[11px] text-gray-500 dark:text-gray-400 mb-1 block">
+                {currentLocale === "en" ? "Include password in link (optional)" : currentLocale === "nl" ? "Wachtwoord in link (optioneel)" : "Inclure le mot de passe (optionnel)"}
+              </Label>
+              <div className="flex items-center gap-2">
+                <Input
+                  type="password"
+                  value={sharePasswordInput}
+                  onChange={(e) => onSharePasswordInput(e.target.value)}
+                  placeholder={currentLocale === "en" ? "Enter team password" : currentLocale === "nl" ? "Teamwachtwoord" : "Mot de passe de l'équipe"}
+                  className="flex-1 h-8 text-xs bg-gray-50 dark:bg-gray-700 border-gray-200 dark:border-gray-600"
+                />
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => copyToClipboard(shareReadOnlyWithPasswordUrl)}
+                  disabled={!sharePasswordInput}
+                  className="h-8 px-2 text-[11px] border-gray-200 dark:border-gray-600"
+                >
+                  {currentLocale === "en" ? "Copy" : currentLocale === "nl" ? "Kopieer" : "Copier"}
+                </Button>
+              </div>
             </div>
           </div>
         )}
@@ -584,6 +638,9 @@ export function SettingsDropdown({ currentLocale, members, team, forceOpen, onOp
   const [testNotificationMessage, setTestNotificationMessage] = useState("")
   const [simplifiedMode, setSimplifiedMode] = useState(false)
   const [shareUrl, setShareUrl] = useState("")
+  const [shareReadOnlyUrl, setShareReadOnlyUrl] = useState("")
+  const [shareReadOnlyWithPasswordUrl, setShareReadOnlyWithPasswordUrl] = useState("")
+  const [sharePasswordInput, setSharePasswordInput] = useState("")
   const { setTheme, theme } = useTheme()
   const { t } = useTranslation(currentLocale)
   const isMobile = useIsMobile()
@@ -617,6 +674,19 @@ export function SettingsDropdown({ currentLocale, members, team, forceOpen, onOp
     const baseUrl = currentUrl.split('?')[0]
     setShareUrl(`${baseUrl}?view=readonly`)
   }, [])
+
+  useEffect(() => {
+    if (!team?.invite_code) return
+    const base = `${window.location.origin}${currentLocale === "en" ? "" : `/${currentLocale}`}/team/${team.invite_code}/share`
+    setShareReadOnlyUrl(base)
+  }, [team?.invite_code, currentLocale])
+
+  useEffect(() => {
+    if (!team?.invite_code) return
+    const base = `${window.location.origin}${currentLocale === "en" ? "" : `/${currentLocale}`}/team/${team.invite_code}/share`
+    const pw = sharePasswordInput ? btoa(sharePasswordInput) : ""
+    setShareReadOnlyWithPasswordUrl(pw ? `${base}?pw=${encodeURIComponent(pw)}` : base)
+  }, [team?.invite_code, currentLocale, sharePasswordInput])
 
   const handleNotificationsToggle = (enabled: boolean) => {
     setNotifications(enabled)
@@ -757,6 +827,10 @@ export function SettingsDropdown({ currentLocale, members, team, forceOpen, onOp
       hideQR={() => setShowQR(false)}
       copyToClipboard={copyToClipboard}
       shareUrl={shareUrl}
+      shareReadOnlyUrl={shareReadOnlyUrl}
+      shareReadOnlyWithPasswordUrl={shareReadOnlyWithPasswordUrl}
+      sharePasswordInput={sharePasswordInput}
+      onSharePasswordInput={setSharePasswordInput}
       notifications={notifications}
       onNotificationsToggle={handleNotificationsToggle}
       testNotificationMessage={testNotificationMessage}

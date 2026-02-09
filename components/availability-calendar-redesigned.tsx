@@ -99,6 +99,8 @@ interface AvailabilityCalendarProps {
   userEmail?: string
   initialDate?: Date
   onDateNavigation?: (newDate: Date) => void
+  readOnly?: boolean
+  initialWeeksToShow?: 1 | 2 | 4 | 8
 }
 
 const AvailabilityCalendarRedesigned = ({
@@ -113,8 +115,11 @@ const AvailabilityCalendarRedesigned = ({
   userEmail,
   initialDate,
   onDateNavigation,
+  readOnly,
+  initialWeeksToShow,
 }: AvailabilityCalendarProps) => {
   const { theme } = useTheme()
+  const isReadOnly = !!readOnly
   // Cache whether RPC functions are available to avoid repeated 404/42P01 errors
   const rpcAvailableRef = useRef<{ up: boolean; down: boolean }>({ up: true, down: true })
   // Note: members include birth_date when available; logs removed to reduce noise
@@ -129,7 +134,7 @@ const AvailabilityCalendarRedesigned = ({
   })
   const [availability, setAvailability] = useState<Availability[]>([])
   const [viewMode, setViewMode] = useState<"week">("week")
-  const [weeksToShow, setWeeksToShow] = useState<1 | 2 | 4 | 8>(1)
+  const [weeksToShow, setWeeksToShow] = useState<1 | 2 | 4 | 8>(initialWeeksToShow || 1)
   const [isLoading, setIsLoading] = useState(false)
   const [editMode, setEditMode] = useState(false)
   const [simplifiedMode, setSimplifiedMode] = useState(false)
@@ -159,6 +164,11 @@ const AvailabilityCalendarRedesigned = ({
   const [showBadgeNotification, setShowBadgeNotification] = useState(false)
   const router = useRouter()
   const { t } = useTranslation(locale)
+  const readOnlyLabel = locale === "nl" ? "Alleen lezen" : locale === "fr" ? "Lecture seule" : "Read-only"
+  const emptyAvailabilityLabel =
+    locale === "nl" ? "Vul in" :
+    locale === "fr" ? "Veuillez compléter" :
+    "Please fill in"
   // Realtime channel for team notifications
   const channelRef = useRef<any>(null)
 
@@ -466,6 +476,24 @@ const AvailabilityCalendarRedesigned = ({
     const month = String(date.getMonth() + 1).padStart(2, '0')
     const day = String(date.getDate()).padStart(2, '0')
     return `${year}-${month}-${day}`
+  }
+
+  const normalizeDate = (date: Date) => new Date(date.getFullYear(), date.getMonth(), date.getDate())
+
+  const shouldShowEmptyPrompt = (date: Date) => {
+    if (editMode) return false
+    const target = normalizeDate(date)
+    const todayStart = normalizeDate(getMondayOfWeek(new Date()))
+    const nextStart = new Date(todayStart)
+    nextStart.setDate(todayStart.getDate() + 7)
+    const endOfWeek = (start: Date) => {
+      const end = new Date(start)
+      end.setDate(start.getDate() + 6)
+      return end
+    }
+    const currentEnd = endOfWeek(todayStart)
+    const nextEnd = endOfWeek(nextStart)
+    return (target >= todayStart && target <= currentEnd) || (target >= nextStart && target <= nextEnd)
   }
 
   // Alias for getMondayOfWeek for consistency with usage in smart filtering
@@ -954,6 +982,7 @@ const AvailabilityCalendarRedesigned = ({
   }
 
   const handleEditModeToggle = (checked: boolean) => {
+    if (isReadOnly) return
     if (checked) {
       // Switching to edit mode - check password if team is password protected
       if (isPasswordProtected && !isPasswordVerified) {
@@ -994,7 +1023,9 @@ const AvailabilityCalendarRedesigned = ({
     setIsPasswordVerified(true)
     setShowPasswordDialog(false)
     setPasswordError("")
-    setEditMode(true)
+    if (!isReadOnly) {
+      setEditMode(true)
+    }
   }
 
   const handleBuddyPasswordSubmit = async (e: React.FormEvent) => {
@@ -1027,6 +1058,7 @@ const AvailabilityCalendarRedesigned = ({
   }
 
   const handleBuddyButtonClick = () => {
+    if (isReadOnly) return
     if (!userEmail) {
       setShowBuddyLoginRequired(true)
       return
@@ -1039,7 +1071,7 @@ const AvailabilityCalendarRedesigned = ({
     date: string,
     status: "available" | "unavailable" | "need_to_check" | "absent" | "holiday" | "remote",
   ) => {
-    if (!editMode) return
+    if (isReadOnly || !editMode) return
 
     try {
       
@@ -1129,7 +1161,7 @@ const AvailabilityCalendarRedesigned = ({
   }
 
   const clearAvailability = async (memberId: string, date: string) => {
-    if (!editMode) return
+    if (isReadOnly || !editMode) return
     try {
       const { error } = await supabase
         .from("availability")
@@ -1145,7 +1177,7 @@ const AvailabilityCalendarRedesigned = ({
   }
 
   const deleteMember = async (memberId: string) => {
-    if (!editMode) return
+    if (isReadOnly || !editMode) return
 
     if (!confirm("Weet je zeker dat je dit teamlid wilt verwijderen?")) return
 
@@ -2043,7 +2075,13 @@ const AvailabilityCalendarRedesigned = ({
                                 </div>
                               ) : (
                                 <div className="text-xl relative w-full flex items-center justify-center">
-                                  {record ? getStatusConfig(record.status).icon : ""}
+                                  {record ? (
+                                    getStatusConfig(record.status).icon
+                                  ) : shouldShowEmptyPrompt(date) ? (
+                                    <span className="text-[10px] text-gray-400 dark:text-gray-500 text-center leading-tight">
+                                      {emptyAvailabilityLabel}
+                                    </span>
+                                  ) : ""}
                                 </div>
                               )}
                             </div>
@@ -2358,7 +2396,13 @@ const AvailabilityCalendarRedesigned = ({
                                   )}
                                   
                                   {/* Status icon in center */}
-                                  {availability ? getStatusConfig(availability.status).icon : ""}
+                                  {availability ? (
+                                    getStatusConfig(availability.status).icon
+                                  ) : shouldShowEmptyPrompt(date) ? (
+                                    <span className="text-[10px] text-gray-400 dark:text-gray-500 text-center leading-tight px-1">
+                                      {emptyAvailabilityLabel}
+                                    </span>
+                                  ) : ""}
                                   
                                   {/* Auto-holiday indicator at bottom-right */}
                                   {availability?.auto_holiday && availability?.status === 'holiday' && (
@@ -2450,6 +2494,11 @@ const AvailabilityCalendarRedesigned = ({
                     <h1 className="text-sm lg:text-lg xl:text-xl font-bold text-white truncate">Availability Planner</h1>
                     <div className="flex items-center gap-2">
                       <p className="text-xs sm:text-sm lg:text-sm font-medium sm:font-semibold text-white lg:text-blue-100 dark:text-gray-300 truncate">{teamName}</p>
+                      {isReadOnly && (
+                        <span className="text-[10px] uppercase tracking-wide bg-white/15 text-white border border-white/30 px-2 py-0.5 rounded-full">
+                          {readOnlyLabel}
+                        </span>
+                      )}
                       {bulkSelectionRange.isActive && bulkSelectionRange.startDate && bulkSelectionRange.endDate && (
                         <div className="px-2 py-1 bg-orange-500/20 backdrop-blur-sm rounded-lg border border-orange-400/30 flex items-center gap-1">
                           <Calendar className="h-3 w-3 text-orange-200" />
@@ -2496,100 +2545,104 @@ const AvailabilityCalendarRedesigned = ({
                     </DropdownMenuContent>
                   </DropdownMenu>
 
-                  {/* Analytics and Planner Buttons */}
-                  <div className="flex items-center gap-1">
-                    <AnalyticsButton 
-                      members={activeMembersForAnalytics} 
-                      locale={locale} 
-                      weeksToShow={weeksToShow}
-                      currentDate={currentDate}
-                      teamId={teamId}
-                      teamSlug={team?.slug}
-                    />
-                    <PlannerButton 
-                      members={visibleMembers} 
-                      locale={locale} 
-                      teamId={teamId}
-                    />
-                  </div>
-
-                  {/* Edit Mode Actions */}
-                  <div className="flex items-center gap-2">
-                    {editMode ? (
-                      <div className="flex items-center gap-1 bg-orange-500/20 backdrop-blur-sm rounded-lg p-1 border border-orange-400/30">
-                        <div className="flex items-center gap-2 px-2 py-1">
-                          <Edit3 className="h-4 w-4 text-orange-100" />
-                          <span className="text-sm font-medium text-orange-100">Edit Mode</span>
-                        </div>
-                        <div className="w-px h-6 bg-orange-300/30"></div>
-                        {/* Undo/Redo buttons */}
-                        <TooltipProvider>
-                          <Tooltip>
-                            <TooltipTrigger asChild>
-                              <Button
-                                variant="ghost"
-                                size="sm"
-                                onClick={handleUndo}
-                                disabled={!canUndo}
-                                className={`h-8 w-8 p-0 ${canUndo ? 'text-orange-100 hover:bg-orange-400/30' : 'text-orange-100/40 cursor-not-allowed'}`}
-                              >
-                                <Undo2 className="h-4 w-4" />
-                              </Button>
-                            </TooltipTrigger>
-                            <TooltipContent>
-                              <p>{t("editMode.undoTooltip")}</p>
-                            </TooltipContent>
-                          </Tooltip>
-                        </TooltipProvider>
-                        <TooltipProvider>
-                          <Tooltip>
-                            <TooltipTrigger asChild>
-                              <Button
-                                variant="ghost"
-                                size="sm"
-                                onClick={handleRedo}
-                                disabled={!canRedo}
-                                className={`h-8 w-8 p-0 ${canRedo ? 'text-orange-100 hover:bg-orange-400/30' : 'text-orange-100/40 cursor-not-allowed'}`}
-                              >
-                                <Redo2 className="h-4 w-4" />
-                              </Button>
-                            </TooltipTrigger>
-                            <TooltipContent>
-                              <p>{t("editMode.redoTooltip")}</p>
-                            </TooltipContent>
-                          </Tooltip>
-                        </TooltipProvider>
-                        <div className="w-px h-6 bg-orange-300/30"></div>
-                        <BulkUpdateDialog 
-                          members={members} 
+                  {!isReadOnly && (
+                    <>
+                      {/* Analytics and Planner Buttons */}
+                      <div className="flex items-center gap-1">
+                        <AnalyticsButton 
+                          members={activeMembersForAnalytics} 
                           locale={locale} 
-                          onUpdate={fetchAvailability} 
-                          onRangeSelectionChange={handleRangeSelectionChange}
+                          weeksToShow={weeksToShow}
+                          currentDate={currentDate}
+                          teamId={teamId}
+                          teamSlug={team?.slug}
                         />
-                        <MemberForm teamId={teamId} locale={locale} onMemberAdded={onMembersUpdate} />
-                        <div className="w-px h-6 bg-orange-300/30"></div>
-                        <div className="flex items-center gap-1 px-2">
-                          <Switch checked={editMode} onCheckedChange={handleEditModeToggle} />
-                        </div>
-                        {!userEmail && (
-                          <>
-                            <div className="w-px h-6 bg-orange-300/30"></div>
-                            <div className="px-1">
-                              <LoginButton />
+                        <PlannerButton 
+                          members={visibleMembers} 
+                          locale={locale} 
+                          teamId={teamId}
+                        />
+                      </div>
+
+                      {/* Edit Mode Actions */}
+                      <div className="flex items-center gap-2">
+                        {editMode ? (
+                          <div className="flex items-center gap-1 bg-orange-500/20 backdrop-blur-sm rounded-lg p-1 border border-orange-400/30">
+                            <div className="flex items-center gap-2 px-2 py-1">
+                              <Edit3 className="h-4 w-4 text-orange-100" />
+                              <span className="text-sm font-medium text-orange-100">Edit Mode</span>
                             </div>
-                          </>
+                            <div className="w-px h-6 bg-orange-300/30"></div>
+                            {/* Undo/Redo buttons */}
+                            <TooltipProvider>
+                              <Tooltip>
+                                <TooltipTrigger asChild>
+                                  <Button
+                                    variant="ghost"
+                                    size="sm"
+                                    onClick={handleUndo}
+                                    disabled={!canUndo}
+                                    className={`h-8 w-8 p-0 ${canUndo ? 'text-orange-100 hover:bg-orange-400/30' : 'text-orange-100/40 cursor-not-allowed'}`}
+                                  >
+                                    <Undo2 className="h-4 w-4" />
+                                  </Button>
+                                </TooltipTrigger>
+                                <TooltipContent>
+                                  <p>{t("editMode.undoTooltip")}</p>
+                                </TooltipContent>
+                              </Tooltip>
+                            </TooltipProvider>
+                            <TooltipProvider>
+                              <Tooltip>
+                                <TooltipTrigger asChild>
+                                  <Button
+                                    variant="ghost"
+                                    size="sm"
+                                    onClick={handleRedo}
+                                    disabled={!canRedo}
+                                    className={`h-8 w-8 p-0 ${canRedo ? 'text-orange-100 hover:bg-orange-400/30' : 'text-orange-100/40 cursor-not-allowed'}`}
+                                  >
+                                    <Redo2 className="h-4 w-4" />
+                                  </Button>
+                                </TooltipTrigger>
+                                <TooltipContent>
+                                  <p>{t("editMode.redoTooltip")}</p>
+                                </TooltipContent>
+                              </Tooltip>
+                            </TooltipProvider>
+                            <div className="w-px h-6 bg-orange-300/30"></div>
+                            <BulkUpdateDialog 
+                              members={members} 
+                              locale={locale} 
+                              onUpdate={fetchAvailability} 
+                              onRangeSelectionChange={handleRangeSelectionChange}
+                            />
+                            <MemberForm teamId={teamId} locale={locale} onMemberAdded={onMembersUpdate} />
+                            <div className="w-px h-6 bg-orange-300/30"></div>
+                            <div className="flex items-center gap-1 px-2">
+                              <Switch checked={editMode} onCheckedChange={handleEditModeToggle} />
+                            </div>
+                            {!userEmail && (
+                              <>
+                                <div className="w-px h-6 bg-orange-300/30"></div>
+                                <div className="px-1">
+                                  <LoginButton />
+                                </div>
+                              </>
+                            )}
+                          </div>
+                        ) : (
+                          <div className="flex items-center gap-2 bg-green-500/20 backdrop-blur-sm rounded-lg p-2 border border-green-400/30">
+                            <div className="flex items-center gap-2">
+                              <Lock className="h-4 w-4 text-green-100" />
+                              <span className="text-sm font-medium text-green-100">View Mode</span>
+                            </div>
+                            <Switch checked={editMode} onCheckedChange={handleEditModeToggle} />
+                          </div>
                         )}
                       </div>
-                    ) : (
-                      <div className="flex items-center gap-2 bg-green-500/20 backdrop-blur-sm rounded-lg p-2 border border-green-400/30">
-                        <div className="flex items-center gap-2">
-                          <Lock className="h-4 w-4 text-green-100" />
-                          <span className="text-sm font-medium text-green-100">View Mode</span>
-                        </div>
-                        <Switch checked={editMode} onCheckedChange={handleEditModeToggle} />
-                      </div>
-                    )}
-                  </div>
+                    </>
+                  )}
 
                   <div className="flex items-center gap-2">
                     {/* Keyboard shortcuts help */}
@@ -2709,30 +2762,34 @@ const AvailabilityCalendarRedesigned = ({
                       </DialogContent>
                     </Dialog>
 
-                    {/* Buddy Battle Button */}
-                    <Tooltip>
-                      <TooltipTrigger asChild>
-                        <Button
-                          variant="outline"
-                          size="sm"
-                          className={`h-9 w-9 p-0 ${themeClasses.button}`}
-                          onClick={handleBuddyButtonClick}
-                        >
-                          <Gamepad2 className="h-4 w-4" />
-                        </Button>
-                      </TooltipTrigger>
-                      <TooltipContent>
-                        <p>My Buddy</p>
-                      </TooltipContent>
-                    </Tooltip>
+                    {!isReadOnly && (
+                      <>
+                        {/* Buddy Battle Button */}
+                        <Tooltip>
+                          <TooltipTrigger asChild>
+                            <Button
+                              variant="outline"
+                              size="sm"
+                              className={`h-9 w-9 p-0 ${themeClasses.button}`}
+                              onClick={handleBuddyButtonClick}
+                            >
+                              <Gamepad2 className="h-4 w-4" />
+                            </Button>
+                          </TooltipTrigger>
+                          <TooltipContent>
+                            <p>My Buddy</p>
+                          </TooltipContent>
+                        </Tooltip>
 
-                    <SettingsDropdown 
-                      currentLocale={locale} 
-                      members={members} 
-                      team={team} 
-                      forceOpen={openSettings}
-                      onOpenChange={() => setOpenSettings(false)}
-                    />
+                        <SettingsDropdown 
+                          currentLocale={locale} 
+                          members={members} 
+                          team={team} 
+                          forceOpen={openSettings}
+                          onOpenChange={() => setOpenSettings(false)}
+                        />
+                      </>
+                    )}
                   </div>
                 </div>
 
@@ -2745,17 +2802,18 @@ const AvailabilityCalendarRedesigned = ({
                     appName="Availability Planner"
                     teamName={teamName}
                   >
-                    {/* Edit Mode Toggle */}
-                    <HamburgerMenuItem>
-                      <div className="flex items-center justify-between w-full">
-                        <span>Edit Mode</span>
-                        <Switch 
-                          checked={editMode} 
-                          onCheckedChange={handleEditModeToggle}
-                          className="scale-90"
-                        />
-                      </div>
-                    </HamburgerMenuItem>
+                    {!isReadOnly && (
+                      <HamburgerMenuItem>
+                        <div className="flex items-center justify-between w-full">
+                          <span>Edit Mode</span>
+                          <Switch 
+                            checked={editMode} 
+                            onCheckedChange={handleEditModeToggle}
+                            className="scale-90"
+                          />
+                        </div>
+                      </HamburgerMenuItem>
+                    )}
                     
                     {/* View Options */}
                     <HamburgerMenuItem onClick={() => setWeeksToShow(1)}>
@@ -2768,27 +2826,30 @@ const AvailabilityCalendarRedesigned = ({
                       <span className={weeksToShow === 4 ? "font-semibold" : ""}>4 Weeks</span>
                     </HamburgerMenuItem>
                     
-                    {/* Analytics & Planning */}
-                    <HamburgerMenuItem>
-                      <AnalyticsButton 
-                        members={activeMembersForAnalytics} 
-                        locale={locale} 
-                        weeksToShow={weeksToShow}
-                        currentDate={currentDate}
-                        teamId={teamId}
-                        teamSlug={team?.slug}
-                      />
-                    </HamburgerMenuItem>
-                    <HamburgerMenuItem>
-                      <PlannerButton 
-                        members={visibleMembers} 
-                        locale={locale} 
-                        teamId={teamId}
-                      />
-                    </HamburgerMenuItem>
+                    {!isReadOnly && (
+                      <>
+                        <HamburgerMenuItem>
+                          <AnalyticsButton 
+                            members={activeMembersForAnalytics} 
+                            locale={locale} 
+                            weeksToShow={weeksToShow}
+                            currentDate={currentDate}
+                            teamId={teamId}
+                            teamSlug={team?.slug}
+                          />
+                        </HamburgerMenuItem>
+                        <HamburgerMenuItem>
+                          <PlannerButton 
+                            members={visibleMembers} 
+                            locale={locale} 
+                            teamId={teamId}
+                          />
+                        </HamburgerMenuItem>
+                      </>
+                    )}
                     
                     {/* Edit Actions (only in edit mode) */}
-                    {editMode && (
+                    {!isReadOnly && editMode && (
                       <>
                         <HamburgerMenuItem>
                           <BulkUpdateDialog 
@@ -2804,21 +2865,23 @@ const AvailabilityCalendarRedesigned = ({
                       </>
                     )}
                     
-                    {/* Settings */}
-                    <HamburgerMenuItem onClick={() => router.push(`/team/${team?.slug || teamId}/settings`)}>
-                      <div className="flex items-center gap-2">
-                        <Settings className="h-4 w-4" />
-                        <span>Settings</span>
-                      </div>
-                    </HamburgerMenuItem>
-                    
-                    {/* Buddy Battle */}
-                    <HamburgerMenuItem onClick={handleBuddyButtonClick}>
-                      <div className="flex items-center gap-2">
-                        <Gamepad2 className="h-4 w-4" />
-                        <span>My Buddy</span>
-                      </div>
-                    </HamburgerMenuItem>
+                    {!isReadOnly && (
+                      <>
+                        <HamburgerMenuItem onClick={() => router.push(`/team/${team?.slug || teamId}/settings`)}>
+                          <div className="flex items-center gap-2">
+                            <Settings className="h-4 w-4" />
+                            <span>Settings</span>
+                          </div>
+                        </HamburgerMenuItem>
+                        
+                        <HamburgerMenuItem onClick={handleBuddyButtonClick}>
+                          <div className="flex items-center gap-2">
+                            <Gamepad2 className="h-4 w-4" />
+                            <span>My Buddy</span>
+                          </div>
+                        </HamburgerMenuItem>
+                      </>
+                    )}
                     
                     {/* Date Navigation */}
                     <HamburgerMenuItem onClick={() => navigateDate("prev")}>

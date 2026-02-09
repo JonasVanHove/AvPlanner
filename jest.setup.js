@@ -5,6 +5,24 @@ import React from 'react'
 // @ts-ignore
 window.__TEST__ = true
 
+// Mock window.location to avoid jsdom navigation errors
+try {
+  const base = new URL('http://localhost/')
+  Object.defineProperty(window, 'location', {
+    configurable: true,
+    value: {
+      href: base.href,
+      origin: base.origin,
+      pathname: base.pathname,
+      search: base.search,
+      hash: base.hash,
+      assign: jest.fn(),
+      replace: jest.fn(),
+      reload: jest.fn(),
+    },
+  })
+} catch {}
+
 // Mock Next.js router
 jest.mock('next/router', () => ({
   useRouter() {

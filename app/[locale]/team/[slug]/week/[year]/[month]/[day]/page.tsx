@@ -10,6 +10,7 @@ import { useAuth } from "@/hooks/useAuth"
 import Link from "next/link"
 import { notFound } from "next/navigation"
 import { useRouter } from "next/navigation"
+import { use as usePromise } from "react"
 
 interface Team {
   id: string
@@ -36,17 +37,18 @@ interface Member {
 }
 
 interface DateTeamPageProps {
-  params: {
+  params: Promise<{
     locale: string
     slug: string // This is actually the invite_code now
     year: string
     month: string
     day: string
-  }
+  }>
 }
 
 export default function DateTeamPage({ params }: DateTeamPageProps) {
-  const locale = params.locale as Locale
+  const resolvedParams = usePromise(params)
+  const locale = resolvedParams.locale as Locale
   const { user } = useAuth()
   const router = useRouter()
 
@@ -55,9 +57,9 @@ export default function DateTeamPage({ params }: DateTeamPageProps) {
   }
 
   // Parse and validate date parameters
-  const year = parseInt(params.year)
-  const month = parseInt(params.month) 
-  const day = parseInt(params.day)
+  const year = parseInt(resolvedParams.year)
+  const month = parseInt(resolvedParams.month) 
+  const day = parseInt(resolvedParams.day)
 
   // Validate date parameters
   if (isNaN(year) || isNaN(month) || isNaN(day) || 
@@ -92,7 +94,7 @@ export default function DateTeamPage({ params }: DateTeamPageProps) {
         const { data: teamData, error: teamError } = await supabase
           .from('teams')
           .select('id,name,slug,invite_code,is_password_protected,password_hash')
-          .eq('invite_code', params.slug)
+          .eq('invite_code', resolvedParams.slug)
           .single()
 
         if (teamError) {
@@ -121,7 +123,7 @@ export default function DateTeamPage({ params }: DateTeamPageProps) {
     }
 
     fetchTeam()
-  }, [params.slug])
+  }, [resolvedParams.slug])
 
   const fetchMembers = async (teamId: string) => {
     try {
@@ -198,7 +200,7 @@ export default function DateTeamPage({ params }: DateTeamPageProps) {
     const month = newDate.getMonth() + 1 // Convert to 1-indexed
     const day = newDate.getDate()
     
-    const newUrl = `/${locale}/team/${params.slug}/week/${year}/${month}/${day}`
+    const newUrl = `/${locale}/team/${resolvedParams.slug}/week/${year}/${month}/${day}`
     
     // Update URL without page reload using History API
     const currentPath = window.location.pathname
