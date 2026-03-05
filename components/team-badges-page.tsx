@@ -300,7 +300,7 @@ export function TeamBadgesPage({ teamId, teamName, userEmail, locale }: TeamBadg
 
         {/* My / Selected Member Badges Section */}
         {userEmail && (
-          <Card>
+          <Card className="border-border/60 bg-card/80 backdrop-blur-sm shadow-sm">
             <CardHeader>
               <CardTitle className="flex items-center gap-2">
                 <Award className="h-5 w-5 text-blue-500" />
@@ -345,7 +345,7 @@ export function TeamBadgesPage({ teamId, teamName, userEmail, locale }: TeamBadg
         )}
 
         {/* Leaderboard */}
-        <Card>
+        <Card className="border-border/60 bg-card/80 backdrop-blur-sm shadow-sm">
           <CardHeader>
             <CardTitle className="flex items-center gap-2">
               <Trophy className="h-5 w-5 text-yellow-500" />
@@ -356,7 +356,7 @@ export function TeamBadgesPage({ teamId, teamName, userEmail, locale }: TeamBadg
             {leaderboard.length > 0 ? (
               <div className="space-y-2">
                 {leaderboard.map((entry, index) => (
-                  <Card key={entry.member_id} className="overflow-hidden">
+                  <Card key={entry.member_id} className="overflow-hidden border-border/60 bg-background/80 hover:bg-muted/30 transition-colors">
                     <CardContent className="p-4">
                       <div className="flex items-center gap-4">
                         {/* Rank */}
@@ -373,7 +373,7 @@ export function TeamBadgesPage({ teamId, teamName, userEmail, locale }: TeamBadg
 
                         {/* Member Info */}
                         <div className="flex-1 min-w-0">
-                          <div className="font-semibold text-lg">{entry.member_name}</div>
+                          <div className="font-semibold text-lg tracking-tight text-foreground">{entry.member_name}</div>
                           <div className="flex gap-4 text-sm text-muted-foreground mt-1">
                             <span>
                               🎯 {entry.timely_badges} {texts.timelyBadges[locale]}
@@ -389,7 +389,7 @@ export function TeamBadgesPage({ teamId, teamName, userEmail, locale }: TeamBadg
 
                         {/* Total */}
                         <div className="flex-shrink-0 text-right">
-                          <div className="text-3xl font-bold text-blue-500">
+                          <div className="text-3xl font-extrabold text-blue-500 tracking-tight">
                             {entry.total_badges}
                           </div>
                           <div className="text-xs text-muted-foreground uppercase">
@@ -397,7 +397,7 @@ export function TeamBadgesPage({ teamId, teamName, userEmail, locale }: TeamBadg
                           </div>
                         </div>
                         <div className="ml-4 flex-shrink-0">
-                          <Button size="sm" onClick={() => loadBadgesForMember(entry.member_id, entry.member_name)}>
+                          <Button size="sm" className="shadow-sm" onClick={() => loadBadgesForMember(entry.member_id, entry.member_name)}>
                             View Badges
                           </Button>
                         </div>

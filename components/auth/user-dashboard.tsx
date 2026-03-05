@@ -1,6 +1,6 @@
 "use client"
 
-import { useEffect, useState } from "react"
+import { useEffect, useRef, useState } from "react"
 import { supabase } from "@/lib/supabase"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
@@ -84,7 +84,20 @@ export function UserDashboard({ user, onLogout, onGoHome }: UserDashboardProps) 
   const [isRefreshing, setIsRefreshing] = useState(false)
   const [userProfileImage, setUserProfileImage] = useState<string | null>(null)
   const [profileDialogOpen, setProfileDialogOpen] = useState(false)
+  const rpcAvailabilityRef = useRef({
+    getTeamMembers: false,
+    getTeamUpcomingHolidays: false,
+  })
   const router = useRouter()
+
+  const isMissingRpcFunction = (error: any) => {
+    const message = error?.message || ""
+    return (
+      message.includes('Could not find the function') ||
+      message.includes('PGRST202') ||
+      message.includes('404')
+    )
+  }
 
   // Get all member IDs from all teams for today's availability
   const allMemberIds = teams.flatMap(team => team.members?.map(member => member.member_id) || [])
@@ -155,13 +168,25 @@ export function UserDashboard({ user, onLogout, onGoHome }: UserDashboardProps) 
       const teamsWithMembers = await Promise.all(
         mappedTeams.map(async (team) => {
           try {
-            const { data: membersData, error: membersError } = await supabase.rpc('get_team_members', {
-              team_id_param: team.id
-            })
+            let rows: any[] | null = null
 
-            let rows: any[] | null = membersData as any[] | null
+            if (rpcAvailabilityRef.current.getTeamMembers) {
+              const { data: membersData, error: membersError } = await supabase.rpc('get_team_members', {
+                team_id_param: team.id
+              })
 
-            if (membersError || !rows) {
+              if (membersError) {
+                if (isMissingRpcFunction(membersError)) {
+                  rpcAvailabilityRef.current.getTeamMembers = false
+                } else {
+                  console.warn(`RPC get_team_members failed for ${team.name}:`, membersError)
+                }
+              } else {
+                rows = membersData as any[] | null
+              }
+            }
+
+            if (!rows) {
               const { data: directMembers, error: directError } = await supabase
                 .from('members')
                 .select('id, first_name, last_name, email, role, status, profile_image, profile_image_url, last_active, order_index, auth_user_id, is_hidden, created_at')
@@ -196,14 +221,59 @@ export function UserDashboard({ user, onLogout, onGoHome }: UserDashboardProps) 
 
             let autoHolidays = undefined as Team["auto_holidays"] | undefined
             try {
-              const { data: holidaysData } = await supabase.rpc('get_team_upcoming_holidays', {
-                target_team_id: team.id,
-                days_ahead: 365
-              })
+              let holidaysData: any[] | null = null
+
+              if (rpcAvailabilityRef.current.getTeamUpcomingHolidays) {
+                const { data: rpcHolidaysData, error: rpcHolidaysError } = await supabase.rpc('get_team_upcoming_holidays', {
+                  target_team_id: team.id,
+                  days_ahead: 365
+                })
+
+                if (rpcHolidaysError) {
+                  if (isMissingRpcFunction(rpcHolidaysError)) {
+                    rpcAvailabilityRef.current.getTeamUpcomingHolidays = false
+                  } else {
+                    console.warn(`RPC get_team_upcoming_holidays failed for ${team.name}:`, rpcHolidaysError)
+                  }
+                } else {
+                  holidaysData = rpcHolidaysData as any[] | null
+                }
+              }
+
+              if (!holidaysData) {
+                const { data: memberCountries, error: memberCountriesError } = await supabase
+                  .from('members')
+                  .select('country_code')
+                  .eq('team_id', team.id)
+                  .eq('status', 'active')
+                  .not('country_code', 'is', null)
+
+                if (!memberCountriesError) {
+                  const countryCodes = [...new Set((memberCountries || []).map((m: any) => m.country_code).filter(Boolean))]
+
+                  if (countryCodes.length > 0) {
+                    const today = new Date().toISOString().split('T')[0]
+                    const nextYear = new Date(Date.now() + 365 * 24 * 60 * 60 * 1000).toISOString().split('T')[0]
+
+                    const { data: directHolidays, error: directHolidaysError } = await supabase
+                      .from('holidays')
+                      .select('name, date')
+                      .in('country_code', countryCodes)
+                      .gte('date', today)
+                      .lte('date', nextYear)
+                      .order('date', { ascending: true })
+
+                    if (!directHolidaysError) {
+                      holidaysData = directHolidays as any[] | null
+                    }
+                  }
+                }
+              }
+
               if (holidaysData && holidaysData.length > 0) {
                 autoHolidays = {
                   count: holidaysData.length,
-                  next_holiday: holidaysData[0]?.holiday_name || undefined
+                  next_holiday: holidaysData[0]?.holiday_name || holidaysData[0]?.name || undefined
                 }
               }
             } catch (holidaysErr) {

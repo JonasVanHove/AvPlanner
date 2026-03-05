@@ -1,6 +1,6 @@
 "use client"
 
-import { useState, useEffect, use } from "react"
+import { useState, useEffect, use, useRef } from "react"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
@@ -59,6 +59,9 @@ interface TeamSettingsPageProps {
 export default function TeamSettingsPage({ params }: TeamSettingsPageProps) {
   const resolvedParams = use(params)
   const router = useRouter()
+  const rpcAvailabilityRef = useRef({
+    getTeamMembers: false,
+  })
   const [teamSettings, setTeamSettings] = useState<TeamSettings | null>(null)
   const [members, setMembers] = useState<TeamMember[]>([])
   const [isLoading, setIsLoading] = useState(true)
@@ -300,13 +303,64 @@ export default function TeamSettingsPage({ params }: TeamSettingsPageProps) {
         team_password: ""
       })
 
-      // Get team members
-      const { data: membersData, error: membersError } = await supabase.rpc('get_team_members', {
-        team_id_param: teamData.id
+      // Get team members (RPC with fallback to direct query when function is missing)
+      let membersRows: any[] | null = null
+
+      if (rpcAvailabilityRef.current.getTeamMembers) {
+        const { data: membersData, error: membersError } = await supabase.rpc('get_team_members', {
+          team_id_param: teamData.id
+        })
+
+        if (membersError) {
+          const isMissingRpc =
+            membersError.message?.includes('Could not find the function') ||
+            membersError.message?.includes('PGRST202') ||
+            membersError.code === '404'
+
+          if (!isMissingRpc) {
+            throw membersError
+          }
+
+          rpcAvailabilityRef.current.getTeamMembers = false
+        } else {
+          membersRows = (membersData as any[] | null) || []
+        }
+      }
+
+      if (!membersRows) {
+        const { data: directMembers, error: directMembersError } = await supabase
+          .from('members')
+          .select('id, email, first_name, last_name, role, status, profile_image_url, is_hidden, created_at, last_active')
+          .eq('team_id', teamData.id)
+          .order('created_at', { ascending: true })
+
+        if (directMembersError) throw directMembersError
+
+        membersRows = directMembers || []
+      }
+
+      const normalizedMembers: TeamMember[] = (membersRows || []).map((member: any) => {
+        const memberEmail = member.member_email || member.email || ''
+        const memberName = member.member_name || `${member.first_name || ''} ${member.last_name || ''}`.trim() || memberEmail.split('@')[0]
+
+        return {
+          member_id: member.member_id || member.id,
+          member_email: memberEmail,
+          member_name: memberName,
+          member_role: member.member_role || member.role || 'member',
+          member_status: member.member_status || member.status || 'active',
+          profile_image_url: member.profile_image_url || null,
+          joined_at: member.joined_at || member.created_at || null,
+          last_active: member.last_active || null,
+          is_current_user:
+            typeof member.is_current_user === 'boolean'
+              ? member.is_current_user
+              : (memberEmail && user.email ? memberEmail.toLowerCase() === user.email.toLowerCase() : false),
+          is_hidden: member.is_hidden || false,
+        }
       })
 
-      if (membersError?.message) throw membersError
-      setMembers(membersData || [])
+      setMembers(normalizedMembers)
 
     } catch (error: any) {
       console.error("Error fetching team settings:", error?.message || error)
@@ -361,12 +415,11 @@ export default function TeamSettingsPage({ params }: TeamSettingsPageProps) {
     if (!teamSettings || !user?.email) return
 
     try {
-      const { error } = await supabase.rpc('toggle_member_visibility', {
-        team_id_param: teamSettings.team_id,
-        member_id_param: memberId,
-        is_hidden_param: !isHidden,
-        user_email: user.email
-      })
+      const { error } = await supabase
+        .from('members')
+        .update({ is_hidden: !isHidden })
+        .eq('id', memberId)
+        .eq('team_id', teamSettings.team_id)
 
       if (error) throw error
 
@@ -1194,8 +1247,8 @@ export default function TeamSettingsPage({ params }: TeamSettingsPageProps) {
 
                     {/* Members List */}
                     {members.map((member) => (
-                      <div key={member.member_id} className={`flex items-center justify-between p-4 border rounded-lg transition-all ${
-                        member.is_hidden ? 'bg-gray-50 border-gray-200' : 'bg-white border-gray-300'
+                      <div key={member.member_id} className={`flex items-center justify-between p-4 border rounded-lg transition-all text-gray-900 dark:text-gray-100 ${
+                        member.is_hidden ? 'bg-gray-50 border-gray-200 dark:bg-gray-800 dark:border-gray-700' : 'bg-white border-gray-300 dark:bg-gray-900 dark:border-gray-700'
                       } ${selectedMembers.includes(member.member_id) ? 'ring-2 ring-blue-500 ring-opacity-50' : ''}`}>
                         <div className="flex items-center gap-3">
                           {/* Selection Checkbox - only for non-current users */}
@@ -1221,7 +1274,7 @@ export default function TeamSettingsPage({ params }: TeamSettingsPageProps) {
                           />
                           <div className="flex-1">
                             <div className="flex items-center gap-2">
-                              <p className={`font-medium ${member.is_hidden ? 'text-gray-500' : 'text-gray-900'}`}>
+                              <p className={`font-medium ${member.is_hidden ? 'text-gray-500 dark:text-gray-400' : 'text-gray-900 dark:text-gray-100'}`}>
                                 {member.member_name.trim() !== '' && member.member_name.trim() !== ' '
                                   ? member.member_name
                                   : member.member_email.split('@')[0]}
@@ -1234,7 +1287,7 @@ export default function TeamSettingsPage({ params }: TeamSettingsPageProps) {
                               )}
                               {getRoleIcon(member.member_role, teamSettings.user_is_creator && member.is_current_user)}
                             </div>
-                            <div className="flex items-center gap-2 text-sm text-gray-600">
+                            <div className="flex items-center gap-2 text-sm text-gray-600 dark:text-gray-300">
                               <Mail className="h-3 w-3" />
                               {member.member_email}
                             </div>

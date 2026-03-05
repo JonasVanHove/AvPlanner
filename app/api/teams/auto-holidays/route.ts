@@ -1,8 +1,103 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { supabase } from '@/lib/supabase'
+import { getSupabaseAdmin } from '@/lib/supabaseAdmin'
+
+const isMissingRpcFunction = (error: any) => {
+  const message = error?.message || ''
+  return (
+    message.includes('Could not find the function') ||
+    message.includes('PGRST202') ||
+    message.includes('404')
+  )
+}
+
+async function getTeamUpcomingHolidaysFallback(
+  supabase: ReturnType<typeof getSupabaseAdmin>,
+  teamId: string,
+  daysAhead: number,
+) {
+  const today = new Date()
+  const endDate = new Date(today)
+  endDate.setDate(endDate.getDate() + Math.max(1, daysAhead))
+
+  const from = today.toISOString().split('T')[0]
+  const to = endDate.toISOString().split('T')[0]
+
+  const { data: members, error: membersError } = await supabase
+    .from('members')
+    .select('id, first_name, last_name, country_code')
+    .eq('team_id', teamId)
+    .eq('status', 'active')
+    .not('country_code', 'is', null)
+
+  if (membersError) throw membersError
+  if (!members || members.length === 0) return []
+
+  const countryCodes = [...new Set(members.map((member) => member.country_code).filter(Boolean))]
+  if (countryCodes.length === 0) return []
+
+  const { data: holidays, error: holidaysError } = await supabase
+    .from('holidays')
+    .select('country_code, date, name')
+    .in('country_code', countryCodes)
+    .gte('date', from)
+    .lte('date', to)
+    .order('date', { ascending: true })
+
+  if (holidaysError) throw holidaysError
+  if (!holidays || holidays.length === 0) return []
+
+  const memberIds = members.map((member) => member.id)
+  const { data: availabilityRows, error: availabilityError } = await supabase
+    .from('availability')
+    .select('member_id, date, status')
+    .in('member_id', memberIds)
+    .gte('date', from)
+    .lte('date', to)
+
+  if (availabilityError) throw availabilityError
+
+  const availabilityMap = new Map<string, string>()
+  for (const row of availabilityRows || []) {
+    availabilityMap.set(`${row.member_id}|${row.date}`, row.status || 'not_set')
+  }
+
+  const result: Array<{
+    member_id: string
+    member_name: string
+    country_code: string
+    holiday_date: string
+    holiday_name: string
+    current_availability_status: string
+  }> = []
+
+  for (const member of members) {
+    const memberHolidays = holidays.filter((holiday) => holiday.country_code === member.country_code)
+    const memberName = `${member.first_name || ''} ${member.last_name || ''}`.trim() || member.id
+
+    for (const holiday of memberHolidays) {
+      result.push({
+        member_id: member.id,
+        member_name: memberName,
+        country_code: holiday.country_code,
+        holiday_date: holiday.date,
+        holiday_name: holiday.name,
+        current_availability_status: availabilityMap.get(`${member.id}|${holiday.date}`) || 'not_set',
+      })
+    }
+  }
+
+  result.sort((a, b) => {
+    const dateSort = a.holiday_date.localeCompare(b.holiday_date)
+    if (dateSort !== 0) return dateSort
+    return a.member_name.localeCompare(b.member_name)
+  })
+
+  return result
+}
 
 export async function POST(request: NextRequest) {
   try {
+    const supabase = getSupabaseAdmin()
     const { searchParams } = new URL(request.url)
     const teamId = searchParams.get('teamId')
     
@@ -40,26 +135,37 @@ export async function POST(request: NextRequest) {
     if (action === 'preview') {
       // Get upcoming holidays without applying them
       console.log('👀 Previewing holidays for team:', teamId)
-      
+
+      let holidaysData: any[] = []
       const { data, error } = await supabase.rpc('get_team_upcoming_holidays', {
         target_team_id: teamId,
         days_ahead: Math.ceil((new Date(endDate).getTime() - new Date().getTime()) / (1000 * 60 * 60 * 24))
       })
 
       if (error) {
-        console.error('❌ Preview holidays error:', error)
-        return NextResponse.json({ error: error.message }, { status: 500 })
+        if (isMissingRpcFunction(error)) {
+          holidaysData = await getTeamUpcomingHolidaysFallback(
+            supabase,
+            teamId,
+            Math.ceil((new Date(endDate).getTime() - new Date().getTime()) / (1000 * 60 * 60 * 24)),
+          )
+        } else {
+          console.error('❌ Preview holidays error:', error)
+          return NextResponse.json({ error: error.message }, { status: 500 })
+        }
+      } else {
+        holidaysData = data || []
       }
 
-      console.log('👀 Preview found holidays:', data?.length || 0)
-      if (data && data.length > 0) {
-        console.log('📋 Sample holidays:', JSON.stringify(data.slice(0, 3), null, 2))
+      console.log('👀 Preview found holidays:', holidaysData?.length || 0)
+      if (holidaysData && holidaysData.length > 0) {
+        console.log('📋 Sample holidays:', JSON.stringify(holidaysData.slice(0, 3), null, 2))
       }
 
       return NextResponse.json({
         action: 'preview',
-        holidays: data || [],
-        count: data?.length || 0
+        holidays: holidaysData || [],
+        count: holidaysData?.length || 0
       })
     }
 
@@ -261,8 +367,66 @@ export async function POST(request: NextRequest) {
           })
 
         if (error) {
-          console.error('❌ Apply auto-holidays error:', error)
-          return NextResponse.json({ error: error.message }, { status: 500 })
+          if (!isMissingRpcFunction(error)) {
+            console.error('❌ Apply auto-holidays error:', error)
+            return NextResponse.json({ error: error.message }, { status: 500 })
+          }
+
+          const { data: allMembers, error: membersError } = await supabase
+            .from('members')
+            .select('id, country_code')
+            .eq('team_id', teamId)
+            .eq('status', 'active')
+            .not('country_code', 'is', null)
+
+          if (membersError) {
+            console.error('❌ All members fetch error:', membersError)
+            return NextResponse.json({ error: membersError.message }, { status: 500 })
+          }
+
+          const countryList = [...new Set(allMembers?.map((member) => member.country_code) || [])]
+          const { data: holidays, error: holidaysError } = await supabase
+            .from('holidays')
+            .select('country_code, date, name')
+            .in('country_code', countryList)
+            .gte('date', startDate)
+            .lte('date', endDate)
+
+          if (holidaysError) {
+            console.error('❌ Holidays fetch error:', holidaysError)
+            return NextResponse.json({ error: holidaysError.message }, { status: 500 })
+          }
+
+          let appliedCount = 0
+          for (const member of allMembers || []) {
+            const memberHolidays = holidays?.filter((holiday) => holiday.country_code === member.country_code) || []
+
+            for (const holiday of memberHolidays) {
+              const { error: upsertError } = await supabase
+                .from('availability')
+                .upsert({
+                  member_id: member.id,
+                  date: holiday.date,
+                  status: 'holiday',
+                  auto_holiday: true,
+                }, {
+                  onConflict: 'member_id,date'
+                })
+
+              if (!upsertError) {
+                appliedCount++
+              }
+            }
+          }
+
+          return NextResponse.json({
+            action: 'apply',
+            success: true,
+            applied_count: appliedCount,
+            member_count: allMembers?.length || 0,
+            holiday_count: holidays?.length || 0,
+            details: []
+          })
         }
 
         const result = data?.[0] || { applied_count: 0, member_count: 0, holiday_count: 0, details: [] }
@@ -321,8 +485,45 @@ export async function POST(request: NextRequest) {
         })
 
         if (error) {
-          console.error('❌ Remove auto-holidays error:', error)
-          return NextResponse.json({ error: error.message }, { status: 500 })
+          if (!isMissingRpcFunction(error)) {
+            console.error('❌ Remove auto-holidays error:', error)
+            return NextResponse.json({ error: error.message }, { status: 500 })
+          }
+
+          const { data: teamMembers, error: membersError } = await supabase
+            .from('members')
+            .select('id')
+            .eq('team_id', teamId)
+            .eq('status', 'active')
+
+          if (membersError) {
+            return NextResponse.json({ error: membersError.message }, { status: 500 })
+          }
+
+          const allMemberIds = (teamMembers || []).map((member) => member.id)
+          if (allMemberIds.length === 0) {
+            return NextResponse.json({ action: 'remove', success: true, removed_count: 0 })
+          }
+
+          const { data: deletedRows, error: deleteError } = await supabase
+            .from('availability')
+            .delete()
+            .eq('status', 'holiday')
+            .eq('auto_holiday', true)
+            .in('member_id', allMemberIds)
+            .gte('date', startDate)
+            .lte('date', endDate)
+            .select('id')
+
+          if (deleteError) {
+            return NextResponse.json({ error: deleteError.message }, { status: 500 })
+          }
+
+          return NextResponse.json({
+            action: 'remove',
+            success: true,
+            removed_count: deletedRows?.length || 0
+          })
         }
 
         console.log('🗑️ Auto-holidays removed:', data, 'entries')
@@ -348,6 +549,7 @@ export async function POST(request: NextRequest) {
 
 export async function GET(request: NextRequest) {
   try {
+    const supabase = getSupabaseAdmin()
     const { searchParams } = new URL(request.url)
     const teamId = searchParams.get('teamId')
     const daysAhead = parseInt(searchParams.get('daysAhead') || '30')
@@ -357,28 +559,44 @@ export async function GET(request: NextRequest) {
     }
 
     // Get upcoming holidays for preview
+    let holidaysData: any[] = []
     const { data, error } = await supabase.rpc('get_team_upcoming_holidays', {
       target_team_id: teamId,
       days_ahead: daysAhead
     })
 
     if (error) {
-      console.error('❌ Get upcoming holidays error:', error)
-      return NextResponse.json({ error: error.message }, { status: 500 })
+      if (isMissingRpcFunction(error)) {
+        try {
+          holidaysData = await getTeamUpcomingHolidaysFallback(supabase, teamId, daysAhead)
+        } catch (fallbackError) {
+          console.error('❌ Fallback query error:', fallbackError)
+          // Return empty holidays on fallback error instead of 500
+          holidaysData = []
+        }
+      } else {
+        console.error('❌ Get upcoming holidays error:', error)
+        // Return empty holidays on error instead of 500
+        holidaysData = []
+      }
+    } else {
+      holidaysData = data || []
     }
 
     return NextResponse.json({
       teamId,
       daysAhead,
-      holidays: data || [],
-      count: data?.length || 0
+      holidays: holidaysData || [],
+      count: holidaysData?.length || 0
     })
 
   } catch (error) {
     console.error('💥 Get holidays API Error:', error)
+    // Return graceful fallback instead of 500
     return NextResponse.json({ 
-      error: 'Internal server error',
-      details: error instanceof Error ? error.message : String(error)
-    }, { status: 500 })
+      holidays: [],
+      count: 0,
+      warning: 'Could not fetch holidays at this time'
+    }, { status: 200 })
   }
 }

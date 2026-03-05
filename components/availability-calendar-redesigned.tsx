@@ -246,8 +246,8 @@ const AvailabilityCalendarRedesigned = ({
       case 'blackwhite':
         return {
           background: 'bg-gray-50 dark:bg-gray-900',
-          header: 'bg-gradient-to-r from-gray-800 via-gray-900 to-black dark:from-gray-900 dark:via-black dark:to-gray-950',
-          headerBorder: 'border-gray-500/20 dark:border-gray-800'
+          header: 'bg-gradient-to-r from-gray-100 via-gray-100 to-gray-200 dark:from-gray-700 dark:via-gray-800 dark:to-gray-900',
+          headerBorder: 'border-gray-300/40 dark:border-gray-800'
         }
       case 'bythestove':
         return {
@@ -287,7 +287,7 @@ const AvailabilityCalendarRedesigned = ({
         return {
           container: 'blackwhite',
           card: 'bg-white border-2 border-gray-900 shadow-[4px_4px_0_rgb(0,0,0)] hover:shadow-[6px_6px_0_rgb(0,0,0)] transition-all',
-          button: 'border-2 border-gray-900 hover:bg-gray-900 hover:text-white font-bold uppercase tracking-wide transition-all duration-200',
+          button: '!text-gray-900 !border-2 !border-gray-400 hover:!bg-gray-300 hover:!text-gray-900 hover:!border-gray-500 font-bold uppercase tracking-wide transition-all duration-200',
           input: 'border-2 border-gray-900 bg-white font-medium focus:ring-4 focus:ring-gray-300',
           avatar: 'ring-2 ring-gray-900 shadow-lg',
           text: 'text-gray-900 font-medium',
@@ -1076,12 +1076,17 @@ const AvailabilityCalendarRedesigned = ({
     try {
       
       // Get current status first for activity logging
-      const { data: currentAvailability } = await supabase
+      const { data: currentAvailability, error: currentAvailabilityError } = await supabase
         .from("availability")
         .select("status")
         .eq("member_id", memberId)
         .eq("date", date)
-        .single()
+        .maybeSingle()
+
+      if (currentAvailabilityError) {
+        console.error('Error fetching current availability:', currentAvailabilityError)
+        throw currentAvailabilityError
+      }
 
       const oldStatus = currentAvailability?.status || null
 
@@ -1463,8 +1468,8 @@ const AvailabilityCalendarRedesigned = ({
       const currentUserMember = members.find(m => m.email && userEmail && m.email.toLowerCase() === userEmail.toLowerCase())
       if (!currentUserMember) return
 
-      // Requirement: Only weekdays count for confetti (exclude weekends regardless of admin toggle)
-      const includeWeekends = false
+      // Respect team weekend setting: if enabled, week completion requires all 7 days
+      const includeWeekends = weekendsAsWeekdays
       // Normalize to Monday 00:00 to keep keys stable even if weekStart carried a time
       const normalizedWeekStart = getMondayOfWeek(weekStart)
       normalizedWeekStart.setHours(0,0,0,0)
@@ -1480,7 +1485,7 @@ const AvailabilityCalendarRedesigned = ({
         return
       }
       // Avoid duplicate celebration per member/week/mode
-      const key = `celebrated:${teamId}:${currentUserMember.id}:${getDateString(normalizedWeekStart)}:wkdaysOnly`
+      const key = `celebrated:${teamId}:${currentUserMember.id}:${getDateString(normalizedWeekStart)}:${includeWeekends ? 'allDays' : 'wkdaysOnly'}`
       if (localStorage.getItem(key) === 'true') return
       // Lazy import local utility
       import('@/lib/confetti').then(mod => mod.createConfetti())
@@ -1971,7 +1976,7 @@ const AvailabilityCalendarRedesigned = ({
                                     <Button
                                       variant="ghost"
                                       size="sm"
-                                      className="h-7 w-7 p-0 hover:bg-gray-100 dark:hover:bg-gray-600 text-gray-700 dark:text-gray-200"
+                                      className={`h-7 w-7 p-0 hover:bg-gray-100 dark:hover:bg-gray-600 ${theme === 'blackwhite' ? 'text-white hover:text-gray-900' : 'text-gray-700 dark:text-gray-200'}`}
                                       onClick={() => moveMemberUp(member.id)}
                                       disabled={memberIndex === 0}
                                     >
@@ -1987,7 +1992,7 @@ const AvailabilityCalendarRedesigned = ({
                                     <Button
                                       variant="ghost"
                                       size="sm"
-                                      className="h-7 w-7 p-0 hover:bg-gray-100 dark:hover:bg-gray-600 text-gray-700 dark:text-gray-200"
+                                      className={`h-7 w-7 p-0 hover:bg-gray-100 dark:hover:bg-gray-600 ${theme === 'blackwhite' ? 'text-white hover:text-gray-900' : 'text-gray-700 dark:text-gray-200'}`}
                                       onClick={() => moveMemberDown(member.id)}
                                       disabled={memberIndex === members.length - 1}
                                     >
@@ -2003,19 +2008,19 @@ const AvailabilityCalendarRedesigned = ({
                                     <Button
                                       variant="ghost"
                                       size="sm"
-                                      className="h-7 w-7 p-0 rounded-full flex-shrink-0 text-gray-700 dark:text-gray-200 hover:bg-gray-100 dark:hover:bg-gray-600"
+                                      className={`h-7 w-7 p-0 rounded-full flex-shrink-0 hover:bg-gray-100 dark:hover:bg-gray-600 ${theme === 'blackwhite' ? 'text-white hover:text-gray-900' : 'text-gray-700 dark:text-gray-200'}`}
                                     >
                                       <MoreHorizontal className="h-4 w-4" />
                                     </Button>
                                   </DropdownMenuTrigger>
-                                  <DropdownMenuContent align="end">
+                                  <DropdownMenuContent align="end" className="bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700">
                                     <DropdownMenuItem onClick={() => moveMemberUp(member.id)} disabled={memberIndex === 0}>
                                       Move Up
                                     </DropdownMenuItem>
                                     <DropdownMenuItem onClick={() => moveMemberDown(member.id)} disabled={memberIndex === members.length - 1}>
                                       Move Down
                                     </DropdownMenuItem>
-                                    <DropdownMenuItem onClick={() => deleteMember(member.id)}>
+                                    <DropdownMenuItem onClick={() => deleteMember(member.id)} className="text-red-600 hover:bg-red-50 dark:text-red-400 dark:hover:bg-red-900/20">
                                       Delete Member
                                     </DropdownMenuItem>
                                   </DropdownMenuContent>
@@ -2264,7 +2269,7 @@ const AvailabilityCalendarRedesigned = ({
                                     <Button
                                       variant="ghost"
                                       size="sm"
-                                      className="h-6 w-6 p-0 hover:bg-gray-100 dark:hover:bg-gray-600 text-gray-700 dark:text-gray-200"
+                                      className={`h-6 w-6 p-0 hover:bg-gray-100 dark:hover:bg-gray-600 ${theme === 'blackwhite' ? 'text-white hover:text-gray-900' : 'text-gray-700 dark:text-gray-200'}`}
                                       onClick={() => moveMemberUp(member.id)}
                                       disabled={memberIndex === 0}
                                     >
@@ -2280,7 +2285,7 @@ const AvailabilityCalendarRedesigned = ({
                                     <Button
                                       variant="ghost"
                                       size="sm"
-                                      className="h-6 w-6 p-0 hover:bg-gray-100 dark:hover:bg-gray-600 text-gray-700 dark:text-gray-200"
+                                      className={`h-6 w-6 p-0 hover:bg-gray-100 dark:hover:bg-gray-600 ${theme === 'blackwhite' ? 'text-white hover:text-gray-900' : 'text-gray-700 dark:text-gray-200'}`}
                                       onClick={() => moveMemberDown(member.id)}
                                       disabled={memberIndex === members.length - 1}
                                     >
@@ -2296,7 +2301,7 @@ const AvailabilityCalendarRedesigned = ({
                                     <Button
                                       variant="ghost"
                                       size="sm"
-                                      className="h-6 w-6 p-0 rounded-md hover:bg-gray-100 dark:hover:bg-gray-600 flex-shrink-0 text-gray-700 dark:text-gray-200"
+                                      className={`h-6 w-6 p-0 rounded-md hover:bg-gray-100 dark:hover:bg-gray-600 flex-shrink-0 ${theme === 'blackwhite' ? 'text-white hover:text-gray-900' : 'text-gray-700 dark:text-gray-200'}`}
                                     >
                                       <MoreHorizontal className="h-4 w-4" />
                                     </Button>
@@ -2486,23 +2491,27 @@ const AvailabilityCalendarRedesigned = ({
           <div className="px-3 lg:px-6 py-2 lg:py-3">
             <div className="flex flex-row items-center justify-between gap-2 lg:gap-3">
               <div className="flex items-center gap-2 lg:gap-3 min-w-0 flex-1">
-                <div className="w-8 h-8 lg:w-10 lg:h-10 rounded-lg lg:rounded-xl bg-white/10 backdrop-blur-sm flex items-center justify-center shadow-lg border border-white/20 flex-shrink-0">
-                  <img src="/favicon.svg" alt="Availability Planner" className="h-5 w-5 lg:h-6 lg:w-6 filter brightness-0 invert" />
+                <div className={`w-8 h-8 lg:w-10 lg:h-10 rounded-lg lg:rounded-xl flex items-center justify-center shadow-lg border flex-shrink-0 ${
+                  theme === 'blackwhite' ? 'bg-gray-900/10 border-gray-400' : 'bg-white/10 border-white/20'
+                }`}>
+                  <img src="/favicon.svg" alt="Availability Planner" className={`h-5 w-5 lg:h-6 lg:w-6 ${
+                    theme === 'blackwhite' ? 'filter brightness-0' : 'filter brightness-0 invert'
+                  }`} />
                 </div>
-                <div className="min-w-0 flex-1">
+                  <div className="min-w-0 flex-1">
                   <div className="flex flex-col">
-                    <h1 className="text-sm lg:text-lg xl:text-xl font-bold text-white truncate">Availability Planner</h1>
+                    <h1 className={`text-sm lg:text-lg xl:text-xl font-bold truncate ${theme === 'blackwhite' ? 'text-gray-900' : 'text-white'}`}>Availability Planner</h1>
                     <div className="flex items-center gap-2">
-                      <p className="text-xs sm:text-sm lg:text-sm font-medium sm:font-semibold text-white lg:text-blue-100 dark:text-gray-300 truncate">{teamName}</p>
+                      <p className={`text-xs sm:text-sm lg:text-sm font-medium sm:font-semibold truncate ${theme === 'blackwhite' ? 'text-gray-700' : 'text-white lg:text-blue-100 dark:text-gray-300'}`}>{teamName}</p>
                       {isReadOnly && (
-                        <span className="text-[10px] uppercase tracking-wide bg-white/15 text-white border border-white/30 px-2 py-0.5 rounded-full">
+                        <span className={`text-[10px] uppercase tracking-wide border px-2 py-0.5 rounded-full ${theme === 'blackwhite' ? 'bg-gray-300/50 text-gray-800 border-gray-400' : 'bg-white/15 text-white border-white/30'}`}>
                           {readOnlyLabel}
                         </span>
                       )}
                       {bulkSelectionRange.isActive && bulkSelectionRange.startDate && bulkSelectionRange.endDate && (
-                        <div className="px-2 py-1 bg-orange-500/20 backdrop-blur-sm rounded-lg border border-orange-400/30 flex items-center gap-1">
-                          <Calendar className="h-3 w-3 text-orange-200" />
-                          <span className="text-xs font-medium text-orange-200 whitespace-nowrap">
+                        <div className={`px-2 py-1 rounded-lg border flex items-center gap-1 ${theme === 'blackwhite' ? 'bg-yellow-200/60 border-yellow-400 text-gray-900' : 'bg-orange-500/20 backdrop-blur-sm border-orange-400/30'}`}>
+                          <Calendar className={`h-3 w-3 ${theme === 'blackwhite' ? 'text-gray-800' : 'text-orange-200'}`} />
+                          <span className={`text-xs font-medium whitespace-nowrap ${theme === 'blackwhite' ? 'text-gray-900' : 'text-orange-200'}`}>
                             {format(bulkSelectionRange.startDate, "MMM d")} - {format(bulkSelectionRange.endDate, "MMM d")}
                           </span>
                         </div>
@@ -2517,7 +2526,7 @@ const AvailabilityCalendarRedesigned = ({
                 <div className="hidden xl:flex flex-row items-center gap-2">
                   {/* Week selector */}
                   <DropdownMenu>
-                    <DropdownMenuTrigger asChild>
+                    <DropdownMenuTrigger asChild className={theme === 'blackwhite' ? '!text-gray-900' : ''}>
                       <Button variant="outline" size="sm" className={`flex items-center gap-2 ${themeClasses.button}`}>
                         <Calendar className="h-4 w-4" />
                         <span className="text-sm font-medium">
@@ -2567,12 +2576,20 @@ const AvailabilityCalendarRedesigned = ({
                       {/* Edit Mode Actions */}
                       <div className="flex items-center gap-2">
                         {editMode ? (
-                          <div className="flex items-center gap-1 bg-orange-500/20 backdrop-blur-sm rounded-lg p-1 border border-orange-400/30">
+                          <div className={`flex items-center gap-2 rounded-lg p-1 border ${
+                          theme === 'blackwhite' 
+                            ? 'bg-gray-200/70 border-gray-400' 
+                            : 'bg-orange-500/20 backdrop-blur-sm border-orange-400/30'
+                        }`}>
                             <div className="flex items-center gap-2 px-2 py-1">
-                              <Edit3 className="h-4 w-4 text-orange-100" />
-                              <span className="text-sm font-medium text-orange-100">Edit Mode</span>
+                              <Edit3 className={`h-4 w-4 ${
+                                theme === 'blackwhite' ? 'text-gray-700' : 'text-orange-100'
+                              }`} />
+                              <span className={`text-sm font-medium ${
+                                theme === 'blackwhite' ? 'text-gray-900' : 'text-orange-100'
+                              }`}>Edit Mode</span>
                             </div>
-                            <div className="w-px h-6 bg-orange-300/30"></div>
+                            <div className={`w-px h-6 ${theme === 'blackwhite' ? 'bg-gray-400/50' : 'bg-orange-300/30'}`}></div>
                             {/* Undo/Redo buttons */}
                             <TooltipProvider>
                               <Tooltip>
@@ -2582,7 +2599,11 @@ const AvailabilityCalendarRedesigned = ({
                                     size="sm"
                                     onClick={handleUndo}
                                     disabled={!canUndo}
-                                    className={`h-8 w-8 p-0 ${canUndo ? 'text-orange-100 hover:bg-orange-400/30' : 'text-orange-100/40 cursor-not-allowed'}`}
+                                    className={`h-8 w-8 p-0 ${
+                                      theme === 'blackwhite' 
+                                        ? `${canUndo ? 'text-gray-700 hover:bg-gray-400/40' : 'text-gray-400 cursor-not-allowed'}`
+                                        : `${canUndo ? 'text-orange-100 hover:bg-orange-400/30' : 'text-orange-100/40 cursor-not-allowed'}`
+                                    }`}
                                   >
                                     <Undo2 className="h-4 w-4" />
                                   </Button>
@@ -2600,7 +2621,11 @@ const AvailabilityCalendarRedesigned = ({
                                     size="sm"
                                     onClick={handleRedo}
                                     disabled={!canRedo}
-                                    className={`h-8 w-8 p-0 ${canRedo ? 'text-orange-100 hover:bg-orange-400/30' : 'text-orange-100/40 cursor-not-allowed'}`}
+                                    className={`h-8 w-8 p-0 ${
+                                      theme === 'blackwhite'
+                                        ? `${canRedo ? 'text-gray-700 hover:bg-gray-400/40' : 'text-gray-400 cursor-not-allowed'}`
+                                        : `${canRedo ? 'text-orange-100 hover:bg-orange-400/30' : 'text-orange-100/40 cursor-not-allowed'}`
+                                    }`}
                                   >
                                     <Redo2 className="h-4 w-4" />
                                   </Button>
@@ -2610,7 +2635,9 @@ const AvailabilityCalendarRedesigned = ({
                                 </TooltipContent>
                               </Tooltip>
                             </TooltipProvider>
-                            <div className="w-px h-6 bg-orange-300/30"></div>
+                            <div className={`w-px h-6 ${
+                              theme === 'blackwhite' ? 'bg-gray-400/60' : 'bg-orange-300/30'
+                            }`}></div>
                             <BulkUpdateDialog 
                               members={members} 
                               locale={locale} 
@@ -2618,13 +2645,15 @@ const AvailabilityCalendarRedesigned = ({
                               onRangeSelectionChange={handleRangeSelectionChange}
                             />
                             <MemberForm teamId={teamId} locale={locale} onMemberAdded={onMembersUpdate} />
-                            <div className="w-px h-6 bg-orange-300/30"></div>
+                            <div className={`w-px h-6 ${
+                              theme === 'blackwhite' ? 'bg-gray-400/60' : 'bg-orange-300/30'
+                            }`}></div>
                             <div className="flex items-center gap-1 px-2">
                               <Switch checked={editMode} onCheckedChange={handleEditModeToggle} />
                             </div>
                             {!userEmail && (
                               <>
-                                <div className="w-px h-6 bg-orange-300/30"></div>
+                                <div className={`w-px h-6 ${theme === 'blackwhite' ? 'bg-gray-400/60' : 'bg-orange-300/30'}`}></div>
                                 <div className="px-1">
                                   <LoginButton />
                                 </div>
@@ -2632,10 +2661,18 @@ const AvailabilityCalendarRedesigned = ({
                             )}
                           </div>
                         ) : (
-                          <div className="flex items-center gap-2 bg-green-500/20 backdrop-blur-sm rounded-lg p-2 border border-green-400/30">
+                          <div className={`flex items-center gap-2 rounded-lg p-2 border ${
+                            theme === 'blackwhite' 
+                              ? 'bg-gray-200/70 border-gray-400' 
+                              : 'bg-green-500/20 backdrop-blur-sm border-green-400/30'
+                          }`}>
                             <div className="flex items-center gap-2">
-                              <Lock className="h-4 w-4 text-green-100" />
-                              <span className="text-sm font-medium text-green-100">View Mode</span>
+                              <Lock className={`h-4 w-4 ${
+                                theme === 'blackwhite' ? 'text-gray-700' : 'text-green-100'
+                              }`} />
+                              <span className={`text-sm font-medium ${
+                                theme === 'blackwhite' ? 'text-gray-900' : 'text-green-100'
+                              }`}>View Mode</span>
                             </div>
                             <Switch checked={editMode} onCheckedChange={handleEditModeToggle} />
                           </div>
@@ -2798,7 +2835,7 @@ const AvailabilityCalendarRedesigned = ({
                   {/* Icon-Only Hamburger Menu */}
                   <HamburgerMenu 
                     title="Menu" 
-                    triggerClassName="h-8 w-8 p-0 bg-white/15 hover:bg-white/25 border-white/25 text-white shadow-sm"
+                    triggerClassName={theme === 'blackwhite' ? 'h-8 w-8 p-0 bg-gray-400/50 hover:bg-gray-400/70 border-gray-400 text-gray-900 shadow-sm' : 'h-8 w-8 p-0 bg-white/15 hover:bg-white/25 border-white/25 text-white shadow-sm'}
                     appName="Availability Planner"
                     teamName={teamName}
                   >

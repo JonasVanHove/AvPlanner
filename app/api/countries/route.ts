@@ -1,8 +1,9 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { supabase } from '@/lib/supabase'
+import { getSupabaseAdmin } from '@/lib/supabaseAdmin'
 
 export async function GET(request: NextRequest) {
   try {
+    const supabase = getSupabaseAdmin()
     console.log('🌍 Fetching countries...')
 
     // Fetch all countries from the database
@@ -13,7 +14,7 @@ export async function GET(request: NextRequest) {
 
     if (error) {
       console.error('❌ Countries fetch error:', error)
-      return NextResponse.json({ error: error.message }, { status: 500 })
+      return NextResponse.json({ countries: [], count: 0, warning: error.message }, { status: 200 })
     }
 
     console.log('✅ Countries fetched:', countries?.length || 0)
@@ -25,9 +26,6 @@ export async function GET(request: NextRequest) {
 
   } catch (error) {
     console.error('💥 Countries API Error:', error)
-    return NextResponse.json({ 
-      error: 'Internal server error',
-      details: error instanceof Error ? error.message : String(error)
-    }, { status: 500 })
+    return NextResponse.json({ countries: [], count: 0, warning: error instanceof Error ? error.message : String(error) }, { status: 200 })
   }
 }

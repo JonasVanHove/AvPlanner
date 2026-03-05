@@ -221,20 +221,27 @@ function MemberAvatarComponent({
 
   // Get theme-specific avatar styling
   const getThemeAvatarClass = () => {
-    // No borders/rings by default - clean look
-    return ''
+    switch (theme) {
+      case 'blackwhite':
+        return 'ring-2 ring-gray-300 dark:ring-gray-600 shadow-sm'
+      case 'cozy':
+      case 'bythestove':
+        return 'ring-2 ring-orange-200/80 dark:ring-orange-700/70 shadow-md shadow-orange-500/10'
+      default:
+        return 'ring-2 ring-blue-200/70 dark:ring-blue-700/60 shadow-md shadow-blue-500/10'
+    }
   }
 
   const getThemeFallbackClass = () => {
     switch (theme) {
       case 'cozy':
-        return 'bg-gradient-to-br from-amber-600 to-orange-700 text-white'
+        return 'bg-gradient-to-br from-amber-500 to-orange-700 text-white font-semibold'
       case 'blackwhite':
-        return 'bg-gray-900 text-white font-bold'
+        return 'bg-gradient-to-br from-gray-700 to-gray-900 text-white font-bold'
       case 'bythestove':
-        return 'bg-gradient-to-br from-red-600 to-orange-600 text-white'
+        return 'bg-gradient-to-br from-red-500 to-orange-700 text-white font-semibold'
       default:
-        return 'bg-blue-500 text-white font-medium'
+        return 'bg-gradient-to-br from-blue-500 to-indigo-600 text-white font-semibold'
     }
   }
 
@@ -253,6 +260,7 @@ function MemberAvatarComponent({
               <AvatarImage 
                 src={profileImage} 
                 alt={`${firstName} ${lastName}`}
+                className="object-cover"
               />
             )}
             <AvatarFallback className={getThemeFallbackClass()}>{initials}</AvatarFallback>
@@ -286,9 +294,9 @@ function MemberAvatarComponent({
         <DialogContent className="sm:max-w-md">
           <DialogHeader>
             <DialogTitle className="flex items-center gap-3">
-              <Avatar className="h-12 w-12">
+              <Avatar className="h-12 w-12 ring-2 ring-blue-200/70 dark:ring-blue-700/60 shadow-md shadow-blue-500/10">
                 {profileImage && (
-                  <AvatarImage src={profileImage} alt={`${firstName} ${lastName}`} />
+                  <AvatarImage src={profileImage} alt={`${firstName} ${lastName}`} className="object-cover" />
                 )}
                 <AvatarFallback className={getThemeFallbackClass()}>{initials}</AvatarFallback>
               </Avatar>

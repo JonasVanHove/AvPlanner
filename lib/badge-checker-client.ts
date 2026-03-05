@@ -30,13 +30,13 @@ export async function checkAndAwardBadgesClientSide(
       .single()
 
     if (memberError || !member) {
-      console.error('🏅 [CLIENT] ❌ Member not found:', memberError?.message)
-      return { newBadges: [], stats: { error: 'Member not found' } }
+      console.warn('🏅 [CLIENT] ⚠️ Member not found:', memberError?.message)
+      return { newBadges: [], stats: { error: 'Member not found', uniqueDates: 0, eligibleBadges: 0, newBadgesAwarded: 0 } }
     }
 
     if (!member.auth_user_id) {
-      console.error('🏅 [CLIENT] ❌ Member not linked to user')
-      return { newBadges: [], stats: { error: 'Member not linked to user' } }
+      console.warn('🏅 [CLIENT] ℹ️ Member not linked to user, skipping badge check')
+      return { newBadges: [], stats: { error: 'Member not linked to user', uniqueDates: 0, eligibleBadges: 0, newBadgesAwarded: 0 } }
     }
 
     console.log('🏅 [CLIENT] ✅ Member found:', member.first_name)
@@ -151,7 +151,7 @@ export async function checkAndAwardBadgesClientSide(
     console.error('🏅 [CLIENT] ❌ Exception:', error)
     return {
       newBadges: [],
-      stats: { error: error.message }
+      stats: { error: error.message, uniqueDates: 0, eligibleBadges: 0, newBadgesAwarded: 0 }
     }
   }
 }

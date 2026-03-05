@@ -25,6 +25,7 @@ import { useTranslation, type Locale } from "@/lib/i18n"
 import { MemberAvatar } from "./member-avatar"
 import { cn } from "@/lib/utils"
 import { useToast } from "@/hooks/use-toast"
+import { useTheme } from "next-themes"
 import { ChartContainer, ChartTooltip, ChartTooltipContent } from "@/components/ui/chart"
 import { BarChart as RBarChart, Bar, XAxis, YAxis, CartesianGrid, Cell } from 'recharts'
 
@@ -53,6 +54,7 @@ export function AnalyticsButton({ members, locale, weeksToShow, currentDate, tea
   teamId: string,
   teamSlug?: string
 }) {
+  const { theme } = useTheme()
   const [showAnalytics, setShowAnalytics] = useState(false)
   const [analyticsData, setAnalyticsData] = useState<any>(null)
   const [simplifiedMode, setSimplifiedMode] = useState(false)
@@ -517,6 +519,31 @@ export function AnalyticsButton({ members, locale, weeksToShow, currentDate, tea
     return Object.keys(analyticsData.memberData).length
   }
 
+  const getViewModeLabel = () => {
+    switch (viewMode) {
+      case 'year':
+        return t('analytics.periodOverview')
+      case 'member':
+        return t('analytics.memberAnalysis')
+      case 'battle':
+        return t('analytics.battleMode')
+      default:
+        return t('analytics.trend')
+    }
+  }
+
+  const getAnalyticsContextLabel = () => {
+    if (viewMode === 'overview') {
+      return selectedPeriod === 'custom'
+        ? `${format(customStartDate, 'dd MMM yyyy', { locale: getDateFnsLocale() })} → ${format(customEndDate, 'dd MMM yyyy', { locale: getDateFnsLocale() })}`
+        : getCurrentViewPeriodDescription()
+    }
+    if (viewMode === 'year') {
+      return `${selectedYear}`
+    }
+    return t('analytics.perPersonBasis')
+  }
+
   const getStatusCounts = () => {
     if (!analyticsData || !analyticsData.timeData) return {}
     
@@ -722,14 +749,21 @@ export function AnalyticsButton({ members, locale, weeksToShow, currentDate, tea
             <DialogDescription className="text-xs sm:text-sm text-gray-600 dark:text-gray-300">
               {t("analytics.description")}
             </DialogDescription>
-            {/* View mode tabs - reorganized */}
-            <div className="mt-2 bg-gray-50 dark:bg-gray-900/50 border border-gray-200 dark:border-gray-700 rounded-lg p-2">
-              <div className="flex flex-wrap gap-2">
+            <div className="mt-2 rounded-lg border border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-900/50 p-2.5">
+              <div className="mb-2 flex flex-wrap items-center gap-2 text-xs">
+                <span className="inline-flex items-center rounded-full bg-blue-100 text-blue-800 dark:bg-blue-900/40 dark:text-blue-200 px-2 py-0.5 font-medium">
+                  {getViewModeLabel()}
+                </span>
+                <span className="inline-flex items-center rounded-full bg-gray-100 text-gray-700 dark:bg-gray-800 dark:text-gray-300 px-2 py-0.5">
+                  {getAnalyticsContextLabel()}
+                </span>
+              </div>
+              <div className="grid grid-cols-2 sm:grid-cols-4 gap-2" role="tablist" aria-label="Analytics modes">
                 <Button
                   variant={viewMode === 'year' ? 'default' : 'outline'}
                   size="sm"
                   onClick={() => setViewMode('year')}
-                  className={viewMode === 'year' ? 'h-8 text-xs bg-blue-600 hover:bg-blue-700 text-white' : 'h-8 text-xs'}
+                  className={viewMode === 'year' ? 'h-8 text-xs bg-blue-600 hover:bg-blue-700 text-white justify-start' : 'h-8 text-xs justify-start'}
                 >
                   📊 {t('analytics.periodOverview')}
                 </Button>
@@ -737,7 +771,7 @@ export function AnalyticsButton({ members, locale, weeksToShow, currentDate, tea
                   variant={viewMode === 'member' ? 'default' : 'outline'}
                   size="sm"
                   onClick={() => setViewMode('member')}
-                  className={viewMode === 'member' ? 'h-8 text-xs bg-purple-600 hover:bg-purple-700 text-white' : 'h-8 text-xs'}
+                  className={viewMode === 'member' ? 'h-8 text-xs bg-purple-600 hover:bg-purple-700 text-white justify-start' : 'h-8 text-xs justify-start'}
                 >
                   👤 {t('analytics.memberAnalysis')}
                 </Button>
@@ -745,7 +779,7 @@ export function AnalyticsButton({ members, locale, weeksToShow, currentDate, tea
                   variant={viewMode === 'battle' ? 'default' : 'outline'}
                   size="sm"
                   onClick={() => setViewMode('battle')}
-                  className={viewMode === 'battle' ? 'h-8 text-xs bg-orange-600 hover:bg-orange-700 text-white' : 'h-8 text-xs'}
+                  className={viewMode === 'battle' ? 'h-8 text-xs bg-orange-600 hover:bg-orange-700 text-white justify-start' : 'h-8 text-xs justify-start'}
                 >
                   ⚔️ {t('analytics.battleMode')}
                 </Button>
@@ -753,7 +787,7 @@ export function AnalyticsButton({ members, locale, weeksToShow, currentDate, tea
                   variant={viewMode === 'overview' ? 'default' : 'outline'}
                   size="sm"
                   onClick={() => setViewMode('overview')}
-                  className={viewMode === 'overview' ? 'h-8 text-xs bg-emerald-600 hover:bg-emerald-700 text-white' : 'h-8 text-xs'}
+                  className={viewMode === 'overview' ? 'h-8 text-xs bg-emerald-600 hover:bg-emerald-700 text-white justify-start' : 'h-8 text-xs justify-start'}
                 >
                   📈 {t('analytics.trend')}
                 </Button>
@@ -939,6 +973,16 @@ export function AnalyticsButton({ members, locale, weeksToShow, currentDate, tea
             {/* Summary Cards */}
             {analyticsData && analyticsData.timeData && (
               <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-6 gap-2">
+                <div className="bg-gray-50 dark:bg-gray-900 rounded-lg p-2 text-center border border-gray-200 dark:border-gray-700">
+                  <div className="text-xs text-gray-600 dark:text-gray-400 mb-1">👥 {t("analytics.uniqueMembers")}</div>
+                  <div className="text-base sm:text-lg font-bold text-gray-900 dark:text-white">{getTotalUniquePeople()}</div>
+                  <div className="text-xs text-gray-500 dark:text-gray-400">{t("analytics.teamMembersCount")}</div>
+                </div>
+                <div className="bg-gray-50 dark:bg-gray-900 rounded-lg p-2 text-center border border-gray-200 dark:border-gray-700">
+                  <div className="text-xs text-gray-600 dark:text-gray-400 mb-1">📅 {t("analytics.periodLabel")}</div>
+                  <div className="text-base sm:text-lg font-bold text-gray-900 dark:text-white">{analyticsData.timeData.length}</div>
+                  <div className="text-xs text-gray-500 dark:text-gray-400">{t("analytics.daysCount")}</div>
+                </div>
                 {Object.entries(getStatusCounts()).map(([status, count]) => (
                   <div key={status} className="bg-gray-50 dark:bg-gray-900 rounded-lg p-2 text-center">
                     <div className="text-xs text-gray-600 dark:text-gray-400 mb-1 flex items-center justify-center gap-1">
@@ -3534,6 +3578,7 @@ function YearOverviewSection({
 }
 
 export function BulkUpdateDialog({ members, locale, onUpdate, onRangeSelectionChange }: BulkUpdateDialogProps) {
+  const { theme } = useTheme()
   const [open, setOpen] = useState(false)
   const [selectedMembers, setSelectedMembers] = useState<string[]>([])
   const [selectedDates, setSelectedDates] = useState<Date[]>([])
@@ -4274,10 +4319,10 @@ export function BulkUpdateDialog({ members, locale, onUpdate, onRangeSelectionCh
           <Button 
             variant="ghost" 
             size="sm" 
-            className="rounded-md bg-white/10 backdrop-blur-sm border border-white/20 text-white hover:bg-white/20 font-medium transition-all duration-200 px-2 py-1.5 h-8"
+            className={`rounded-md backdrop-blur-sm border font-medium transition-all duration-200 px-2 py-1.5 h-8 ${theme === 'blackwhite' ? 'bg-gray-400/50 border-gray-400 text-gray-900 hover:bg-gray-400/70' : 'bg-white/10 border-white/20 text-white hover:bg-white/20'}`}
           >
-            <Users className="h-4 w-4 mr-1 flex-shrink-0" />
-            <span className="truncate hidden sm:inline">{t("bulk.title")}</span>
+            <BarChart3 className="h-4 w-4 mr-1 flex-shrink-0" />
+            <span className="truncate hidden sm:inline">{t("calendar.analytics")}</span>
           </Button>
         </DialogTrigger>
         <DialogContent className="max-w-[95vw] sm:max-w-4xl max-h-[90vh] overflow-y-auto bg-white dark:bg-gray-900 border-gray-200 dark:border-gray-700">
@@ -4866,6 +4911,7 @@ export function BulkUpdateDialog({ members, locale, onUpdate, onRangeSelectionCh
 
 // Export PlannerButton component
 export function PlannerButton({ members, locale, teamId }: { members: Member[], locale: Locale, teamId: string }) {
+  const { theme } = useTheme()
   const [showPlanner, setShowPlanner] = useState(false)
   const [plannerData, setPlannerData] = useState<any>(null)
   const [plannerPeriod, setPlannerPeriod] = useState<7 | 14 | 30>(7)
@@ -5020,7 +5066,7 @@ export function PlannerButton({ members, locale, teamId }: { members: Member[], 
         variant="outline" 
         size="sm" 
         onClick={() => setShowPlanner(true)}
-        className="rounded-lg bg-white/10 backdrop-blur-sm border-white/20 text-white hover:bg-white/20 font-medium transition-all duration-200"
+        className={`rounded-lg backdrop-blur-sm border font-medium transition-all duration-200 ${theme === 'blackwhite' ? 'bg-gray-400/50 border-gray-400 text-gray-900 hover:bg-gray-400/70' : 'bg-white/10 border-white/20 text-white hover:bg-white/20'}`}
       >
         <TrendingUp className="h-4 w-4 mr-2 flex-shrink-0" />
         <span className="truncate hidden sm:inline">{t("planner.title")}</span>

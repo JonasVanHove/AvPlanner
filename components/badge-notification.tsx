@@ -59,23 +59,24 @@ export function BadgeNotificationComponent({ badge, locale, onClose }: BadgeNoti
         isVisible ? "translate-x-0 opacity-100" : "translate-x-full opacity-0"
       )}
     >
-      <Card className="w-96 shadow-2xl border-2 overflow-hidden">
+      <Card className="w-96 shadow-2xl border border-white/50 dark:border-white/10 overflow-hidden bg-background/95 backdrop-blur-md">
         <CardContent className="p-0">
-          <div className={cn("p-4", config.bgColor)}>
+          <div className={cn("p-4 relative", config.bgColor)}>
+            <div className="absolute inset-0 bg-gradient-to-br from-white/35 via-transparent to-transparent pointer-events-none" />
             <div className="flex items-start gap-3">
-              <div className="flex items-center justify-center rounded-full bg-white dark:bg-gray-800 h-12 w-12 flex-shrink-0">
+              <div className="flex items-center justify-center rounded-full bg-white/90 dark:bg-gray-900/90 border border-white/70 dark:border-white/10 h-12 w-12 flex-shrink-0 shadow-sm">
                 <Icon className={cn(config.color, "h-6 w-6")} />
               </div>
               <div className="flex-1 min-w-0">
                 <div className="flex items-start justify-between gap-2">
-                  <h3 className="font-bold text-lg">
+                  <h3 className="font-bold text-lg tracking-tight text-gray-900 dark:text-gray-100">
                     {config.emoji} {config.title[locale]}
                   </h3>
-                  <Button variant="ghost" size="sm" className="h-6 w-6 p-0 hover:bg-white/50" onClick={handleClose}>
+                  <Button variant="ghost" size="sm" className="h-6 w-6 p-0 hover:bg-black/5 dark:hover:bg-white/10" onClick={handleClose}>
                     <X className="h-4 w-4" />
                   </Button>
                 </div>
-                <p className="text-sm mt-1 text-gray-700 dark:text-gray-200">
+                <p className="text-sm mt-1 text-gray-700 dark:text-gray-200 leading-relaxed">
                   {config.message[locale]}
                   {badge.helped_count && badge.helped_count > 0 && (
                     <span className="font-semibold">
@@ -99,7 +100,7 @@ export function BadgeNotificationComponent({ badge, locale, onClose }: BadgeNoti
               </div>
             </div>
           </div>
-          <div className="bg-gray-50 dark:bg-gray-800 px-4 py-2 text-xs text-muted-foreground text-center">
+          <div className="bg-muted/60 dark:bg-gray-900/70 px-4 py-2 text-xs text-muted-foreground text-center border-t border-border/60">
             {badge.week_year}
           </div>
         </CardContent>

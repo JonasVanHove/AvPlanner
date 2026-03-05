@@ -15,11 +15,13 @@ import { useEffect, useState } from "react"
 import { User } from "@supabase/supabase-js"
 import { useRouter } from "next/navigation"
 import { LoginButton, RegisterButton } from "@/components/auth/auth-dialog"
+import { useTheme } from "next-themes"
 
 
 export default function HomePage() {
   const { t } = useTranslation("en")
   const router = useRouter()
+  const { resolvedTheme } = useTheme()
   const [user, setUser] = useState<User | null>(null)
   const [loading, setLoading] = useState(true)
   const [isAdmin, setIsAdmin] = useState(false)
@@ -224,19 +226,31 @@ export default function HomePage() {
   // Show loading state
   if (loading) {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-blue-50 via-indigo-50 to-purple-50">
+      <div className={`min-h-screen flex items-center justify-center ${
+        resolvedTheme === 'light'
+          ? 'bg-gradient-to-br from-blue-50 via-indigo-50 to-purple-50'
+          : 'bg-gradient-to-br from-gray-950 via-slate-900 to-gray-950'
+      }`}>
         <div className="text-center">
           <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto mb-4"></div>
-          <p className="text-gray-600">Loading...</p>
+          <p className={resolvedTheme === 'light' ? 'text-gray-600' : 'text-gray-400'}>Loading...</p>
         </div>
       </div>
     )
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-gray-950 via-slate-900 to-gray-950 overflow-x-hidden">
+    <div className={`min-h-screen overflow-x-hidden ${ 
+      resolvedTheme === 'light'
+        ? 'bg-gradient-to-br from-gray-50 via-white to-gray-100'
+        : 'bg-gradient-to-br from-gray-950 via-slate-900 to-gray-950'
+    }`}>
         {/* Header */}
-        <header className="bg-gray-950/80 backdrop-blur-md shadow-sm border-b border-gray-800/50 sticky top-0 z-50 will-change-transform">
+        <header className={`${
+          resolvedTheme === 'light'
+            ? 'bg-white/80 border-gray-200 shadow-sm'
+            : 'bg-gray-950/80 border-gray-800/50'
+        } backdrop-blur-md shadow-sm sticky top-0 z-50 will-change-transform`}>
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="flex justify-between items-center h-16">
             <div className="flex items-center gap-3">

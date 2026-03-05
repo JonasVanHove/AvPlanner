@@ -27,22 +27,22 @@ export function HamburgerMenu({ children, title = "Menu", triggerClassName, appN
         <Button 
           variant="outline" 
           size="sm" 
-          className={triggerClassName || `bg-white border-gray-300 text-gray-700 hover:bg-gray-50 hover:text-gray-900 h-9 px-3 flex items-center gap-2 shadow-sm`}
+          className={triggerClassName || `bg-white/15 hover:bg-white/25 border-white/25 text-white h-9 px-3 flex items-center gap-2 shadow-sm`}
           aria-label="Open menu"
         >
           <Menu className="h-4 w-4" />
           {!triggerClassName?.includes('p-0') && <span className="text-xs font-medium">Menu</span>}
         </Button>
       </SheetTrigger>
-      <SheetContent side="right" className="w-80 sm:w-96 p-0">
-        <SheetHeader className="px-6 py-4 border-b border-gray-200">
+      <SheetContent side="right" className="w-80 sm:w-96 p-0 bg-white dark:bg-gray-900">
+        <SheetHeader className="px-6 py-4 border-b border-gray-200 dark:border-gray-700">
           {appName && teamName ? (
             <div className="text-left">
-              <SheetTitle className="text-lg font-bold text-gray-900">{appName}</SheetTitle>
-              <p className="text-sm text-gray-600 mt-1">{teamName}</p>
+              <SheetTitle className="text-lg font-bold text-gray-900 dark:text-gray-100">{appName}</SheetTitle>
+              <p className="text-sm text-gray-600 dark:text-gray-400 mt-1">{teamName}</p>
             </div>
           ) : (
-            <SheetTitle className="text-left text-lg font-semibold">{title}</SheetTitle>
+            <SheetTitle className="text-left text-lg font-semibold text-gray-900 dark:text-gray-100">{title}</SheetTitle>
           )}
         </SheetHeader>
         <div className="overflow-y-auto max-h-[calc(100vh-80px)]">
@@ -65,7 +65,7 @@ export function HamburgerMenuItem({
 }) {
   return (
     <div 
-      className={`p-3 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-800 cursor-pointer transition-colors ${className}`}
+      className={`p-3 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-800 cursor-pointer transition-colors text-gray-900 dark:text-gray-100 ${className}`}
       onClick={onClick}
     >
       {children}

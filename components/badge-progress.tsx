@@ -90,12 +90,12 @@ export function BadgeProgress({ memberId, teamId, locale, className, weekendsAsW
     <TooltipProvider>
       <Tooltip>
         <TooltipTrigger asChild>
-          <Card className={cn("cursor-pointer hover:shadow-md transition-shadow", className)}>
+          <Card className={cn("cursor-pointer border-border/60 bg-card/80 backdrop-blur-sm shadow-sm hover:shadow-md transition-all", className)}>
             <CardContent className="p-3">
-              <div className="flex items-center gap-3">
+              <div className="flex items-center gap-3 rounded-lg p-2 bg-gradient-to-r from-background to-muted/40">
                 <div
                   className={cn(
-                    "flex items-center justify-center rounded-full h-10 w-10 flex-shrink-0",
+                    "flex items-center justify-center rounded-full h-10 w-10 flex-shrink-0 border border-white/60 dark:border-white/10 shadow-sm",
                     progress.isEligible
                       ? "bg-green-100 dark:bg-green-900/20"
                       : "bg-blue-100 dark:bg-blue-900/20"
@@ -109,14 +109,14 @@ export function BadgeProgress({ memberId, teamId, locale, className, weekendsAsW
                 </div>
                 <div className="flex-1 min-w-0">
                   <div className="flex items-center justify-between mb-1">
-                    <span className="text-xs font-medium text-muted-foreground">
+                    <span className="text-xs font-semibold text-muted-foreground tracking-wide uppercase">
                       {texts.title[locale]}
                     </span>
-                    <span className="text-xs font-semibold">
+                    <span className="text-xs font-bold text-foreground">
                       {progress.daysCompleted}/{progress.daysRequired}
                     </span>
                   </div>
-                  <Progress value={progress.nextWeekProgress} className="h-2" />
+                  <Progress value={progress.nextWeekProgress} className="h-2.5 rounded-full bg-muted/70" />
                 </div>
               </div>
             </CardContent>
