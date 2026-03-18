@@ -6,24 +6,13 @@
 // =====================================================
 
 import React, { useState, useEffect } from 'react';
-import { useParams, useRouter } from 'next/navigation';
+import { useRouter } from 'next/navigation';
 import { useRetroSounds } from '@/hooks/use-retro-sounds';
-import { supabase } from '@/lib/supabase';
-import '@/styles/buddy-battle.css';
 
 import { RetroButton, RetroTabs, RetroProgress, RetroBadge } from './ui/retro-button';
 import { ELEMENT_COLORS } from '@/lib/buddy-battle/types';
 import type { LeaderboardEntry, BuddyElement } from '@/lib/buddy-battle/types';
-
-// Helper to get auth headers for API calls
-async function getAuthHeaders(): Promise<HeadersInit> {
-  const { data: { session } } = await supabase.auth.getSession();
-  const headers: HeadersInit = { 'Content-Type': 'application/json' };
-  if (session?.access_token) {
-    headers['Authorization'] = `Bearer ${session.access_token}`;
-  }
-  return headers;
-}
+import { getAuthHeaders } from '@/lib/buddy-battle/client-auth';
 
 type LeaderboardCategory = 'level' | 'battles' | 'bosses' | 'streak' | 'points';
 
@@ -33,10 +22,14 @@ interface LeaderboardData {
   total_players: number;
 }
 
-export function LeaderboardScreen() {
-  const params = useParams();
+interface LeaderboardScreenProps {
+  teamId: string;
+  teamSlug?: string;
+}
+
+export function LeaderboardScreen({ teamId, teamSlug }: LeaderboardScreenProps) {
   const router = useRouter();
-  const teamId = params?.slug as string;
+  const navId = teamSlug || teamId;
   
   const { sounds, initAudio, isInitialized } = useRetroSounds();
   
@@ -117,7 +110,7 @@ export function LeaderboardScreen() {
         
         {/* Back button */}
         <RetroButton 
-          onClick={() => router.push(`/team/${teamId}/buddy`)}
+          onClick={() => router.push(`/team/${navId}/buddy`)}
           variant="default"
           size="small"
           className="mb-4"
@@ -170,10 +163,10 @@ export function LeaderboardScreen() {
           <div className="retro-panel p-8 text-center">
             <div className="text-6xl mb-4">🏆</div>
             <p className="retro-text text-gb-light-green mb-2">
-              Nog geen rankings!
+              No rankings yet!
             </p>
             <p className="retro-text text-xs text-gb-dark-green">
-              Wees de eerste om een buddy te maken en te battlen.
+              Be the first to create a buddy and battle.
             </p>
           </div>
         ) : (

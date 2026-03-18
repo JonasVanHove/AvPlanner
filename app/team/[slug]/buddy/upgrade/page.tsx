@@ -5,7 +5,8 @@
 
 import { Suspense } from 'react';
 import { UpgradeScreen } from '@/components/buddy-battle/upgrade-screen';
-import '@/styles/buddy-battle.css';
+import { resolveTeamFromSlug } from '@/lib/buddy-battle/resolve-team';
+import { notFound } from 'next/navigation';
 
 // Loading component
 function UpgradeLoading() {
@@ -26,10 +27,12 @@ interface PageProps {
 
 export default async function UpgradePage({ params }: PageProps) {
   const { slug } = await params;
+  const team = await resolveTeamFromSlug(slug);
+  if (!team) notFound();
   
   return (
     <Suspense fallback={<UpgradeLoading />}>
-      <UpgradeScreen />
+      <UpgradeScreen teamId={team.id} teamSlug={slug} />
     </Suspense>
   );
 }

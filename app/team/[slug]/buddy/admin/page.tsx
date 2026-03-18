@@ -8,7 +8,6 @@ import { redirect } from 'next/navigation';
 import { AdminDashboard } from '@/components/buddy-battle/admin-dashboard';
 import { createClient } from '@supabase/supabase-js';
 import { cookies } from 'next/headers';
-import '@/styles/buddy-battle.css';
 
 const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!;
 const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!;

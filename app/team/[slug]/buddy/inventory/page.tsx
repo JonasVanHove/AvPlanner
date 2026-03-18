@@ -5,7 +5,8 @@
 
 import { Suspense } from 'react';
 import { InventoryScreen } from '@/components/buddy-battle/inventory-screen';
-import '@/styles/buddy-battle.css';
+import { resolveTeamFromSlug } from '@/lib/buddy-battle/resolve-team';
+import { notFound } from 'next/navigation';
 
 // Loading component
 function InventoryLoading() {
@@ -26,10 +27,12 @@ interface PageProps {
 
 export default async function InventoryPage({ params }: PageProps) {
   const { slug } = await params;
+  const team = await resolveTeamFromSlug(slug);
+  if (!team) notFound();
   
   return (
     <Suspense fallback={<InventoryLoading />}>
-      <InventoryScreen />
+      <InventoryScreen teamId={team.id} teamSlug={slug} />
     </Suspense>
   );
 }

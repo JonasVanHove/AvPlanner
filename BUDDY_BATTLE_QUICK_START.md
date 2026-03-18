@@ -5,7 +5,7 @@
 1. **Access Gamification**
    - Go to your team page
    - Click the golden "Buddy" button (top right area)
-   - Password: `PapaYvo`
+   - Password, you need to know :)
 
 2. **Create Your Buddy**
    - Click "Create New Buddy"
@@ -146,7 +146,7 @@ A: Mark availability daily (10 pts), win battles (20 pts), complete quests (50-1
 A: Reset for 500 points, creates new one
 
 **Q: What's the password?**
-A: `PapaYvo`
+A: Nice try
 
 **Q: How long do battles take?**
 A: 2-5 minutes average

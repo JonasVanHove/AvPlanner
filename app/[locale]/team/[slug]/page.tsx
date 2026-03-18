@@ -132,15 +132,6 @@ export default function LocaleTeamPage({ params }: { params: Promise<LocaleTeamP
         .order("created_at", { ascending: true })
 
       if (membersError) throw membersError
-      
-      // Debug raw members to verify birth_date presence (locale route)
-      try {
-        console.log("🎂 Raw members (locale normal fetch):", (allMembersData || []).map((m: any) => ({
-          id: m.id,
-          name: `${m.first_name} ${m.last_name}`,
-          birth_date: m.birth_date ?? '<missing>'
-        })))
-      } catch {}
 
       // Transform to consistent format
       const allMembers: Member[] = (allMembersData || []).map((member: any) => ({

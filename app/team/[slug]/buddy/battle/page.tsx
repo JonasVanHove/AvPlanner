@@ -5,9 +5,7 @@
 
 import { Suspense } from 'react';
 import { BattleScreen } from '@/components/buddy-battle/battle-screen';
-import '@/styles/buddy-battle.css';
-import { createServerClient } from '@supabase/ssr';
-import { cookies } from 'next/headers';
+import { resolveTeamFromSlug } from '@/lib/buddy-battle/resolve-team';
 import { notFound } from 'next/navigation';
 
 // Loading component
@@ -28,47 +26,11 @@ interface PageProps {
   searchParams?: Promise<{ type?: string; opponent?: string }>;
 }
 
-async function getTeamBySlug(slug: string) {
-  const cookieStore = await cookies();
-  const supabase = createServerClient(
-    process.env.NEXT_PUBLIC_SUPABASE_URL!,
-    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
-    {
-      cookies: {
-        getAll() {
-          return cookieStore.getAll();
-        },
-        setAll(cookiesToSet) {
-          cookiesToSet.forEach(({ name, value, options }) =>
-            cookieStore.set(name, value, options)
-          );
-        },
-      },
-    }
-  );
-
-  // Check if slug looks like a UUID
-  const isUUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(slug);
-
-  let query = supabase
-    .from('teams')
-    .select('id, name, slug');
-
-  if (isUUID) {
-    query = query.eq('id', slug);
-  } else {
-    query = query.eq('slug', slug);
-  }
-
-  const { data: team, error } = await query.single();
-  return team;
-}
-
 export default async function BattlePage({ params, searchParams }: PageProps) {
   const { slug } = await params;
   const query = searchParams ? await searchParams : {};
   
-  const team = await getTeamBySlug(slug);
+  const team = await resolveTeamFromSlug(slug);
   
   if (!team) {
     notFound();
@@ -76,7 +38,7 @@ export default async function BattlePage({ params, searchParams }: PageProps) {
   
   return (
     <Suspense fallback={<BattleLoading />}>
-      <BattleScreen teamId={team.id} />
+      <BattleScreen teamId={team.id} teamSlug={team.invite_code || slug} />
     </Suspense>
   );
 }

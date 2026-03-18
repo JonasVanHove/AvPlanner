@@ -5,7 +5,8 @@
 
 import { Suspense } from 'react';
 import { LeaderboardScreen } from '@/components/buddy-battle/leaderboard-screen';
-import '@/styles/buddy-battle.css';
+import { resolveTeamFromSlug } from '@/lib/buddy-battle/resolve-team';
+import { notFound } from 'next/navigation';
 
 // Loading component
 function LeaderboardLoading() {
@@ -26,10 +27,12 @@ interface PageProps {
 
 export default async function LeaderboardPage({ params }: PageProps) {
   const { slug } = await params;
+  const team = await resolveTeamFromSlug(slug);
+  if (!team) notFound();
   
   return (
     <Suspense fallback={<LeaderboardLoading />}>
-      <LeaderboardScreen />
+      <LeaderboardScreen teamId={team.id} teamSlug={slug} />
     </Suspense>
   );
 }

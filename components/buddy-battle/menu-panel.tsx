@@ -56,11 +56,11 @@ export function MenuPanel({
           />
         )}
         
-        {/* PvP Battle */}
+        {/* Training Battle */}
         <MenuButton
           icon="⚔️"
           label="Battle"
-          onClick={() => navigate(`/team/${teamId}/buddy/battle`)}
+          onClick={() => navigate(`/team/${teamId}/buddy/battle?type=training`)}
         />
         
         {/* Boss Battle */}
@@ -142,7 +142,7 @@ export function MenuPanel({
           }}
         >
           <span className="text-lg">🚪</span>
-          <span className="retro-text">Terug naar AvPlanner</span>
+          <span className="retro-text">Back to AvPlanner</span>
         </button>
       </div>
       

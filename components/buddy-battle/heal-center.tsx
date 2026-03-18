@@ -15,6 +15,7 @@ import { ELEMENT_COLORS, BuddyElement } from '@/lib/buddy-battle/types';
 
 interface HealCenterProps {
   teamId: string;
+  teamSlug?: string;
 }
 
 interface BuddyData {
@@ -33,15 +34,14 @@ interface BuddyData {
   last_healed_at: string | null;
 }
 
-export function HealCenter({ teamId }: HealCenterProps) {
+export function HealCenter({ teamId, teamSlug }: HealCenterProps) {
   const router = useRouter();
   const { sounds } = useRetroSounds();
+  const navId = teamSlug || teamId;
   
   const [buddy, setBuddy] = useState<BuddyData | null>(null);
   const [loading, setLoading] = useState(true);
   const [healing, setHealing] = useState(false);
-  const [canHeal, setCanHeal] = useState(false);
-  const [hoursUntilHeal, setHoursUntilHeal] = useState(0);
   const [showHealAnimation, setShowHealAnimation] = useState(false);
   const [healedAmount, setHealedAmount] = useState(0);
   
@@ -89,24 +89,6 @@ export function HealCenter({ teamId }: HealCenterProps) {
             : buddyData.buddy_type
         };
         setBuddy(buddy);
-        
-        // Check if can heal (once per 24 hours)
-        const lastHealed = buddy.last_healed_at ? new Date(buddy.last_healed_at) : null;
-        const now = new Date();
-        
-        if (!lastHealed) {
-          setCanHeal(true);
-          setHoursUntilHeal(0);
-        } else {
-          const hoursSinceHeal = (now.getTime() - lastHealed.getTime()) / (1000 * 60 * 60);
-          if (hoursSinceHeal >= 24) {
-            setCanHeal(true);
-            setHoursUntilHeal(0);
-          } else {
-            setCanHeal(false);
-            setHoursUntilHeal(Math.ceil(24 - hoursSinceHeal));
-          }
-        }
       }
     } catch (error) {
       console.error('Error fetching buddy:', error);
@@ -116,7 +98,7 @@ export function HealCenter({ teamId }: HealCenterProps) {
   }
   
   async function handleHeal() {
-    if (!buddy || !canHeal || buddy.current_hp >= buddy.max_hp) return;
+    if (!buddy || buddy.current_hp >= buddy.max_hp) return;
     
     setHealing(true);
     sounds.select();
@@ -124,7 +106,7 @@ export function HealCenter({ teamId }: HealCenterProps) {
     try {
       const healAmount = buddy.max_hp - buddy.current_hp;
       
-      // Update buddy HP and last_healed_at
+      // Update buddy HP to full (Pokemon Center style - free & unlimited)
       const { error } = await supabase
         .from('player_buddies')
         .update({
@@ -147,8 +129,6 @@ export function HealCenter({ teamId }: HealCenterProps) {
           current_hp: buddy.max_hp,
           last_healed_at: new Date().toISOString()
         });
-        setCanHeal(false);
-        setHoursUntilHeal(24);
         setShowHealAnimation(false);
         setHealing(false);
       }, 2000);
@@ -272,41 +252,22 @@ export function HealCenter({ teamId }: HealCenterProps) {
         {/* Heal Button */}
         <div className="retro-panel p-6 text-center">
           {needsHealing ? (
-            canHeal ? (
-              <>
-                <p className="retro-text mb-4 text-retro-yellow">
-                  ⚡ Daily heal available! ⚡
-                </p>
-                <RetroButton
-                  variant="primary"
-                  onClick={handleHeal}
-                  disabled={healing}
-                  className="px-8 py-4 text-lg"
-                >
-                  {healing ? '💚 Healing...' : '💚 Heal Buddy'}
-                </RetroButton>
-                <p className="retro-text text-xs mt-4 text-gb-dark-green">
-                  Free once per day!
-                </p>
-              </>
-            ) : (
-              <>
-                <p className="retro-text text-gb-light-green mb-2">
-                  Daily heal already used
-                </p>
-                <p className="retro-text text-retro-yellow mb-4">
-                  ⏰ Available in {hoursUntilHeal} hour{hoursUntilHeal !== 1 ? 's' : ''}
-                </p>
-                <div className="retro-panel bg-gb-dark-green/50 p-4">
-                  <p className="retro-text text-sm mb-2">Alternative options:</p>
-                  <ul className="retro-text text-xs text-left space-y-1">
-                    <li>• 🧪 Use healing items from Shop</li>
-                    <li>• ⚔️ Win battles for bonus HP</li>
-                    <li>• 📋 Complete quests for rewards</li>
-                  </ul>
-                </div>
-              </>
-            )
+            <>
+              <p className="retro-text mb-4 text-retro-yellow">
+                ⚡ Let me heal your buddy! ⚡
+              </p>
+              <RetroButton
+                variant="primary"
+                onClick={handleHeal}
+                disabled={healing}
+                className="px-8 py-4 text-lg"
+              >
+                {healing ? '💚 Healing...' : '💚 Heal Buddy'}
+              </RetroButton>
+              <p className="retro-text text-xs mt-4 text-gb-dark-green">
+                Free healing — always available!
+              </p>
+            </>
           ) : (
             <>
               <p className="retro-text text-retro-lime text-lg mb-2">
@@ -323,7 +284,7 @@ export function HealCenter({ teamId }: HealCenterProps) {
         <div className="text-center">
           <RetroButton onClick={() => {
             sounds.cancel();
-            router.push(`/team/${teamId}/buddy`);
+            router.push(`/team/${navId}/buddy`);
           }}>
             ← Back to Menu
           </RetroButton>

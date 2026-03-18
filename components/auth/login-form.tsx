@@ -36,8 +36,8 @@ export function LoginForm({ onClose, onSwitchToRegister, onSwitchToForgotPasswor
       if (error) throw error
 
       if (data.user) {
+        // Call onClose callback to let parent handle redirect
         onClose?.()
-        window.location.reload()
       }
     } catch (error: any) {
       setError(error.message)

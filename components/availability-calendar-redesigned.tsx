@@ -1035,7 +1035,7 @@ const AvailabilityCalendarRedesigned = ({
     setBuddyPasswordError("")
     
     try {
-      const correctPassword = "PapaYvo"
+      const correctPassword = "Since2025."
       
       if (buddyPasswordInput === correctPassword) {
         // Password correct, navigate to buddy page
@@ -1397,46 +1397,7 @@ const AvailabilityCalendarRedesigned = ({
     return date.getMonth() === bMonth && date.getDate() === bDay
   }
 
-  // Debug logging: per-member summary + today's birthdays
-  // Runs once per members/date range change to avoid noisy spam
   useEffect(() => {
-    const today = new Date()
-    // Compute visible dates for the current grid period
-    const start = getMondayOfWeek(currentDate)
-    const totalDays = weeksToShow * 7
-    const visibleDates: Date[] = Array.from({ length: totalDays }, (_, i) => {
-      const d = new Date(start)
-      d.setDate(start.getDate() + i)
-      return d
-    })
-    const visibleDateStrings = visibleDates.map(d => getDateString(d))
-
-    // Per-member debug log (guard against React StrictMode double invocation)
-    const g = window as any
-    if (!g.__AVP_MEMBER_DEBUG_ONCE__) {
-      g.__AVP_MEMBER_DEBUG_ONCE__ = true
-      members.forEach(m => {
-        const name = `${m.first_name} ${m.last_name}`.trim()
-        const birth = m.birth_date || null
-        const isToday = isBirthdayDate(birth || undefined, today)
-        const weekMatches = visibleDates
-          .filter(d => isBirthdayDate(birth || undefined, d))
-          .map(d => getDateString(d))
-        console.info(
-          `👤 Member: ${name} | birth_date=${birth ?? 'null'} | isBirthdayToday=${isToday} | weekMatches=[${weekMatches.join(', ')}] | visible=[${visibleDateStrings.join(', ')}]`
-        )
-      })
-      // Reset the flag after a short delay so navigating to a different week re-logs once
-      setTimeout(() => { g.__AVP_MEMBER_DEBUG_ONCE__ = false }, 2000)
-    }
-
-    // Summary of birthdays today
-    const birthdays = members
-      .filter(m => isBirthdayDate(m.birth_date || undefined, today))
-      .map(m => `${m.first_name} ${m.last_name}`.trim())
-    if (birthdays.length > 0) {
-      console.info(`🎂 Birthdays today: ${birthdays.join(", ")}`)
-    }
   }, [members, currentDate, weeksToShow])
 
   // Determine if a given week for a member is fully filled according to the rules

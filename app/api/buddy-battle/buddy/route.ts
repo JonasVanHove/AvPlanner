@@ -3,9 +3,6 @@
 // =====================================================
 
 import { NextRequest, NextResponse } from 'next/server';
-import { createServerClient } from '@supabase/ssr';
-import { createClient as createSupabaseClient } from '@supabase/supabase-js';
-import { cookies } from 'next/headers';
 import {
   getPlayerBuddy,
   createPlayerBuddy,
@@ -16,89 +13,30 @@ import {
   getActiveTeamBuffs,
 } from '@/lib/buddy-battle/api';
 import { getCurrentQuarter, isBossBattleAvailable } from '@/lib/buddy-battle/game-logic';
+import { getAuthenticatedUser, isAdminKeyAvailable } from '@/lib/buddy-battle/server-auth';
 
-const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!;
-const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!;
-// Use service role key if available, otherwise fall back to anon key
-const supabaseServiceKey = process.env.SUPABASE_SERVICE_ROLE_KEY || supabaseAnonKey;
-const isAdminKeyAvailable = !!process.env.SUPABASE_SERVICE_ROLE_KEY && process.env.SUPABASE_SERVICE_ROLE_KEY !== supabaseAnonKey;
+export const runtime = 'nodejs';
 
-async function createClient() {
-  const cookieStore = await cookies();
-  return createServerClient(
-    supabaseUrl,
-    supabaseAnonKey,
-    {
-      cookies: {
-        getAll() {
-          return cookieStore.getAll();
-        },
-        setAll(cookiesToSet) {
-          cookiesToSet.forEach(({ name, value, options }) =>
-            cookieStore.set(name, value, options)
-          );
-        },
-      },
-    }
-  );
-}
+function getFetchFailedHint(error: any): string | undefined {
+  const message = String(error?.message ?? '');
+  const details = String(error?.details ?? '');
 
-// Create admin client for database operations (bypasses RLS)
-function createAdminClient() {
-  return createSupabaseClient(supabaseUrl, supabaseServiceKey, {
-    auth: { persistSession: false }
-  });
-}
-
-// Helper to get authenticated user from cookies or auth header
-async function getAuthenticatedUser(request: NextRequest) {
-  // First try SSR cookies approach
-  const supabase = await createClient();
-  const { data: { user }, error } = await supabase.auth.getUser();
-  
-  console.log('[buddy-battle/buddy] Auth check:', { 
-    hasUser: !!user, 
-    userId: user?.id,
-    error: error?.message 
-  });
-  
-  if (user) {
-    return { user, supabase, adminClient: createAdminClient() };
+  if (!message.includes('fetch failed') && !details.includes('fetch failed')) {
+    return undefined;
   }
-  
-  // Fallback: try Authorization header
-  const authHeader = request.headers.get('authorization');
-  if (authHeader) {
-    const token = authHeader.replace('Bearer ', '');
-    const supabaseWithToken = createSupabaseClient(supabaseUrl, supabaseAnonKey);
-    const { data: { user: tokenUser }, error: tokenError } = await supabaseWithToken.auth.getUser(token);
-    
-    console.log('[buddy-battle/buddy] Auth header check:', { 
-      hasUser: !!tokenUser, 
-      userId: tokenUser?.id,
-      error: tokenError?.message 
-    });
-    
-    if (tokenUser) {
-      return { user: tokenUser, supabase: supabaseWithToken, adminClient: createAdminClient() };
-    }
-  }
-  
-  return { user: null, supabase, adminClient: createAdminClient() };
+
+  return 'Server-side Supabase request failed. On Windows dev, restart with the updated dev script so Node uses IPv4 first. If it still fails, add SUPABASE_SERVICE_ROLE_KEY to .env.local and restart.';
 }
 
 // GET /api/buddy-battle/buddy?teamId=xxx
 export async function GET(request: NextRequest) {
   try {
-    const { user, adminClient } = await getAuthenticatedUser(request);
+    console.log('[buddy GET] handler entered');
+    const { user, adminClient, supabase } = await getAuthenticatedUser(request);
+    console.log('[buddy GET] getAuthenticatedUser done', { hasUser: !!user, userId: user?.id });
     const { searchParams } = new URL(request.url);
     const teamId = searchParams.get('teamId');
-
-    console.log('[buddy-battle/buddy GET] Request:', { 
-      teamId, 
-      hasUser: !!user, 
-      userId: user?.id 
-    });
+    const summaryOnly = searchParams.get('summaryOnly') === '1';
 
     if (!teamId) {
       return NextResponse.json({ error: 'Team ID required' }, { status: 400 });
@@ -106,55 +44,108 @@ export async function GET(request: NextRequest) {
 
     // Get current user
     if (!user) {
-      console.log('[buddy-battle/buddy GET] No user, returning 401');
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
-    // Get member for this team using admin client (bypass RLS)
-    const { data: member, error: memberError } = await adminClient
+    // Use admin client if available, otherwise fall back to authenticated client
+    const dbClient = isAdminKeyAvailable ? adminClient : supabase;
+
+    console.log('[buddy GET] auth ok, querying members', {
+      teamId,
+      userId: user.id,
+      usingAdminKey: isAdminKeyAvailable,
+      summaryOnly,
+    });
+
+    // Get member for this team using dbClient (admin or authenticated fallback)
+    const { data: memberRows, error: memberError } = await dbClient
       .from('members')
       .select('id')
       .eq('team_id', teamId)
       .eq('auth_user_id', user.id)
-      .single();
+      .limit(1);
 
-    console.log('[buddy-battle/buddy GET] Member lookup:', { 
-      found: !!member, 
-      memberId: member?.id, 
-      error: memberError?.message 
-    });
-
-    if (memberError || !member) {
-      return NextResponse.json({ error: 'Member not found' }, { status: 404 });
+    if (memberError) {
+      console.error('[buddy GET] members query error:', { code: memberError.code, message: memberError.message, details: memberError.details, hint: memberError.hint });
+      const tagged = new Error(`[members query] ${memberError.message}`);
+      (tagged as any).code = memberError.code;
+      (tagged as any).details = memberError.details;
+      (tagged as any).hint = memberError.hint;
+      throw tagged;
     }
 
-    // Get buddy
-    const buddy = await getPlayerBuddy(member.id, teamId);
+    const member = memberRows?.[0];
+
+    console.log('[buddy GET] member lookup result:', { found: !!member, rowCount: memberRows?.length });
+
+    if (!member) {
+      return NextResponse.json({
+        buddy: null,
+        needsSetup: false,
+        membershipRequired: true,
+        error: 'Join this team before using Buddy Battle.',
+      });
+    }
+
+    // For summaryOnly we only need the buddy id — avoid complex joins that can fail
+    // due to missing RLS grants, schema mismatches, or Supabase connection hiccups.
+    const buddySelect = summaryOnly
+      ? 'id'
+      : `*, buddy_type:buddy_types(*), member:members(id, first_name, last_name, profile_image_url)`;
+
+    // Get buddy using dbClient (admin or authenticated fallback)
+    const { data: buddyRows, error: buddyError } = await dbClient
+      .from('player_buddies')
+      .select(buddySelect)
+      .eq('member_id', member.id)
+      .eq('team_id', teamId)
+      .limit(1);
+
+    if (buddyError) {
+      const tagged = new Error(`[player_buddies query] ${buddyError.message}`);
+      (tagged as any).code = buddyError.code;
+      (tagged as any).details = buddyError.details;
+      (tagged as any).hint = buddyError.hint;
+      throw tagged;
+    }
+
+    const buddy = buddyRows?.[0];
 
     if (!buddy) {
       return NextResponse.json({ buddy: null, needsSetup: true });
     }
 
+    // Fast path for page init checks to avoid expensive recalculation work.
+    if (summaryOnly) {
+      return NextResponse.json({
+        buddy: { id: buddy.id },
+        needsSetup: false,
+        membershipRequired: false,
+      });
+    }
+
     // Calculate and award any pending points (safe - don't crash if this fails)
-    let pointsResult = { pointsAwarded: 0, breakdown: [] };
+    let pointsResult: { pointsAwarded: number; availablePoints: number; totalEarned: number; totalSpent: number; breakdown: { date: string; points: number }[] } = { pointsAwarded: 0, availablePoints: buddy.available_points || 0, totalEarned: buddy.total_points_earned || 0, totalSpent: buddy.total_points_spent || 0, breakdown: [] };
     try {
       pointsResult = await calculateAndAwardPoints(member.id, buddy.id, teamId);
     } catch (pointsError) {
       console.error('[buddy-battle/buddy] Points calculation failed:', pointsError);
     }
 
-    // Update login streak (safe - returns null if fails)
-    const trainerProfile = await updateLoginStreak(buddy.id);
+    // Run non-critical reads in parallel and degrade gracefully.
+    const [trainerProfileResult, activeQuestsResult, teamBuffsResult] = await Promise.allSettled([
+      updateLoginStreak(buddy.id),
+      getActiveQuests(buddy.id),
+      getActiveTeamBuffs(teamId),
+    ]);
 
-    // Get active quests (safe - returns empty array)
-    const activeQuests = await getActiveQuests(buddy.id);
+    const trainerProfile = trainerProfileResult.status === 'fulfilled' ? trainerProfileResult.value : null;
+    const activeQuests = activeQuestsResult.status === 'fulfilled' ? activeQuestsResult.value : [];
+    const teamBuffs = teamBuffsResult.status === 'fulfilled' ? teamBuffsResult.value : [];
 
-    // Get team buffs (safe - returns empty array)
-    const teamBuffs = await getActiveTeamBuffs(teamId);
-
-    // Check boss availability using admin client
+    // Check boss availability using dbClient
     const quarter = getCurrentQuarter();
-    const { data: bossAttempts } = await adminClient
+    const { data: bossAttempts } = await dbClient
       .from('boss_battle_attempts')
       .select('*')
       .eq('player_buddy_id', buddy.id)
@@ -163,6 +154,10 @@ export async function GET(request: NextRequest) {
     const dashboard = {
       buddy: {
         ...buddy,
+        // Override with freshly recalculated point values (buddy was fetched before recalculation)
+        available_points: pointsResult.availablePoints,
+        total_points_earned: pointsResult.totalEarned,
+        total_points_spent: pointsResult.totalSpent,
         points_awarded_today: pointsResult.pointsAwarded,
       },
       trainer: trainerProfile,
@@ -178,10 +173,20 @@ export async function GET(request: NextRequest) {
     };
 
     return NextResponse.json(dashboard);
-  } catch (error) {
+  } catch (error: any) {
     console.error('Buddy GET error:', error);
+    const isDev = process.env.NODE_ENV !== 'production';
+    const fetchFailedHint = getFetchFailedHint(error);
     return NextResponse.json(
-      { error: 'Failed to fetch buddy data' },
+      {
+        error: 'Failed to fetch buddy data',
+        ...(isDev && {
+          debug_message: error?.message ?? String(error),
+          debug_code: error?.code,
+          debug_details: error?.details,
+          debug_hint: error?.hint ?? fetchFailedHint,
+        }),
+      },
       { status: 500 }
     );
   }
@@ -190,16 +195,9 @@ export async function GET(request: NextRequest) {
 // POST /api/buddy-battle/buddy - Create new buddy
 export async function POST(request: NextRequest) {
   try {
-    const { user, adminClient } = await getAuthenticatedUser(request);
+    const { user, adminClient, supabase } = await getAuthenticatedUser(request);
     const body = await request.json();
     const { teamId, buddyTypeId, nickname, colors } = body;
-
-    console.log('[buddy-battle/buddy POST] Request:', { 
-      teamId, 
-      buddyTypeId,
-      hasUser: !!user, 
-      userId: user?.id 
-    });
 
     if (!teamId || !buddyTypeId) {
       return NextResponse.json(
@@ -210,12 +208,8 @@ export async function POST(request: NextRequest) {
 
     // Check authentication
     if (!user) {
-      console.log('[buddy-battle/buddy POST] No user, returning 401');
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
-
-    // Create authenticated client for non-admin operations
-    const supabase = await createClient();
 
     // Use authenticated client if admin key is missing, otherwise use admin client
     // This ensures that if we don't have the service key, we rely on RLS policies for the user
@@ -229,12 +223,6 @@ export async function POST(request: NextRequest) {
       .eq('auth_user_id', user.id)
       .single();
 
-    console.log('[buddy-battle/buddy POST] Member lookup:', { 
-      found: !!member, 
-      memberId: member?.id, 
-      error: memberError?.message 
-    });
-
     if (memberError || !member) {
       return NextResponse.json({ error: 'Member not found' }, { status: 404 });
     }
@@ -245,7 +233,7 @@ export async function POST(request: NextRequest) {
       .select('id')
       .eq('member_id', member.id)
       .eq('team_id', teamId)
-      .single();
+      .maybeSingle();
       
     if (existingBuddy) {
       return NextResponse.json(
@@ -336,12 +324,16 @@ export async function POST(request: NextRequest) {
 
     console.log('[buddy-battle/buddy POST] Buddy created:', buddy.id);
 
-    // Create trainer profile with admin client
-    await adminClient
+    // Create trainer profile with same DB client so auth context stays consistent
+    const { error: trainerProfileError } = await dbClient
       .from('buddy_trainer_profiles')
       .insert({
         player_buddy_id: buddy.id,
       });
+
+    if (trainerProfileError) {
+      console.error('[buddy-battle/buddy POST] Trainer profile creation failed:', trainerProfileError);
+    }
 
     return NextResponse.json({ buddy }, { status: 201 });
   } catch (error) {
@@ -368,7 +360,7 @@ export async function POST(request: NextRequest) {
 // PATCH /api/buddy-battle/buddy - Update buddy
 export async function PATCH(request: NextRequest) {
   try {
-    const { user, adminClient } = await getAuthenticatedUser(request);
+    const { user, adminClient, supabase } = await getAuthenticatedUser(request);
     const body = await request.json();
     const { buddyId, colors, nickname } = body;
 
@@ -381,8 +373,11 @@ export async function PATCH(request: NextRequest) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
-    // Verify ownership using admin client
-    const { data: buddy, error: buddyError } = await adminClient
+    const isAdminKeyAvailable = !!process.env.SUPABASE_SERVICE_ROLE_KEY;
+    const dbClient = isAdminKeyAvailable ? adminClient : supabase;
+
+    // Verify ownership
+    const { data: buddy, error: buddyError } = await dbClient
       .from('player_buddies')
       .select('id, member:members!inner(auth_user_id)')
       .eq('id', buddyId)
@@ -400,9 +395,9 @@ export async function PATCH(request: NextRequest) {
       await updateBuddyColors(buddyId, colors);
     }
 
-    // Update nickname using admin client
+    // Update nickname
     if (nickname !== undefined) {
-      await adminClient
+      await dbClient
         .from('player_buddies')
         .update({ nickname, updated_at: new Date().toISOString() })
         .eq('id', buddyId);

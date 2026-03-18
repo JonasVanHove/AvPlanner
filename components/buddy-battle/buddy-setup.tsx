@@ -112,7 +112,22 @@ export function BuddySetup({ teamId, onComplete }: BuddySetupProps) {
   };
   
   const handleCreate = async () => {
-    if (!selectedType) return;
+    // Validate state before creating
+    if (!selectedType || !teamId) {
+      console.warn('[Buddy Setup] Cannot create: selectedType or teamId missing', { 
+        selectedType: selectedType?.id, 
+        teamId 
+      });
+      sounds.error();
+      alert('Invalid state: buddy type or team ID is missing');
+      return;
+    }
+    
+    // Prevent double-submit while creating
+    if (creating) {
+      console.warn('[Buddy Setup] Already creating, ignoring double-submit');
+      return;
+    }
     
     setCreating(true);
     
@@ -125,6 +140,12 @@ export function BuddySetup({ teamId, onComplete }: BuddySetupProps) {
       if (accessToken) {
         headers['Authorization'] = `Bearer ${accessToken}`;
       }
+      
+      console.log('[Buddy Setup] Creating buddy:', { 
+        teamId, 
+        buddyTypeId: selectedType.id,
+        hasAuth: !!accessToken 
+      });
       
       const response = await fetch('/api/buddy-battle/buddy', {
         method: 'POST',
@@ -140,18 +161,31 @@ export function BuddySetup({ teamId, onComplete }: BuddySetupProps) {
       
       const data = await response.json();
       
+      console.log('[Buddy Setup] Create response:', { 
+        status: response.status, 
+        error: data.error 
+      });
+      
       if (response.ok) {
         sounds.achievement();
+        console.log('[Buddy Setup] Buddy created successfully, calling onComplete');
         onComplete();
       } else {
         sounds.error();
+        // Check if "Already have a buddy" error - might mean creation succeeded on first attempt
+        if (data.error?.includes('Already have a buddy')) {
+          console.log('[Buddy Setup] Got "already have buddy" - refresh to check state');
+          // Likely the buddy was created on first attempt, just refresh to see game
+          onComplete();
+          return;
+        }
         console.error('Failed to create buddy:', data.error, data.details || '');
-        alert(`Fout bij aanmaken buddy: ${data.error}\n${data.details || ''}`);
+        alert(`Error creating buddy: ${data.error}\n${data.details || ''}`);
       }
     } catch (error) {
       sounds.error();
       console.error('Error creating buddy:', error);
-      alert(`Er ging iets mis: ${error}`);
+      alert(`Something went wrong: ${error}`);
     } finally {
       setCreating(false);
     }
@@ -174,24 +208,24 @@ export function BuddySetup({ teamId, onComplete }: BuddySetupProps) {
       <div className="flex items-center justify-center min-h-[400px] py-8">
         <div className="retro-panel p-8 text-center">
           <div className="text-4xl mb-4">⚠️</div>
-          <p className="retro-text mb-2">Geen buddy types beschikbaar</p>
+          <p className="retro-text mb-2">No buddy types available</p>
           <p className="retro-text text-xs text-gb-dark-green">
-            Neem contact op met de beheerder
+            Please contact the administrator
           </p>
         </div>
       </div>
     );
   }
 
-  const stepLabels = ['Buddy', 'Kleuren', 'Naam'];
+  const stepLabels = ['Buddy', 'Colors', 'Name'];
   
   return (
     <div className="max-w-2xl mx-auto py-8">
       {/* Header */}
       <div className="text-center mb-8">
-        <h1 className="retro-title mb-2">🎮 Kies Je Buddy</h1>
+        <h1 className="retro-title mb-2">🎮 Choose Your Buddy</h1>
         <p className="retro-text text-gb-light-green">
-          Stap {step} van 3: {stepLabels[step - 1]}
+          Step {step} of 3: {stepLabels[step - 1]}
         </p>
       </div>
       
@@ -212,7 +246,7 @@ export function BuddySetup({ teamId, onComplete }: BuddySetupProps) {
               `}
               style={s === step ? { boxShadow: '0 0 15px rgba(255, 205, 117, 0.6)' } : {}}
               onClick={() => s < step && setStep(s)}
-              title={s < step ? `Terug naar stap ${s}: ${stepLabels[s - 1]}` : stepLabels[s - 1]}
+              title={s < step ? `Back to step ${s}: ${stepLabels[s - 1]}` : stepLabels[s - 1]}
             >
               {s < step ? (
                 <span className="text-sm">✓</span>
@@ -255,7 +289,7 @@ export function BuddySetup({ teamId, onComplete }: BuddySetupProps) {
         <div className="retro-panel">
           <h2 className="retro-text-lg mb-4 text-center">Select Your Buddy</h2>
           <p className="retro-text text-xs text-center text-gb-light-green mb-6">
-            Klik op een buddy om te selecteren
+            Click on a buddy to select it
           </p>
           
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
@@ -317,7 +351,7 @@ export function BuddySetup({ teamId, onComplete }: BuddySetupProps) {
           
           <div className="flex justify-between items-center mt-6">
             <p className="retro-text text-xs text-gb-light-green">
-              {selectedType ? `✓ ${selectedType.name} geselecteerd` : 'Selecteer een buddy'}
+              {selectedType ? `✓ ${selectedType.name} selected` : 'Select a buddy'}
             </p>
             <button 
               className="retro-btn retro-btn-primary"
@@ -335,7 +369,7 @@ export function BuddySetup({ teamId, onComplete }: BuddySetupProps) {
         <div className="retro-panel">
           <h2 className="retro-text-lg mb-4 text-center">Customize Colors</h2>
           <p className="retro-text text-xs text-center text-gb-light-green mb-6">
-            Kies een kleurenschema voor je buddy
+            Choose a color scheme for your buddy
           </p>
           
           {/* Preview */}
@@ -400,7 +434,7 @@ export function BuddySetup({ teamId, onComplete }: BuddySetupProps) {
         <div className="retro-panel">
           <h2 className="retro-text-lg mb-4 text-center">Give a Nickname</h2>
           <p className="retro-text text-xs text-center text-gb-light-green mb-6">
-            Geef je buddy een unieke naam (optioneel)
+            Give your buddy a unique name (optional)
           </p>
           
           {/* Preview */}
@@ -432,13 +466,13 @@ export function BuddySetup({ teamId, onComplete }: BuddySetupProps) {
               maxLength={12}
             />
             <p className="retro-text text-xs text-gb-dark-green mt-2 text-center">
-              {nickname.length}/12 karakters (optioneel)
+              {nickname.length}/12 characters (optional)
             </p>
           </div>
           
           {/* Summary */}
           <div className="retro-panel bg-gb-dark p-4 mb-6">
-            <h3 className="retro-text text-center mb-3 text-retro-yellow">📋 Samenvatting</h3>
+            <h3 className="retro-text text-center mb-3 text-retro-yellow">📋 Summary</h3>
             <div className="space-y-2">
               <div className="flex justify-between items-center">
                 <span className="retro-text text-xs text-gb-light-green">Type:</span>
@@ -454,11 +488,11 @@ export function BuddySetup({ teamId, onComplete }: BuddySetupProps) {
                 </span>
               </div>
               <div className="flex justify-between items-center">
-                <span className="retro-text text-xs text-gb-light-green">Naam:</span>
+                <span className="retro-text text-xs text-gb-light-green">Name:</span>
                 <span className="retro-text text-xs text-retro-yellow">{nickname || selectedType.name}</span>
               </div>
               <div className="flex justify-between items-center">
-                <span className="retro-text text-xs text-gb-light-green">Thema:</span>
+                <span className="retro-text text-xs text-gb-light-green">Theme:</span>
                 <div className="flex items-center gap-2">
                   <div 
                     className="w-4 h-4 border border-gb-dark-green"
@@ -472,14 +506,14 @@ export function BuddySetup({ teamId, onComplete }: BuddySetupProps) {
           
           <div className="flex justify-between">
             <button className="retro-btn" onClick={handlePrevStep}>
-              ← Terug
+              ← Back
             </button>
             <button 
               className="retro-btn retro-btn-special"
               onClick={handleCreate}
               disabled={creating}
             >
-              {creating ? 'Aanmaken...' : '✨ Maak Buddy!'}
+              {creating ? 'Creating...' : '✨ Create Buddy!'}
             </button>
           </div>
         </div>

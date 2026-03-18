@@ -6,10 +6,9 @@
 // =====================================================
 
 import React, { useState, useEffect } from 'react';
-import { useParams, useRouter } from 'next/navigation';
+import { useRouter } from 'next/navigation';
 import { useRetroSounds } from '@/hooks/use-retro-sounds';
 import { supabase } from '@/lib/supabase';
-import '@/styles/buddy-battle.css';
 
 import { RetroButton, RetroDialog, RetroTabs, RetroToast, RetroBadge } from './ui/retro-button';
 import type { BuddyItem, PlayerBuddy } from '@/lib/buddy-battle/types';
@@ -37,10 +36,14 @@ interface InventoryData {
   buddy: PlayerBuddy;
 }
 
-export function InventoryScreen() {
-  const params = useParams();
+interface InventoryScreenProps {
+  teamId: string;
+  teamSlug?: string;
+}
+
+export function InventoryScreen({ teamId, teamSlug }: InventoryScreenProps) {
   const router = useRouter();
-  const teamId = params?.slug as string;
+  const navId = teamSlug || teamId;
   
   const { sounds, initAudio, isInitialized } = useRetroSounds();
   
@@ -207,7 +210,7 @@ export function InventoryScreen() {
         
         {/* Back button */}
         <RetroButton 
-          onClick={() => router.push(`/team/${teamId}/buddy`)}
+          onClick={() => router.push(`/team/${navId}/buddy`)}
           variant="default"
           size="small"
           className="mb-4"
@@ -313,7 +316,7 @@ export function InventoryScreen() {
               No items in this category
             </p>
             <RetroButton 
-              onClick={() => router.push(`/team/${teamId}/buddy/shop`)}
+              onClick={() => router.push(`/team/${navId}/buddy/shop`)}
               variant="primary"
               size="small"
               className="mt-4"

@@ -106,10 +106,12 @@ const ELEMENT_CHART = {
 export async function GET(request: NextRequest) {
   try {
     // Return all buddy types with their details
+    // Note: base_stats represent max potential - actual starting stats at level 1 are much lower
     return NextResponse.json({
       buddy_types: BUDDY_TYPES,
       element_chart: ELEMENT_CHART,
       total_types: BUDDY_TYPES.length,
+      note: 'base_stats show maximum potential at high levels. Buddies start at level 1 with lower stats.',
     });
     
   } catch (error) {

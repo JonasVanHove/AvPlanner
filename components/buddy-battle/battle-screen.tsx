@@ -8,12 +8,11 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { useSearchParams, useRouter } from 'next/navigation';
 import { useRetroSounds } from '@/hooks/use-retro-sounds';
-import { supabase } from '@/lib/supabase';
-import '@/styles/buddy-battle.css';
 
 import { RetroButton, RetroDialog, RetroProgress } from './ui/retro-button';
 import { ELEMENT_COLORS } from '@/lib/buddy-battle/types';
 import type { BattleState, BuddyAbility, BattleAction, NPCBoss } from '@/lib/buddy-battle/types';
+import { getAuthHeaders } from '@/lib/buddy-battle/client-auth';
 
 // =====================================================
 // AvPlanner Buddy Avatars - TRUE PIXEL ART STYLE
@@ -431,12 +430,16 @@ interface DialogueState {
 
 interface BattleScreenProps {
   teamId: string;
+  teamSlug?: string;
 }
 
-export function BattleScreen({ teamId }: BattleScreenProps) {
+export function BattleScreen({ teamId, teamSlug }: BattleScreenProps) {
   const searchParams = useSearchParams();
   const router = useRouter();
-  const battleType = searchParams?.get('type') || 'pvp';
+  const battleType = searchParams?.get('type') || 'training';
+  
+  // Use slug for navigation URLs, fall back to teamId
+  const navId = teamSlug || teamId;
   
   const { sounds, initAudio, isInitialized } = useRetroSounds();
   
@@ -446,10 +449,12 @@ export function BattleScreen({ teamId }: BattleScreenProps) {
   const [dialogue, setDialogue] = useState<DialogueState | null>(null);
   const [selectedAbility, setSelectedAbility] = useState<string | null>(null);
   const [actionMessage, setActionMessage] = useState<string | null>(null);
-  const [damageNumbers, setDamageNumbers] = useState<{ id: string; value: number; x: number; y: number; isCrit: boolean; isPlayer?: boolean }[]>([]);
+  const [damageNumbers, setDamageNumbers] = useState<{ id: string; value: number; x: number; y: number; isCrit: boolean; isPlayer?: boolean; isHeal?: boolean }[]>([]);
   const [isExecutingTurn, setIsExecutingTurn] = useState(false);
   const [shakeTarget, setShakeTarget] = useState<'player' | 'opponent' | null>(null);
   const [flashTarget, setFlashTarget] = useState<'player' | 'opponent' | null>(null);
+  const [battleRewards, setBattleRewards] = useState<{ xp_gained: number; anxiety_change: number } | null>(null);
+  const [errorMessage, setErrorMessage] = useState<string | null>(null);
   
   // Initialize battle
   useEffect(() => {
@@ -462,13 +467,9 @@ export function BattleScreen({ teamId }: BattleScreenProps) {
       
       try {
         // Get auth token for API call
-        const { data: { session } } = await supabase.auth.getSession();
-        const headers: HeadersInit = { 'Content-Type': 'application/json' };
-        if (session?.access_token) {
-          headers['Authorization'] = `Bearer ${session.access_token}`;
-        }
+        const headers = await getAuthHeaders();
         
-        console.log('[BattleScreen] Starting battle:', { teamId, battleType, hasToken: !!session?.access_token });
+        console.log('[BattleScreen] Starting battle:', { teamId, battleType, hasToken: !!(headers as Record<string, string>)['Authorization'] });
         
         const response = await fetch('/api/buddy-battle/battle', {
           method: 'POST',
@@ -496,6 +497,7 @@ export function BattleScreen({ teamId }: BattleScreenProps) {
         
         if (data.error) {
           console.error('[BattleScreen] API error:', data.error);
+          setErrorMessage(data.error);
           return;
         }
         
@@ -556,6 +558,19 @@ export function BattleScreen({ teamId }: BattleScreenProps) {
       return () => window.removeEventListener('keydown', handleKeyDown);
     }
   }, [dialogue, advanceDialogue]);
+
+  // Auto-select first available (non-cooldown) ability when battle state changes
+  useEffect(() => {
+    if (battleState && phase === 'battle' && battleState.is_player_turn && !selectedAbility) {
+      const firstAvailable = battleState.available_abilities.slice(0, 4).find(a => {
+        const cd = battleState.player_buddy.ability_cooldowns[a.id] || 0;
+        return cd <= 0;
+      });
+      if (firstAvailable) {
+        setSelectedAbility(firstAvailable.id);
+      }
+    }
+  }, [battleState, phase, selectedAbility]);
   
   // Handle ability selection
   const handleAbilitySelect = (ability: BuddyAbility) => {
@@ -576,11 +591,7 @@ export function BattleScreen({ teamId }: BattleScreenProps) {
     
     try {
       // Get auth token for API call
-      const { data: { session } } = await supabase.auth.getSession();
-      const headers: HeadersInit = { 'Content-Type': 'application/json' };
-      if (session?.access_token) {
-        headers['Authorization'] = `Bearer ${session.access_token}`;
-      }
+      const headers = await getAuthHeaders();
       
       const response = await fetch('/api/buddy-battle/battle', {
         method: 'POST',
@@ -620,11 +631,30 @@ export function BattleScreen({ teamId }: BattleScreenProps) {
       setIsExecutingTurn(false);
     }
     
+    // Reset selection so auto-select picks the next best ability
     setSelectedAbility(null);
   };
   
   // Process turn result for animations
   const processTurnResult = (data: any) => {
+    // Player healed themselves
+    if (data.player_heal) {
+      const id = Date.now().toString() + '-heal';
+      setDamageNumbers(prev => [...prev, {
+        id,
+        value: data.player_heal,
+        x: 20 + Math.random() * 20,
+        y: 55 + Math.random() * 10,
+        isCrit: false,
+        isPlayer: true,
+        isHeal: true,
+      }]);
+      sounds.hit();
+      setTimeout(() => {
+        setDamageNumbers(prev => prev.filter(d => d.id !== id));
+      }, 1500);
+    }
+    
     // Player's attack damage to opponent
     if (data.damage) {
       // Shake opponent when hit
@@ -690,6 +720,10 @@ export function BattleScreen({ teamId }: BattleScreenProps) {
     
     // Check for battle end
     if (data.battle_state?.is_finished) {
+      // Store rewards from server
+      if (data.rewards) {
+        setBattleRewards(data.rewards);
+      }
       if (data.battle_state.winner === 'player') {
         sounds.victory();
         setPhase('victory');
@@ -707,11 +741,7 @@ export function BattleScreen({ teamId }: BattleScreenProps) {
     sounds.cancel();
     
     // Get auth token for API call
-    const { data: { session } } = await supabase.auth.getSession();
-    const headers: HeadersInit = { 'Content-Type': 'application/json' };
-    if (session?.access_token) {
-      headers['Authorization'] = `Bearer ${session.access_token}`;
-    }
+    const headers = await getAuthHeaders();
     
     await fetch('/api/buddy-battle/battle', {
       method: 'POST',
@@ -725,7 +755,7 @@ export function BattleScreen({ teamId }: BattleScreenProps) {
       }),
     });
     
-    router.push(`/team/${teamId}/buddy`);
+    router.push(`/team/${navId}/buddy`);
   };
   
   // Initialize audio on interaction
@@ -753,13 +783,20 @@ export function BattleScreen({ teamId }: BattleScreenProps) {
         className="buddy-battle-container flex items-center justify-center min-h-screen"
         onClick={handleInteraction}
       >
-        <div className="retro-panel p-8">
+        <div className="retro-panel p-8 max-w-md">
           <p className="retro-text text-center text-retro-red mb-4">
-            Failed to start battle
+            {errorMessage || 'Failed to start battle'}
           </p>
-          <RetroButton onClick={() => router.push(`/team/${teamId}/buddy`)}>
-            Return
-          </RetroButton>
+          <div className="flex gap-2 justify-center">
+            <RetroButton onClick={() => router.push(`/team/${navId}/buddy`)}>
+              Return
+            </RetroButton>
+            {errorMessage?.includes('Tutorial already completed') && (
+              <RetroButton variant="primary" onClick={() => router.push(`/team/${navId}/buddy/battle?type=training`)}>
+                Train Instead
+              </RetroButton>
+            )}
+          </div>
         </div>
       </div>
     );
@@ -779,7 +816,9 @@ export function BattleScreen({ teamId }: BattleScreenProps) {
           <h1 className="retro-title">
             {battleType === 'tutorial' && 'Tutorial Battle'}
             {battleType === 'boss' && 'Boss Battle'}
+            {battleType === 'training' && 'Training Battle'}
             {battleType === 'pvp' && 'Team Battle'}
+            {!['tutorial', 'boss', 'training', 'pvp'].includes(battleType) && 'Battle'}
           </h1>
         </div>
         
@@ -832,10 +871,10 @@ export function BattleScreen({ teamId }: BattleScreenProps) {
             {damageNumbers.filter(d => !d.isPlayer).map(dmg => (
               <div 
                 key={dmg.id}
-                className={`damage-number ${dmg.isCrit ? 'critical' : ''}`}
+                className={`damage-number ${dmg.isCrit ? 'critical' : ''} ${dmg.isHeal ? 'heal' : ''}`}
                 style={{ left: `${dmg.x - 30}%`, top: `${dmg.y}%` }}
               >
-                {dmg.value}
+                {dmg.isHeal ? `+${dmg.value}` : dmg.value}
               </div>
             ))}
           </div>
@@ -860,10 +899,10 @@ export function BattleScreen({ teamId }: BattleScreenProps) {
             {damageNumbers.filter(d => d.isPlayer).map(dmg => (
               <div 
                 key={dmg.id}
-                className={`damage-number ${dmg.isCrit ? 'critical' : ''}`}
+                className={`damage-number ${dmg.isCrit ? 'critical' : ''} ${dmg.isHeal ? 'heal' : ''}`}
                 style={{ left: `${dmg.x}%`, top: `${dmg.y}%` }}
               >
-                -{dmg.value}
+                {dmg.isHeal ? `+${dmg.value}` : `-${dmg.value}`}
               </div>
             ))}
           </div>
@@ -1005,11 +1044,12 @@ export function BattleScreen({ teamId }: BattleScreenProps) {
             <p className="text-6xl mb-4">🎉</p>
             <p className="retro-text mb-4">You won the battle!</p>
             <p className="retro-text text-xs text-retro-yellow mb-4">
-              +50 XP | +10 Points
+              +{battleRewards?.xp_gained || 0} XP
+              {battleRewards?.anxiety_change ? ` | Anxiety ${battleRewards.anxiety_change > 0 ? '+' : ''}${battleRewards.anxiety_change}` : ''}
             </p>
             <RetroButton 
               variant="primary"
-              onClick={() => router.push(`/team/${teamId}/buddy`)}
+              onClick={() => router.push(`/team/${navId}/buddy`)}
             >
               Continue
             </RetroButton>
@@ -1024,10 +1064,10 @@ export function BattleScreen({ teamId }: BattleScreenProps) {
             <p className="text-6xl mb-4">😢</p>
             <p className="retro-text mb-4">You lost the battle...</p>
             <p className="retro-text text-xs text-retro-red mb-4">
-              Anxiety +10
+              Anxiety +{Math.abs(battleRewards?.anxiety_change || 10)}
             </p>
             <RetroButton 
-              onClick={() => router.push(`/team/${teamId}/buddy`)}
+              onClick={() => router.push(`/team/${navId}/buddy`)}
             >
               Return
             </RetroButton>

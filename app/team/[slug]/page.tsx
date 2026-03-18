@@ -171,20 +171,6 @@ export default function TeamPage({ params }: TeamPageProps) {
         .order("created_at", { ascending: true })
 
       if (membersError) throw membersError
-      
-      // Debug raw data coming from Supabase (to verify birth_date is returned by API)
-      try {
-        const g = window as any
-        if (!g.__AVP_LOG_RAW_MEMBERS_ONCE__) {
-          g.__AVP_LOG_RAW_MEMBERS_ONCE__ = true
-          console.log("🎂 Raw members (normal fetch):", (allMembersData || []).map((m: any) => ({
-            id: m.id,
-            name: `${m.first_name} ${m.last_name}`,
-            birth_date: m.birth_date ?? '<missing>'
-          })))
-          setTimeout(() => { g.__AVP_LOG_RAW_MEMBERS_ONCE__ = false }, 2000)
-        }
-      } catch {}
 
       // Transform to consistent format
       const allMembers: Member[] = (allMembersData || []).map((member: any) => ({
@@ -202,20 +188,6 @@ export default function TeamPage({ params }: TeamPageProps) {
         order_index: member.order_index || 0,
         birth_date: member.birth_date || null
       }))
-      
-      // Debug: verify birth_date presence coming from Supabase
-      try {
-        const g = window as any
-        if (!g.__AVP_LOG_LOADED_MEMBERS_ONCE__) {
-          g.__AVP_LOG_LOADED_MEMBERS_ONCE__ = true
-          console.log("🎂 Members loaded (normal fetch):", allMembers.map(m => ({
-            id: m.id,
-            name: `${m.first_name} ${m.last_name}`,
-            birth_date: m.birth_date
-          })))
-          setTimeout(() => { g.__AVP_LOG_LOADED_MEMBERS_ONCE__ = false }, 2000)
-        }
-      } catch {}
 
       setMembers(allMembers)
     } catch (error) {
@@ -250,15 +222,6 @@ export default function TeamPage({ params }: TeamPageProps) {
           .order("created_at", { ascending: true })
 
         if (membersError) throw membersError
-        
-        // Debug raw data coming from Supabase (after password)
-        try {
-          console.log("🎂 Raw members (after password):", (membersData || []).map((m: any) => ({
-            id: m.id,
-            name: `${m.first_name} ${m.last_name}`,
-            birth_date: m.birth_date ?? '<missing>'
-          })))
-        } catch {}
 
         // Transform to consistent format
         const transformedMembers: Member[] = (membersData || []).map((member: any) => ({
@@ -276,15 +239,6 @@ export default function TeamPage({ params }: TeamPageProps) {
           order_index: member.order_index || 0,
           birth_date: member.birth_date || null
         }))
-        
-        // Debug: verify birth_date presence coming from Supabase (after password)
-        try {
-          console.log("🎂 Members loaded (after password):", transformedMembers.map(m => ({
-            id: m.id,
-            name: `${m.first_name} ${m.last_name}`,
-            birth_date: m.birth_date
-          })))
-        } catch {}
 
         setMembers(transformedMembers)
       } else {

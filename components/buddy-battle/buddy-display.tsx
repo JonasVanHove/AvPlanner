@@ -8,6 +8,7 @@
 import React, { useState, useEffect } from 'react';
 import type { PlayerBuddyWithDetails } from '@/lib/buddy-battle/types';
 import { ELEMENT_COLORS } from '@/lib/buddy-battle/types';
+import { supabase } from '@/lib/supabase';
 
 interface BuddyDisplayProps {
   buddy: PlayerBuddyWithDetails;
@@ -54,7 +55,15 @@ export function BuddyDisplay({
   useEffect(() => {
     const fetchCountdown = async () => {
       try {
-        const response = await fetch(`/api/buddy-battle/hp-reset?action=get-countdown`);
+        const { data: { session } } = await supabase.auth.getSession();
+        const headers: HeadersInit = {};
+        if (session?.access_token) {
+          headers['Authorization'] = `Bearer ${session.access_token}`;
+        }
+        const response = await fetch(`/api/buddy-battle/hp-reset?action=get-countdown`, {
+          credentials: 'include',
+          headers,
+        });
         const data = await response.json();
         
         if (data.countdown) {

@@ -154,6 +154,11 @@ export function RegisterForm({ onClose, onSwitchToLogin }: RegisterFormProps) {
         setEmail("")
         setPassword("")
         setConfirmPassword("")
+        
+        // Call onClose to trigger redirect
+        setTimeout(() => {
+          onClose?.()
+        }, 1500)
       }
     } catch (error: any) {
       // Determine locale (simple heuristic: first URL segment or fallback 'en')

@@ -5,7 +5,8 @@
 
 import { Suspense } from 'react';
 import { ShopScreen } from '@/components/buddy-battle/shop-screen';
-import '@/styles/buddy-battle.css';
+import { resolveTeamFromSlug } from '@/lib/buddy-battle/resolve-team';
+import { notFound } from 'next/navigation';
 
 // Loading component
 function ShopLoading() {
@@ -26,10 +27,12 @@ interface PageProps {
 
 export default async function ShopPage({ params }: PageProps) {
   const { slug } = await params;
+  const team = await resolveTeamFromSlug(slug);
+  if (!team) notFound();
   
   return (
     <Suspense fallback={<ShopLoading />}>
-      <ShopScreen />
+      <ShopScreen teamId={team.id} teamSlug={slug} />
     </Suspense>
   );
 }

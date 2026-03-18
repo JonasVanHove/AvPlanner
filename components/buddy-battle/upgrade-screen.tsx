@@ -6,46 +6,15 @@
 // =====================================================
 
 import React, { useState, useEffect } from 'react';
-import { useParams, useRouter } from 'next/navigation';
+import { useRouter } from 'next/navigation';
 import { useRetroSounds } from '@/hooks/use-retro-sounds';
 import { supabase } from '@/lib/supabase';
-import '@/styles/buddy-battle.css';
 
 import { RetroButton, RetroProgress, RetroToast, RetroDialog } from './ui/retro-button';
 import { ELEMENT_COLORS, GAME_CONSTANTS } from '@/lib/buddy-battle/types';
 import { PixelBuddy } from './buddy-display';
 import type { PlayerBuddy, BuddyStat, UpgradeCost } from '@/lib/buddy-battle/types';
-
-// Helper function to get auth headers
-async function getAuthHeaders(): Promise<HeadersInit> {
-  // First try to get session
-  const { data: { session } } = await supabase.auth.getSession();
-  
-  if (session?.access_token) {
-    console.log('[getAuthHeaders] Got session token');
-    return {
-      'Authorization': `Bearer ${session.access_token}`,
-      'Content-Type': 'application/json',
-    };
-  }
-  
-  // If no session, try to refresh
-  console.log('[getAuthHeaders] No session, trying to refresh...');
-  const { data: refreshData } = await supabase.auth.refreshSession();
-  
-  if (refreshData?.session?.access_token) {
-    console.log('[getAuthHeaders] Got refreshed session token');
-    return {
-      'Authorization': `Bearer ${refreshData.session.access_token}`,
-      'Content-Type': 'application/json',
-    };
-  }
-  
-  console.log('[getAuthHeaders] No session available');
-  return {
-    'Content-Type': 'application/json',
-  };
-}
+import { getAuthHeaders } from '@/lib/buddy-battle/client-auth';
 
 interface PointsBreakdown {
   status: string;
@@ -62,10 +31,14 @@ interface UpgradeData {
   upgrades: UpgradeCost[];
 }
 
-export function UpgradeScreen() {
-  const params = useParams();
+interface UpgradeScreenProps {
+  teamId: string;
+  teamSlug?: string;
+}
+
+export function UpgradeScreen({ teamId, teamSlug }: UpgradeScreenProps) {
   const router = useRouter();
-  const teamId = params?.slug as string;
+  const navId = teamSlug || teamId;
   
   const { sounds, initAudio, isInitialized } = useRetroSounds();
   
@@ -219,7 +192,7 @@ export function UpgradeScreen() {
           <p className="retro-text text-center text-retro-red mb-4">
             No buddy found
           </p>
-          <RetroButton onClick={() => router.push(`/team/${teamId}/buddy`)}>
+          <RetroButton onClick={() => router.push(`/team/${navId}/buddy`)}>
             Return
           </RetroButton>
         </div>
@@ -245,7 +218,7 @@ export function UpgradeScreen() {
         
         {/* Back button */}
         <RetroButton 
-          onClick={() => router.push(`/team/${teamId}/buddy`)}
+          onClick={() => router.push(`/team/${navId}/buddy`)}
           variant="default"
           size="small"
           className="mb-5"

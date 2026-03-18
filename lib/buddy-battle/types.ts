@@ -680,11 +680,13 @@ export const GAME_CONSTANTS = {
   ELEMENT_ADVANTAGE_MULTIPLIER: 1.5,
   ELEMENT_DISADVANTAGE_MULTIPLIER: 0.5,
   CRITICAL_DAMAGE_MULTIPLIER: 1.5,
-  DAILY_POINT_VALUE: 1,
-  HOLIDAY_POINT_VALUE: 2,
+  // Point values — canonical values defined in POINTS_PER_STATUS (game-logic.ts)
+  DAILY_POINT_VALUE: 2,      // available/remote status
+  HOLIDAY_POINT_VALUE: 3,    // available on holiday = 2 + 1 bonus
   POINTS: {
-    DAILY_AVAILABILITY: 1,
-    HOLIDAY_AVAILABILITY: 2,
+    DAILY_AVAILABILITY: 2,
+    HOLIDAY_AVAILABILITY: 3,
+    INDICATED_UNAVAILABLE: 1, // absent, unavailable, holiday
     STREAK_BONUS_7: 1,
     STREAK_BONUS_14: 2,
     STREAK_BONUS_30: 3,

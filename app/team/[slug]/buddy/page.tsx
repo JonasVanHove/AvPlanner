@@ -5,7 +5,6 @@
 
 import { Suspense } from 'react';
 import { BuddyPageClient } from './client';
-import '@/styles/buddy-battle.css';
 import { createServerClient } from '@supabase/ssr';
 import { cookies } from 'next/headers';
 import { notFound, redirect } from 'next/navigation';
@@ -28,16 +27,8 @@ interface PageProps {
 }
 
 async function getTeamBySlug(slug: string) {
-  console.log('[BUDDY PAGE] Looking up team with slug:', slug);
-  
-  // Debug environment variables (masked)
   const url = process.env.NEXT_PUBLIC_SUPABASE_URL;
   const key = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
-  console.log('[BUDDY PAGE] Env check:', { 
-    hasUrl: !!url, 
-    urlPrefix: url ? url.substring(0, 8) : 'missing',
-    hasKey: !!key 
-  });
 
   if (!url || !key) {
     console.error('[BUDDY PAGE] Missing Supabase environment variables');
@@ -75,12 +66,7 @@ async function getTeamBySlug(slug: string) {
       .maybeSingle();
 
     if (!rpcError && rpcData) {
-      console.log('[BUDDY PAGE] RPC lookup result:', rpcData);
       return rpcData;
-    }
-    
-    if (rpcError) {
-      console.warn('[BUDDY PAGE] RPC lookup failed (function might not exist yet):', rpcError.message);
     }
 
     // Fallback to direct queries (will fail if RLS is strict and user is anon)
@@ -95,8 +81,7 @@ async function getTeamBySlug(slug: string) {
         .select('id, name, slug, invite_code')
         .eq('id', slug)
         .single();
-      
-      console.log('[BUDDY PAGE] UUID lookup result:', result.data, result.error);
+
       if (result.data) return result.data;
     }
 
@@ -106,8 +91,7 @@ async function getTeamBySlug(slug: string) {
       .select('id, name, slug, invite_code')
       .eq('invite_code', decodedSlug)
       .maybeSingle();
-    
-    console.log('[BUDDY PAGE] invite_code lookup result:', inviteResult.data, inviteResult.error);
+
     if (inviteResult.data) return inviteResult.data;
 
     // Then try by slug (friendly URL)
@@ -116,8 +100,7 @@ async function getTeamBySlug(slug: string) {
       .select('id, name, slug, invite_code')
       .eq('slug', decodedSlug)
       .maybeSingle();
-    
-    console.log('[BUDDY PAGE] slug lookup result:', slugResult.data, slugResult.error);
+
     if (slugResult.data) return slugResult.data;
 
     // Finally try by name (case-insensitive)
@@ -126,8 +109,7 @@ async function getTeamBySlug(slug: string) {
       .select('id, name, slug, invite_code')
       .ilike('name', decodedSlug)
       .maybeSingle();
-    
-    console.log('[BUDDY PAGE] name lookup result:', nameResult.data, nameResult.error);
+
     if (nameResult.data) return nameResult.data;
 
     // Try with spaces replaced by hyphens (e.g., "efficiency-team" -> "Efficiency Team")
@@ -138,8 +120,7 @@ async function getTeamBySlug(slug: string) {
         .select('id, name, slug, invite_code')
         .ilike('name', nameWithSpaces)
         .maybeSingle();
-      
-      console.log('[BUDDY PAGE] name (with spaces) lookup result:', nameSpacesResult.data, nameSpacesResult.error);
+
       if (nameSpacesResult.data) return nameSpacesResult.data;
     }
 

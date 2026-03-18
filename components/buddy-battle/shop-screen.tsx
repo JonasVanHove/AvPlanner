@@ -6,10 +6,9 @@
 // =====================================================
 
 import React, { useState, useEffect } from 'react';
-import { useParams, useRouter } from 'next/navigation';
+import { useRouter } from 'next/navigation';
 import { useRetroSounds } from '@/hooks/use-retro-sounds';
 import { supabase } from '@/lib/supabase';
-import '@/styles/buddy-battle.css';
 
 import { RetroButton, RetroDialog, RetroTabs, RetroToast, RetroBadge } from './ui/retro-button';
 import type { MysteryBoxResult, BuddyItem, ItemRarity, ItemType } from '@/lib/buddy-battle/types';
@@ -64,15 +63,21 @@ interface MysteryBoxDisplay {
 
 interface ShopState {
   weekly_items: DisplayShopItem[];
+  featured_items?: DisplayShopItem[];
+  limited_items?: DisplayShopItem[];
   mystery_boxes: MysteryBoxDisplay[];
   player_points: number;
   refresh_countdown: string;
 }
 
-export function ShopScreen() {
-  const params = useParams();
+interface ShopScreenProps {
+  teamId: string;
+  teamSlug?: string;
+}
+
+export function ShopScreen({ teamId, teamSlug }: ShopScreenProps) {
   const router = useRouter();
-  const teamId = params?.slug as string;
+  const navId = teamSlug || teamId;
   
   const { sounds, initAudio, isInitialized } = useRetroSounds();
   
@@ -95,9 +100,15 @@ export function ShopScreen() {
           headers,
         });
         const data = await response.json();
+
+        if (!response.ok) {
+          throw new Error(data?.error || 'Failed to fetch shop data');
+        }
+
         setShopData(data);
       } catch (error) {
         console.error('Failed to fetch shop:', error);
+        setToast({ message: 'Failed to load shop data', type: 'error' });
       } finally {
         setLoading(false);
       }
@@ -253,7 +264,7 @@ export function ShopScreen() {
         
         {/* Back button */}
         <RetroButton 
-          onClick={() => router.push(`/team/${teamId}/buddy`)}
+          onClick={() => router.push(`/team/${navId}/buddy`)}
           variant="default"
           size="small"
           className="mb-4"
@@ -342,57 +353,38 @@ export function ShopScreen() {
         {/* Mystery Boxes */}
         {activeTab === 'mystery' && (
           <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mt-4">
-            {/* Bronze Box */}
-            <div className="retro-panel p-4 text-center">
-              <div className="text-6xl mb-2">📦</div>
-              <p className="retro-text-lg" style={{ color: '#cd7f32' }}>Bronze Box</p>
-              <p className="retro-text text-xs text-retro-gray mb-4">
-                Common items, small boost
-              </p>
-              <p className="retro-text text-retro-lime mb-4">25 ✨</p>
-              <RetroButton 
-                onClick={() => handleMysteryBox('bronze', 25)}
-                disabled={purchasing || (shopData?.player_points || 0) < 25}
-                size="small"
-              >
-                Open
-              </RetroButton>
-            </div>
-            
-            {/* Silver Box */}
-            <div className="retro-panel p-4 text-center">
-              <div className="text-6xl mb-2">🎁</div>
-              <p className="retro-text-lg" style={{ color: '#c0c0c0' }}>Silver Box</p>
-              <p className="retro-text text-xs text-retro-gray mb-4">
-                Rare items possible
-              </p>
-              <p className="retro-text text-retro-lime mb-4">75 ✨</p>
-              <RetroButton 
-                onClick={() => handleMysteryBox('silver', 75)}
-                disabled={purchasing || (shopData?.player_points || 0) < 75}
-                size="small"
-              >
-                Open
-              </RetroButton>
-            </div>
-            
-            {/* Gold Box */}
-            <div className="retro-panel p-4 text-center">
-              <div className="text-6xl mb-2">💰</div>
-              <p className="retro-text-lg" style={{ color: '#ffd700' }}>Gold Box</p>
-              <p className="retro-text text-xs text-retro-gray mb-4">
-                Epic/Legendary possible!
-              </p>
-              <p className="retro-text text-retro-lime mb-4">200 ✨</p>
-              <RetroButton 
-                onClick={() => handleMysteryBox('gold', 200)}
-                disabled={purchasing || (shopData?.player_points || 0) < 200}
-                size="small"
-                variant="primary"
-              >
-                Open
-              </RetroButton>
-            </div>
+            {(shopData?.mystery_boxes || []).map((box, index) => {
+              const price = box.cost || 50;
+              const boxEmoji = index % 3 === 0 ? '📦' : index % 3 === 1 ? '🎁' : '💰';
+              const titleColor = index % 3 === 0 ? '#cd7f32' : index % 3 === 1 ? '#c0c0c0' : '#ffd700';
+
+              return (
+                <div key={box.id} className="retro-panel p-4 text-center">
+                  <div className="text-6xl mb-2">{boxEmoji}</div>
+                  <p className="retro-text-lg" style={{ color: titleColor }}>{box.name}</p>
+                  <p className="retro-text text-xs text-retro-gray mb-4">
+                    {box.description || 'Open for a surprise reward'}
+                  </p>
+                  <p className="retro-text text-retro-lime mb-4">{price} ✨</p>
+                  <RetroButton
+                    onClick={() => handleMysteryBox(box.id, price)}
+                    disabled={purchasing || (shopData?.player_points || 0) < price}
+                    size="small"
+                    variant={index === 2 ? 'primary' : 'default'}
+                  >
+                    Open
+                  </RetroButton>
+                </div>
+              );
+            })}
+
+            {(!shopData?.mystery_boxes || shopData.mystery_boxes.length === 0) && (
+              <div className="retro-panel p-8 col-span-3 text-center">
+                <p className="retro-text text-retro-gray">
+                  No mystery boxes available right now.
+                </p>
+              </div>
+            )}
           </div>
         )}
       </div>

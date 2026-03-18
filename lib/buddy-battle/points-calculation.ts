@@ -4,6 +4,7 @@
 // =====================================================
 
 import { createClient } from '@supabase/supabase-js';
+import { POINTS_PER_STATUS } from './game-logic';
 
 const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!;
 const supabaseServiceKey = process.env.SUPABASE_SERVICE_ROLE_KEY!;
@@ -62,14 +63,14 @@ export async function calculateAndAwardPoints(
       return null;
     }
     
-    // Only award points for filled availability
-    const validStatuses = ['available', 'remote', 'office', 'holiday', 'sick'];
-    if (!validStatuses.includes(availability.status)) {
+    // Only award points for statuses with value > 0
+    const statusPoints = POINTS_PER_STATUS[availability.status] ?? 0;
+    if (statusPoints === 0) {
       return null;
     }
     
-    // Base points
-    let pointsEarned = 1;
+    // Base points from unified POINTS_PER_STATUS
+    let pointsEarned = statusPoints;
     let isHoliday = false;
     
     // Check if it's a holiday (bonus point)

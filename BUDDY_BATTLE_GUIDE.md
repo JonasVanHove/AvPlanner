@@ -8,7 +8,7 @@ AvPlanner includes a complete gamification system with the **Buddy Battle** feat
 
 1. Go to your team's availability page
 2. Click the "Buddy" button in the header (if you have access)
-3. Enter the buddy password: `PapaYvo`
+3. Enter the buddy password.
 4. Create your first buddy character
 5. Start battling other team members' buddies!
 

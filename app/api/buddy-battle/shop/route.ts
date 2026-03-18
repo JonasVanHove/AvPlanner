@@ -58,15 +58,18 @@ export async function GET(request: NextRequest) {
 
     const { data: buddy } = await supabase
       .from('player_buddies')
-      .select('id, stat_points')
+      .select('id, available_points')
       .eq('member_id', member.id)
       .single();
 
     // Get shop items for this team
+    const nowIso = new Date().toISOString();
+
     const { data: shopItems } = await supabase
-      .from('buddy_shop_items')
+      .from('buddy_shop_inventory')
       .select(`
         id,
+        item_id,
         price,
         quantity_available,
         is_featured,
@@ -74,7 +77,8 @@ export async function GET(request: NextRequest) {
         item:buddy_items(*)
       `)
       .eq('team_id', member.team_id)
-      .eq('is_active', true);
+      .lte('available_from', nowIso)
+      .gte('available_until', nowIso);
 
     // Flatten shop items for display
     const flattenedItems = (shopItems || []).map(si => {
@@ -106,13 +110,13 @@ export async function GET(request: NextRequest) {
     let inventory: any[] = [];
     if (buddy) {
       const { data: inv } = await supabase
-        .from('buddy_inventory')
+        .from('buddy_player_inventory')
         .select(`
           id,
           quantity,
           item:buddy_items(*)
         `)
-        .eq('buddy_id', buddy.id);
+        .eq('player_buddy_id', buddy.id);
       inventory = inv || [];
     }
 
@@ -132,11 +136,11 @@ export async function GET(request: NextRequest) {
         id: box.id,
         name: box.name,
         description: box.description || 'Open for a surprise!',
-        cost: box.cost || 50,
+        cost: box.price || 50,
         rarity: 'mystery',
       })),
       inventory,
-      player_points: buddy?.stat_points || 0,
+      player_points: buddy?.available_points || 0,
       refresh_countdown: refreshCountdown,
     });
   } catch (error) {
@@ -182,7 +186,7 @@ export async function POST(request: NextRequest) {
 
     const { data: buddy, error: buddyError } = await supabase
       .from('player_buddies')
-      .select('id, stat_points')
+      .select('id, available_points, total_points_spent')
       .eq('member_id', member.id)
       .single();
 
@@ -193,7 +197,7 @@ export async function POST(request: NextRequest) {
     if (action === 'purchase' && itemId) {
       // Get shop item
       const { data: shopItem } = await supabase
-        .from('buddy_shop_items')
+        .from('buddy_shop_inventory')
         .select('*, item:buddy_items(*)')
         .eq('id', itemId)
         .single();
@@ -202,35 +206,38 @@ export async function POST(request: NextRequest) {
         return NextResponse.json({ error: 'Item not found' }, { status: 404 });
       }
 
-      if (buddy.stat_points < shopItem.price) {
+      if (buddy.available_points < shopItem.price) {
         return NextResponse.json({ error: 'Not enough points' }, { status: 400 });
       }
 
       // Deduct points
-      const newPoints = buddy.stat_points - shopItem.price;
+      const newPoints = buddy.available_points - shopItem.price;
+      const newTotalSpent = (buddy.total_points_spent || 0) + shopItem.price;
       await supabase
         .from('player_buddies')
-        .update({ stat_points: newPoints })
+        .update({ available_points: newPoints, total_points_spent: newTotalSpent })
         .eq('id', buddy.id);
 
       // Add to inventory (or increase quantity)
-      const { data: existingItem } = await supabase
-        .from('buddy_inventory')
+      const { data: existingItems } = await supabase
+        .from('buddy_player_inventory')
         .select('id, quantity')
-        .eq('buddy_id', buddy.id)
+        .eq('player_buddy_id', buddy.id)
         .eq('item_id', shopItem.item_id)
-        .single();
+        .limit(1);
+
+      const existingItem = existingItems?.[0];
 
       if (existingItem) {
         await supabase
-          .from('buddy_inventory')
+          .from('buddy_player_inventory')
           .update({ quantity: existingItem.quantity + 1 })
           .eq('id', existingItem.id);
       } else {
         await supabase
-          .from('buddy_inventory')
+          .from('buddy_player_inventory')
           .insert({
-            buddy_id: buddy.id,
+            player_buddy_id: buddy.id,
             item_id: shopItem.item_id,
             quantity: 1,
           });
@@ -255,16 +262,17 @@ export async function POST(request: NextRequest) {
         return NextResponse.json({ error: 'Mystery box not found' }, { status: 404 });
       }
 
-      const boxCost = box.cost || 50;
-      if (buddy.stat_points < boxCost) {
+      const boxCost = box.price || 50;
+      if (buddy.available_points < boxCost) {
         return NextResponse.json({ error: 'Not enough points' }, { status: 400 });
       }
 
       // Deduct points
-      const newPoints = buddy.stat_points - boxCost;
+      const newPoints = buddy.available_points - boxCost;
+      const newTotalSpent = (buddy.total_points_spent || 0) + boxCost;
       await supabase
         .from('player_buddies')
-        .update({ stat_points: newPoints })
+        .update({ available_points: newPoints, total_points_spent: newTotalSpent })
         .eq('id', buddy.id);
 
       // Get random item from pool (simplified - just get a random item)
@@ -277,23 +285,25 @@ export async function POST(request: NextRequest) {
 
       if (randomItem) {
         // Add to inventory
-        const { data: existingItem } = await supabase
-          .from('buddy_inventory')
+        const { data: existingItems } = await supabase
+          .from('buddy_player_inventory')
           .select('id, quantity')
-          .eq('buddy_id', buddy.id)
+          .eq('player_buddy_id', buddy.id)
           .eq('item_id', randomItem.id)
-          .single();
+          .limit(1);
+
+        const existingItem = existingItems?.[0];
 
         if (existingItem) {
           await supabase
-            .from('buddy_inventory')
+            .from('buddy_player_inventory')
             .update({ quantity: existingItem.quantity + 1 })
             .eq('id', existingItem.id);
         } else {
           await supabase
-            .from('buddy_inventory')
+            .from('buddy_player_inventory')
             .insert({
-              buddy_id: buddy.id,
+              player_buddy_id: buddy.id,
               item_id: randomItem.id,
               quantity: 1,
             });

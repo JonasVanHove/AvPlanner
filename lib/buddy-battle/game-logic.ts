@@ -108,6 +108,25 @@ export function calculateBattleXP(
 // ===================
 
 /**
+ * Unified points-per-status map.
+ * This is the SINGLE SOURCE OF TRUTH for how many points each availability status earns.
+ * 
+ * Game mechanic rationale:
+ * - available / remote = 2 pts: You indicated your status AND you're working → full reward
+ * - unavailable / absent / holiday = 1 pt: You indicated your status (effort for filling in) → partial reward
+ * - need_to_check / maybe / empty = 0 pts: You didn't commit to a status → no reward
+ */
+export const POINTS_PER_STATUS: Record<string, number> = {
+  'available': 2,
+  'remote': 2,
+  'unavailable': 1,
+  'absent': 1,
+  'holiday': 1,
+  'need_to_check': 0,
+  'maybe': 0,
+};
+
+/**
  * Check if a date is a holiday for a given country
  */
 export function isHoliday(date: Date, holidays: { date: string }[]): boolean {
@@ -116,7 +135,17 @@ export function isHoliday(date: Date, holidays: { date: string }[]): boolean {
 }
 
 /**
- * Calculate points earned for a specific date
+ * Calculate points earned for a single availability record
+ */
+export function getPointsForStatus(status: string, isPublicHoliday: boolean = false): number {
+  const base = POINTS_PER_STATUS[status] ?? 0;
+  // Bonus: if you fill in your status on a public holiday, +1 extra point
+  const holidayBonus = (isPublicHoliday && base > 0) ? 1 : 0;
+  return base + holidayBonus;
+}
+
+/**
+ * Calculate points earned for a specific date (legacy wrapper)
  */
 export function calculatePointsForDate(
   hasAvailability: boolean,
@@ -127,7 +156,7 @@ export function calculatePointsForDate(
 }
 
 /**
- * Calculate points for a date range
+ * Calculate points for a date range using the unified POINTS_PER_STATUS
  */
 export function calculatePointsForRange(
   availabilities: { date: string; status: string }[],
@@ -138,16 +167,14 @@ export function calculatePointsForRange(
   const breakdown: { date: string; points: number; isHoliday: boolean }[] = [];
   let total = 0;
   
-  const validStatuses = ['available', 'remote', 'holiday'];
   const current = new Date(startDate);
   
   while (current <= endDate) {
     const dateStr = current.toISOString().split('T')[0];
     const availability = availabilities.find(a => a.date === dateStr);
-    const hasValidAvailability = availability && validStatuses.includes(availability.status);
     const isHolidayDate = isHoliday(current, holidays);
     
-    const points = hasValidAvailability ? (isHolidayDate ? 2 : 1) : 0;
+    const points = availability ? getPointsForStatus(availability.status, isHolidayDate) : 0;
     
     breakdown.push({
       date: dateStr,
@@ -302,10 +329,12 @@ export function calculateDamage(
     }
   }
   
-  // Base damage calculation
+  // Base damage calculation (adjusted for low-level stats, Pokemon-inspired)
+  // Original Pokemon uses /50 which is tuned for levels 50-100 and stats 100-300+
+  // We use /15 so level 1 buddies with stats ~10 still deal meaningful damage
   const levelModifier = (2 * attackerLevel / 5 + 2);
   const statRatio = attackStat / defenseStat;
-  let baseDamage = (levelModifier * ability.damage_base * statRatio) / 50 + 2;
+  let baseDamage = (levelModifier * ability.damage_base * statRatio) / 15 + 2;
   
   // Element effectiveness
   const effectiveness = getElementMultiplier(ability.element, defender.element);
@@ -689,6 +718,58 @@ export function generateBattleMessage(
   }
   
   return message;
+}
+
+// ===================
+// TRAINER LEVEL SYSTEM
+// ===================
+
+/**
+ * XP needed to advance from trainerLevel to trainerLevel+1.
+ * Formula: level * 15 + (level - 1) * 10
+ * This matches the display formula in trainer-card.tsx.
+ * Level 1→2: 15 XP
+ * Level 2→3: 40 XP
+ * Level 3→4: 65 XP
+ * etc.
+ */
+export function getTrainerXPForNextLevel(level: number): number {
+  return level * 15 + (level - 1) * 10;
+}
+
+/**
+ * Given current trainer_level and trainer_xp, add xpAmount and compute new level + remaining XP.
+ * trainer_xp is XP within the current level (not total).
+ * Returns { newLevel, newXP, levelsGained }
+ */
+export function addTrainerXP(
+  currentLevel: number,
+  currentXP: number,
+  xpAmount: number
+): { newLevel: number; newXP: number; levelsGained: number } {
+  let level = currentLevel;
+  let xp = currentXP + xpAmount;
+  let levelsGained = 0;
+  const maxLevel = GAME_CONSTANTS.MAX_LEVEL;
+
+  while (level < maxLevel) {
+    const needed = getTrainerXPForNextLevel(level);
+    if (xp >= needed) {
+      xp -= needed;
+      level++;
+      levelsGained++;
+    } else {
+      break;
+    }
+  }
+
+  // Cap at max level
+  if (level >= maxLevel) {
+    level = maxLevel;
+    xp = 0;
+  }
+
+  return { newLevel: level, newXP: xp, levelsGained };
 }
 
 /**

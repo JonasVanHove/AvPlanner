@@ -171,13 +171,6 @@ export default function DateTeamPage({ params }: DateTeamPageProps) {
         return
       }
       
-      // Debug raw Supabase data
-      console.log("🎂 Raw members (date route):", (allMembersData || []).map((m: any) => ({
-        id: m.id,
-        name: `${m.first_name} ${m.last_name}`,
-        birth_date: m.birth_date ?? '<missing>'
-      })))
-      
       // Transform to consistent format
       const allMembers: Member[] = (allMembersData || []).map((member: any) => ({
         id: member.id,

@@ -17,6 +17,7 @@ import { MemberAvatar } from '@/components/member-avatar';
 
 interface TeamOverviewProps {
   teamId: string;
+  teamSlug?: string;
 }
 
 interface TeamMember {
@@ -59,15 +60,15 @@ interface TeamMember {
 
 // Status color and emoji mapping
 const STATUS_CONFIG = {
-  available: { color: 'bg-green-500', emoji: '🟢', label: 'Beschikbaar' },
+  available: { color: 'bg-green-500', emoji: '🟢', label: 'Available' },
   remote: { color: 'bg-purple-500', emoji: '🟣', label: 'Remote' },
-  unavailable: { color: 'bg-red-500', emoji: '🔴', label: 'Niet beschikbaar' },
-  need_to_check: { color: 'bg-blue-500', emoji: '🔵', label: 'Moet checken' },
-  absent: { color: 'bg-gray-500', emoji: '⚫', label: 'Afwezig' },
-  holiday: { color: 'bg-yellow-500', emoji: '🟡', label: 'Vakantie' },
+  unavailable: { color: 'bg-red-500', emoji: '🔴', label: 'Unavailable' },
+  need_to_check: { color: 'bg-blue-500', emoji: '🟥', label: 'Need to check' },
+  absent: { color: 'bg-gray-500', emoji: '⚫', label: 'Absent' },
+  holiday: { color: 'bg-yellow-500', emoji: '🟡', label: 'Holiday' },
 } as const;
 
-export function TeamOverview({ teamId }: TeamOverviewProps) {
+export function TeamOverview({ teamId, teamSlug }: TeamOverviewProps) {
   const router = useRouter();
   const { sounds } = useRetroSounds();
   
@@ -243,12 +244,12 @@ export function TeamOverview({ teamId }: TeamOverviewProps) {
       
       {/* Header */}
       <header className="mb-6">
-        <h1 className="retro-title text-center mb-2">👥 TEAM OVERZICHT 👥</h1>
+        <h1 className="retro-title text-center mb-2">👥 TEAM OVERVIEW 👥</h1>
         <p className="retro-text text-center text-gb-light-green">
           {teamName}
         </p>
         <p className="retro-text text-center text-xs text-gb-dark-green mt-1">
-          {teamMembers.length} Leden • {membersWithBuddy} met Buddy • {availableToday} Beschikbaar vandaag
+          {teamMembers.length} Members • {membersWithBuddy} with Buddy • {availableToday} Available today
         </p>
       </header>
       
@@ -263,19 +264,19 @@ export function TeamOverview({ teamId }: TeamOverviewProps) {
                 className={`retro-btn text-xs ${filterBuddy === 'all' ? 'retro-btn-primary' : ''}`}
                 onClick={() => { sounds.select(); setFilterBuddy('all'); }}
               >
-                Alle ({teamMembers.length})
+                All ({teamMembers.length})
               </button>
               <button
                 className={`retro-btn text-xs ${filterBuddy === 'with' ? 'retro-btn-primary' : ''}`}
                 onClick={() => { sounds.select(); setFilterBuddy('with'); }}
               >
-                Met Buddy ({membersWithBuddy})
+                With Buddy ({membersWithBuddy})
               </button>
               <button
                 className={`retro-btn text-xs ${filterBuddy === 'without' ? 'retro-btn-primary' : ''}`}
                 onClick={() => { sounds.select(); setFilterBuddy('without'); }}
               >
-                Zonder ({membersWithoutBuddy})
+                Without ({membersWithoutBuddy})
               </button>
             </div>
             
@@ -286,7 +287,7 @@ export function TeamOverview({ teamId }: TeamOverviewProps) {
                 className={`retro-btn text-xs ${sortBy === 'name' ? 'retro-btn-primary' : ''}`}
                 onClick={() => { sounds.select(); setSortBy('name'); }}
               >
-                Naam
+                Name
               </button>
               <button
                 className={`retro-btn text-xs ${sortBy === 'status' ? 'retro-btn-primary' : ''}`}
@@ -340,7 +341,7 @@ export function TeamOverview({ teamId }: TeamOverviewProps) {
                           statusIndicator={{
                             show: false  // We render our own status dot below
                           }}
-                          locale="nl"
+                          locale="en"
                           memberId={member.id}
                           teamId={teamId}
                           email={member.email}
@@ -354,7 +355,7 @@ export function TeamOverview({ teamId }: TeamOverviewProps) {
                           }`}
                           title={member.todayStatus && STATUS_CONFIG[member.todayStatus] 
                             ? STATUS_CONFIG[member.todayStatus].label 
-                            : 'Geen status'}
+                            : 'No status'}
                         />
                       </div>
                       
@@ -391,7 +392,7 @@ export function TeamOverview({ teamId }: TeamOverviewProps) {
                           {member.first_name} {member.last_name}
                         </span>
                         {isCurrentUser && (
-                          <span className="text-xs bg-retro-yellow text-black px-1 rounded flex-shrink-0">JIJ</span>
+                          <span className="text-xs bg-retro-yellow text-black px-1 rounded flex-shrink-0">YOU</span>
                         )}
                       </div>
                       
@@ -436,7 +437,7 @@ export function TeamOverview({ teamId }: TeamOverviewProps) {
                         <div className="flex items-center gap-2 py-1">
                           <span className="text-xl">🥚</span>
                           <span className="retro-text text-xs text-gb-dark-green">
-                            Nog geen Buddy
+                            No Buddy yet
                           </span>
                         </div>
                       )}
@@ -450,10 +451,10 @@ export function TeamOverview({ teamId }: TeamOverviewProps) {
           <div className="retro-panel p-8 text-center">
             <div className="text-6xl mb-4">🔍</div>
             <p className="retro-text text-gb-light-green mb-2">
-              Geen teamleden gevonden
+              No team members found
             </p>
             <p className="retro-text text-sm">
-              Probeer een ander filter.
+              Try a different filter.
             </p>
           </div>
         )}
@@ -461,25 +462,25 @@ export function TeamOverview({ teamId }: TeamOverviewProps) {
         {/* Team Stats Summary */}
         {teamMembers.length > 0 && (
           <div className="retro-panel p-4 mt-6">
-            <h3 className="retro-text-lg text-center mb-4 text-retro-lime">📊 Team Statistieken</h3>
+            <h3 className="retro-text-lg text-center mb-4 text-retro-lime">📊 Team Statistics</h3>
             <div className="grid grid-cols-2 md:grid-cols-4 gap-4 text-center">
               <div>
                 <p className="retro-text text-2xl text-retro-yellow">
                   {teamMembers.length}
                 </p>
-                <p className="retro-text text-xs">Teamleden</p>
+                <p className="retro-text text-xs">Team Members</p>
               </div>
               <div>
                 <p className="retro-text text-2xl text-retro-lime">
                   {membersWithBuddy}
                 </p>
-                <p className="retro-text text-xs">Met Buddy</p>
+                <p className="retro-text text-xs">With Buddy</p>
               </div>
               <div>
                 <p className="retro-text text-2xl text-retro-yellow">
                   {availableToday}
                 </p>
-                <p className="retro-text text-xs">Beschikbaar</p>
+                <p className="retro-text text-xs">Available</p>
               </div>
               <div>
                 <p className="retro-text text-2xl text-retro-lime">
@@ -488,13 +489,13 @@ export function TeamOverview({ teamId }: TeamOverviewProps) {
                     : 0
                   }
                 </p>
-                <p className="retro-text text-xs">Gem. Level</p>
+                <p className="retro-text text-xs">Avg. Level</p>
               </div>
             </div>
             
             {/* Availability breakdown */}
             <div className="border-t border-gb-dark-green mt-4 pt-4">
-              <p className="retro-text text-sm text-center mb-2">Beschikbaarheid Vandaag:</p>
+              <p className="retro-text text-sm text-center mb-2">Availability Today:</p>
               <div className="flex flex-wrap justify-center gap-3">
                 {Object.entries(STATUS_CONFIG).map(([key, config]) => {
                   const count = teamMembers.filter(m => m.todayStatus === key).length;
@@ -521,9 +522,9 @@ export function TeamOverview({ teamId }: TeamOverviewProps) {
         <div className="text-center mt-6">
           <RetroButton onClick={() => {
             sounds.cancel();
-            router.push(`/team/${teamId}/buddy`);
+            router.push(`/team/${teamSlug || teamId}/buddy`);
           }}>
-            ← Terug naar Menu
+            ← Back to Menu
           </RetroButton>
         </div>
       </div>

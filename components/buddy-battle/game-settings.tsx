@@ -12,6 +12,7 @@ import { RetroButton } from './ui/retro-button';
 
 interface GameSettingsProps {
   teamId: string;
+  teamSlug?: string;
 }
 
 // Local storage keys
@@ -23,9 +24,10 @@ const STORAGE_KEYS = {
   SHOW_TUTORIALS: 'buddy-battle-tutorials',
 };
 
-export function GameSettings({ teamId }: GameSettingsProps) {
+export function GameSettings({ teamId, teamSlug }: GameSettingsProps) {
   const router = useRouter();
   const { sounds, isMuted, toggleMute } = useRetroSounds();
+  const navId = teamSlug || teamId;
   
   // Settings state
   const [musicEnabled, setMusicEnabled] = useState(true);
@@ -208,7 +210,7 @@ export function GameSettings({ teamId }: GameSettingsProps) {
           <RetroButton 
             onClick={() => {
               sounds.confirm();
-              router.push(`/team/${teamId}`);
+              router.push(`/team/${navId}`);
             }}
             className="w-full mb-3"
           >
@@ -219,7 +221,7 @@ export function GameSettings({ teamId }: GameSettingsProps) {
           <RetroButton 
             onClick={() => {
               sounds.cancel();
-              router.push(`/team/${teamId}/buddy`);
+              router.push(`/team/${navId}/buddy`);
             }}
             className="w-full"
             variant="primary"

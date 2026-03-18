@@ -138,15 +138,6 @@ export default function DateTeamPage({ params }: DateTeamPageProps) {
         console.error('Error fetching members:', membersError)
         return
       }
-      
-      // Debug raw members to verify birth_date presence (locale date route)
-      try {
-        console.log("🎂 Raw members (locale date fetch):", (allMembersData || []).map((m: any) => ({
-          id: m.id,
-          name: `${m.first_name} ${m.last_name}`,
-          birth_date: m.birth_date ?? '<missing>'
-        })))
-      } catch {}
 
       // Transform to consistent format
       const allMembers: Member[] = (allMembersData || []).map((member: any) => ({

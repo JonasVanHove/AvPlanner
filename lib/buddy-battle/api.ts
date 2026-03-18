@@ -21,7 +21,7 @@ import {
   StatType,
   TransactionType,
 } from './types';
-import { calculatePointsForRange } from './game-logic';
+import { calculatePointsForRange, POINTS_PER_STATUS, addTrainerXP, getTrainerTitle } from './game-logic';
 
 // ===================
 // BUDDY OPERATIONS
@@ -245,97 +245,154 @@ export async function calculateAndAwardPoints(
   memberId: string,
   buddyId: string,
   teamId: string
-): Promise<{ pointsAwarded: number; breakdown: { date: string; points: number }[] }> {
+): Promise<{ pointsAwarded: number; availablePoints: number; totalEarned: number; totalSpent: number; breakdown: { date: string; points: number }[] }> {
   const supabase = createClient();
   
-  // Get buddy's last calculated date
+  // Get buddy's current state
   const { data: buddy, error: buddyError } = await supabase
     .from('player_buddies')
-    .select('last_points_calculated_date, available_points, total_points_earned')
+    .select('last_points_calculated_date, available_points, total_points_earned, total_points_spent')
     .eq('id', buddyId)
     .single();
   
   if (buddyError) throw buddyError;
   
-  // Get member's country for holidays
-  const { data: member, error: memberError } = await supabase
-    .from('members')
-    .select('country_code')
-    .eq('id', memberId)
-    .single();
+  const today = new Date().toISOString().split('T')[0];
   
-  if (memberError) throw memberError;
+  // ============================================
+  // FULL HISTORY RECALCULATION (single source of truth)
+  // This always recalculates total earned from the complete
+  // availability history so the DB stays in sync.
+  // ============================================
   
-  const startDate = buddy.last_points_calculated_date 
-    ? new Date(buddy.last_points_calculated_date)
-    : new Date(new Date().setMonth(new Date().getMonth() - 1)); // Default to 1 month ago
+  // Get ALL availability records for this member up to today
+  const { data: allAvailabilities, error: availError } = await supabase
+    .from('availability')
+    .select('status, date')
+    .eq('member_id', memberId)
+    .lte('date', today);
   
-  startDate.setDate(startDate.getDate() + 1); // Start from day after last calculated
-  
-  const endDate = new Date();
-  endDate.setHours(0, 0, 0, 0);
-  
-  if (startDate > endDate) {
-    return { pointsAwarded: 0, breakdown: [] };
+  if (availError) {
+    console.error('[calculateAndAwardPoints] Availability query error:', availError);
+    throw availError;
   }
   
-  // Get availabilities for date range
-  const { data: availabilities, error: availError } = await supabase
-    .from('availability')
-    .select('date, status')
-    .eq('member_id', memberId)
-    .gte('date', startDate.toISOString().split('T')[0])
-    .lte('date', endDate.toISOString().split('T')[0]);
+  console.log('[calculateAndAwardPoints] Found availability records:', {
+    memberId,
+    buddyId,
+    count: allAvailabilities?.length || 0,
+    sampleStatuses: allAvailabilities?.slice(0, 5).map(a => `${a.date}:${a.status}`),
+  });
   
-  if (availError) throw availError;
+  // Calculate total points from full history using unified POINTS_PER_STATUS
+  let totalEarned = 0;
+  const dailyBreakdown: { date: string; points: number; isHoliday: boolean }[] = [];
   
-  // Get holidays for date range
-  const { data: holidays, error: holidayError } = await supabase
-    .from('holidays')
-    .select('date')
-    .eq('country_code', member.country_code)
-    .eq('is_official', true)
-    .gte('date', startDate.toISOString().split('T')[0])
-    .lte('date', endDate.toISOString().split('T')[0]);
-  
-  if (holidayError) throw holidayError;
-  
-  const { total, breakdown } = calculatePointsForRange(
-    availabilities || [],
-    holidays || [],
-    startDate,
-    endDate
-  );
-  
-  if (total > 0) {
-    // Update buddy points
-    const { error: updateError } = await supabase
-      .from('player_buddies')
-      .update({
-        available_points: buddy.available_points + total,
-        total_points_earned: buddy.total_points_earned + total,
-        last_points_calculated_date: endDate.toISOString().split('T')[0],
-        updated_at: new Date().toISOString(),
-      })
-      .eq('id', buddyId);
-    
-    if (updateError) throw updateError;
-    
-    // Create transactions for each day
-    for (const day of breakdown) {
-      if (day.points > 0) {
-        await createPointTransaction(
-          buddyId,
-          day.points,
-          day.isHoliday ? 'holiday_bonus' : 'daily_availability',
-          `Points for ${day.date}`,
-          day.date
-        );
-      }
+  for (const av of (allAvailabilities || [])) {
+    const pts = POINTS_PER_STATUS[av.status] ?? 0;
+    totalEarned += pts;
+    if (pts > 0) {
+      dailyBreakdown.push({ date: av.date, points: pts, isHoliday: false });
     }
   }
   
-  return { pointsAwarded: total, breakdown };
+  // Calculate how many NEW points were earned since last calculation
+  const previousTotal = buddy.total_points_earned || 0;
+  const newPointsAwarded = Math.max(0, totalEarned - previousTotal);
+  const totalSpent = buddy.total_points_spent || 0;
+  const availablePoints = Math.max(0, totalEarned - totalSpent);
+  
+  // Always sync the DB values to the recalculated truth
+  const { error: updateError } = await supabase
+    .from('player_buddies')
+    .update({
+      available_points: availablePoints,
+      total_points_earned: totalEarned,
+      last_points_calculated_date: today,
+      updated_at: new Date().toISOString(),
+    })
+    .eq('id', buddyId);
+  
+  if (updateError) {
+    console.error('[calculateAndAwardPoints] Failed to sync points:', updateError);
+  }
+  
+  // Award trainer XP for newly earned points (if any)
+  if (newPointsAwarded > 0) {
+    try {
+      await awardTrainerXP(buddyId, newPointsAwarded);
+    } catch (trainerErr) {
+      console.error('[calculateAndAwardPoints] Trainer XP update failed:', trainerErr);
+    }
+  }
+  
+  return { 
+    pointsAwarded: newPointsAwarded,
+    availablePoints,
+    totalEarned,
+    totalSpent,
+    breakdown: dailyBreakdown.slice(-30) // Return last 30 days for display
+  };
+}
+
+/**
+ * Award trainer XP and handle level-ups.
+ * Reads the buddy_trainer_profiles row, adds XP, checks for level-up.
+ */
+export async function awardTrainerXP(buddyId: string, xpAmount: number): Promise<void> {
+  if (xpAmount <= 0) return;
+  
+  const supabase = createClient();
+  
+  // Get or create trainer profile
+  let profile = await getTrainerProfile(buddyId);
+  if (!profile) {
+    // Profile creation happens in updateLoginStreak; create a minimal one here
+    const { data: newProfile, error: createErr } = await supabase
+      .from('buddy_trainer_profiles')
+      .upsert({
+        player_buddy_id: buddyId,
+        trainer_level: 1,
+        trainer_xp: 0,
+        trainer_title: 'Novice Trainer',
+        tutorial_completed: false,
+        current_login_streak: 0,
+        longest_login_streak: 0,
+      }, { onConflict: 'player_buddy_id' })
+      .select()
+      .single();
+    
+    if (createErr) {
+      console.error('[awardTrainerXP] Failed to create profile:', createErr);
+      return;
+    }
+    profile = newProfile;
+  }
+  
+  if (!profile) return;
+  
+  const currentLevel = profile.trainer_level || 1;
+  const currentXP = profile.trainer_xp || 0;
+  
+  const { newLevel, newXP, levelsGained } = addTrainerXP(currentLevel, currentXP, xpAmount);
+  
+  const { error: updateErr } = await supabase
+    .from('buddy_trainer_profiles')
+    .update({
+      trainer_level: newLevel,
+      trainer_xp: newXP,
+      trainer_title: getTrainerTitle(newLevel),
+      updated_at: new Date().toISOString(),
+    })
+    .eq('player_buddy_id', buddyId);
+  
+  if (updateErr) {
+    console.error('[awardTrainerXP] Failed to update trainer XP:', updateErr);
+  }
+  
+  if (levelsGained > 0) {
+    console.log(`[awardTrainerXP] Trainer leveled up! ${currentLevel} → ${newLevel} (+${levelsGained})`);
+  }
 }
 
 /**

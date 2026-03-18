@@ -7,6 +7,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { createClient } from '@supabase/supabase-js';
 import { cookies } from 'next/headers';
+import { POINTS_PER_STATUS } from '@/lib/buddy-battle/game-logic';
 
 const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!;
 const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!;
@@ -85,9 +86,9 @@ export async function POST(request: NextRequest) {
       });
     }
     
-    // Only award points for filled availability
-    const validStatuses = ['available', 'remote', 'office', 'holiday', 'sick'];
-    if (!availability.status || !validStatuses.includes(availability.status)) {
+    // Only award points for statuses with value > 0 (unified POINTS_PER_STATUS)
+    const statusPoints = POINTS_PER_STATUS[availability.status] ?? 0;
+    if (!availability.status || statusPoints === 0) {
       return NextResponse.json({ 
         success: true, 
         message: 'Status not valid for points',
@@ -95,8 +96,8 @@ export async function POST(request: NextRequest) {
       });
     }
     
-    // Base points
-    let pointsEarned = 1;
+    // Base points from unified POINTS_PER_STATUS
+    let pointsEarned = statusPoints;
     let isHoliday = false;
     
     // Check if it's a holiday
@@ -126,14 +127,24 @@ export async function POST(request: NextRequest) {
     yesterday.setDate(yesterday.getDate() - 1);
     const yesterdayStr = yesterday.toISOString().split('T')[0];
     
-    let streakDays = buddy.streak_days || 0;
+    // Calculate streak from trainer profile
+    const { data: trainerProfile } = await supabase
+      .from('buddy_trainer_profiles')
+      .select('id, current_login_streak, longest_login_streak, last_login_date')
+      .eq('player_buddy_id', buddy.id)
+      .single();
+    
+    let streakDays = trainerProfile?.current_login_streak || 0;
     let streakBonus = 0;
     
-    if (buddy.last_points_calculated_date === yesterdayStr) {
+    const lastLoginDate = trainerProfile?.last_login_date;
+    if (lastLoginDate === yesterdayStr) {
       streakDays += 1;
-    } else {
+    } else if (lastLoginDate !== dateStr) {
+      // Not yesterday and not today - streak broken
       streakDays = 1;
     }
+    // If lastLoginDate === dateStr, keep current streak (already counted today)
     
     // Streak bonus every 7 days
     if (streakDays > 0 && streakDays % 7 === 0) {
@@ -152,12 +163,25 @@ export async function POST(request: NextRequest) {
       .update({
         available_points: newAvailablePoints,
         total_points_earned: newTotalEarned,
-        streak_days: streakDays,
         anxiety_level: newAnxiety,
         last_points_calculated_date: dateStr,
         updated_at: new Date().toISOString(),
       })
       .eq('id', buddy.id);
+    
+    // Update trainer profile streak
+    if (trainerProfile) {
+      const longestStreak = Math.max(trainerProfile.longest_login_streak || 0, streakDays);
+      await supabase
+        .from('buddy_trainer_profiles')
+        .update({
+          current_login_streak: streakDays,
+          longest_login_streak: longestStreak,
+          last_login_date: dateStr,
+          updated_at: new Date().toISOString(),
+        })
+        .eq('id', trainerProfile.id);
+    }
     
     // Log transaction
     await supabase

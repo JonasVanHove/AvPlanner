@@ -6,10 +6,9 @@
 // =====================================================
 
 import React, { useState, useEffect } from 'react';
-import { useParams, useRouter } from 'next/navigation';
+import { useRouter } from 'next/navigation';
 import { useRetroSounds } from '@/hooks/use-retro-sounds';
 import { supabase } from '@/lib/supabase';
-import '@/styles/buddy-battle.css';
 
 import { RetroButton, RetroTabs, RetroProgress, RetroBadge, RetroCard } from './ui/retro-button';
 
@@ -49,10 +48,14 @@ interface AchievementsData {
   earned: number;
 }
 
-export function AchievementsScreen() {
-  const params = useParams();
+interface AchievementsScreenProps {
+  teamId: string;
+  teamSlug?: string;
+}
+
+export function AchievementsScreen({ teamId, teamSlug }: AchievementsScreenProps) {
   const router = useRouter();
-  const teamId = params?.slug as string;
+  const navId = teamSlug || teamId;
   
   const { sounds, initAudio, isInitialized } = useRetroSounds();
   
@@ -101,7 +104,7 @@ export function AchievementsScreen() {
   
   // Format date
   const formatDate = (dateString: string) => {
-    return new Date(dateString).toLocaleDateString('nl-BE', {
+    return new Date(dateString).toLocaleDateString('en-US', {
       day: '2-digit',
       month: '2-digit',
       year: 'numeric',
@@ -169,7 +172,7 @@ export function AchievementsScreen() {
         
         {/* Back button */}
         <RetroButton 
-          onClick={() => router.push(`/team/${teamId}/buddy`)}
+          onClick={() => router.push(`/team/${navId}/buddy`)}
           variant="default"
           size="small"
           className="mb-4"

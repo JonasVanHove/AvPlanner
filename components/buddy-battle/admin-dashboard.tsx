@@ -7,7 +7,6 @@
 
 import React, { useState, useEffect } from 'react';
 import { useParams, useRouter } from 'next/navigation';
-import '@/styles/buddy-battle.css';
 
 import { RetroButton, RetroTabs, RetroProgress, RetroBadge, RetroCard } from './ui/retro-button';
 import type { BuddyElement } from '@/lib/buddy-battle/types';
@@ -78,7 +77,7 @@ export function AdminDashboard() {
   
   // Format date
   const formatDate = (dateString: string) => {
-    return new Date(dateString).toLocaleDateString('nl-BE', {
+    return new Date(dateString).toLocaleDateString('en-US', {
       day: '2-digit',
       month: '2-digit',
     });
