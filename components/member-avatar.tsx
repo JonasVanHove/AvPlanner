@@ -21,7 +21,7 @@ interface MemberAvatarProps {
   isBirthdayToday?: boolean
   statusIndicator?: {
     show: boolean
-    status?: "available" | "unavailable" | "need_to_check" | "absent" | "holiday" | "remote"
+    status?: "available" | "unavailable" | "need_to_check" | "absent" | "holiday" | "remote" | "school"
     tooltip?: string
   }
   locale?: Locale
@@ -209,6 +209,7 @@ function MemberAvatarComponent({
     switch (status) {
       case 'available': return t('status.available')
       case 'remote': return t('status.remote')
+      case 'school': return t('status.school')
       case 'unavailable': return t('status.unavailable')
       case 'need_to_check': return t('status.need_to_check')
       case 'absent': return t('status.absent')

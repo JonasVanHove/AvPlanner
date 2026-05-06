@@ -17,7 +17,7 @@ interface Member {
 interface Availability {
   member_id: string
   date: string
-  status: "available" | "maybe" | "unavailable" | "holiday" | "remote"
+  status: "available" | "maybe" | "unavailable" | "holiday" | "remote" | "school"
 }
 
 interface AvailabilityCalendarProps {
@@ -29,6 +29,7 @@ interface AvailabilityCalendarProps {
 const statusColors = {
   available: "bg-green-500",
   remote: "bg-purple-500",
+  school: "bg-teal-500",
   maybe: "bg-orange-500",
   unavailable: "bg-red-500",
   holiday: "bg-yellow-500",
@@ -96,7 +97,7 @@ export function AvailabilityCalendar({ teamId, members, locale }: AvailabilityCa
     }
   }
 
-  const updateAvailability = async (memberId: string, date: string, status: Availability["status"]) => {
+  const updateAvailability = async (memberId: string, date: string, status: Availability["status"] | 'school') => {
     try {
       const { error } = await supabase.from("availability").upsert([{ member_id: memberId, date, status }])
 
@@ -187,6 +188,10 @@ export function AvailabilityCalendar({ teamId, members, locale }: AvailabilityCa
                   <span>{t("status.available")}</span>
                 </div>
                 <div className="flex items-center gap-2">
+                  <div className="w-4 h-4 bg-teal-500 rounded"></div>
+                  <span>{t("status.school")}</span>
+                </div>
+                <div className="flex items-center gap-2">
                   <div className="w-4 h-4 bg-orange-500 rounded"></div>
                   <span>{t("status.maybe")}</span>
                 </div>
@@ -239,6 +244,7 @@ export function AvailabilityCalendar({ teamId, members, locale }: AvailabilityCa
                                   const statuses: Availability["status"][] = [
                                     "available",
                                     "remote",
+                                    "school",
                                     "maybe",
                                     "unavailable",
                                     "holiday",

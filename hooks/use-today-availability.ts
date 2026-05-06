@@ -4,7 +4,7 @@ import { useState, useEffect } from "react"
 import { supabase } from "@/lib/supabase"
 
 export interface TodayAvailability {
-  [memberId: string]: "available" | "unavailable" | "need_to_check" | "absent" | "holiday" | "remote" | undefined
+  [memberId: string]: "available" | "unavailable" | "need_to_check" | "absent" | "holiday" | "remote" | "school" | undefined
 }
 
 export function useTodayAvailability(memberIds: string[] = []) {

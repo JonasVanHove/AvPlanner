@@ -238,6 +238,7 @@ export function HolidayManagement({ teamId, locale, members = [] }: HolidayManag
     const statusMap = {
       'holiday': { label: t('status.holiday'), color: 'bg-yellow-500 text-white' },
       'available': { label: t('status.available'), color: 'bg-green-500 text-white' },
+      'school': { label: t('status.school'), color: 'bg-teal-500 text-white' },
       'unavailable': { label: t('status.unavailable'), color: 'bg-red-500 text-white' },
       'not_set': { label: t('status.not_set'), color: 'bg-gray-400 text-white' }
     }

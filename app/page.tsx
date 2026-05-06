@@ -22,6 +22,7 @@ export default function HomePage() {
   const { t } = useTranslation("en")
   const router = useRouter()
   const { resolvedTheme } = useTheme()
+  const [mounted, setMounted] = useState(false)
   const [user, setUser] = useState<User | null>(null)
   const [loading, setLoading] = useState(true)
   const [isAdmin, setIsAdmin] = useState(false)
@@ -34,6 +35,7 @@ export default function HomePage() {
   }, [userTeams])
 
   useEffect(() => {
+    setMounted(true)
     // Get initial session
     const getInitialSession = async () => {
       const { data: { session } } = await supabase.auth.getSession()
@@ -227,13 +229,17 @@ export default function HomePage() {
   if (loading) {
     return (
       <div className={`min-h-screen flex items-center justify-center ${
-        resolvedTheme === 'light'
-          ? 'bg-gradient-to-br from-blue-50 via-indigo-50 to-purple-50'
-          : 'bg-gradient-to-br from-gray-950 via-slate-900 to-gray-950'
+        // Render a neutral background on the server and initial client render to avoid
+        // hydration mismatches. After mount, apply theme-specific styles.
+        !mounted
+          ? 'bg-gradient-to-br from-gray-950 via-slate-900 to-gray-950'
+          : (resolvedTheme === 'light'
+              ? 'bg-gradient-to-br from-blue-50 via-indigo-50 to-purple-50'
+              : 'bg-gradient-to-br from-gray-950 via-slate-900 to-gray-950')
       }`}>
         <div className="text-center">
           <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto mb-4"></div>
-          <p className={resolvedTheme === 'light' ? 'text-gray-600' : 'text-gray-400'}>Loading...</p>
+          <p className={!mounted ? 'text-gray-400' : (resolvedTheme === 'light' ? 'text-gray-600' : 'text-gray-400')}>Loading...</p>
         </div>
       </div>
     )
@@ -241,15 +247,20 @@ export default function HomePage() {
 
   return (
     <div className={`min-h-screen overflow-x-hidden ${ 
-      resolvedTheme === 'light'
-        ? 'bg-gradient-to-br from-gray-50 via-white to-gray-100'
-        : 'bg-gradient-to-br from-gray-950 via-slate-900 to-gray-950'
+      // Use neutral initial background until mounted to prevent hydration mismatch
+      !mounted
+        ? 'bg-gradient-to-br from-gray-950 via-slate-900 to-gray-950'
+        : (resolvedTheme === 'light'
+            ? 'bg-gradient-to-br from-gray-50 via-white to-gray-100'
+            : 'bg-gradient-to-br from-gray-950 via-slate-900 to-gray-950')
     }`}>
         {/* Header */}
         <header className={`${
-          resolvedTheme === 'light'
-            ? 'bg-white/80 border-gray-200 shadow-sm'
-            : 'bg-gray-950/80 border-gray-800/50'
+          !mounted
+            ? 'bg-gray-950/80 border-gray-800/50'
+            : (resolvedTheme === 'light'
+                ? 'bg-white/80 border-gray-200 shadow-sm'
+                : 'bg-gray-950/80 border-gray-800/50')
         } backdrop-blur-md shadow-sm sticky top-0 z-50 will-change-transform`}>
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="flex justify-between items-center h-16">

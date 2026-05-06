@@ -7,7 +7,7 @@ const supabase = createClient(supabaseUrl, supabaseServiceKey)
 
 async function updateDatabaseConstraint() {
   try {
-    console.log('Updating database constraint to include remote status...')
+    console.log('Updating database constraint to include remote and school statuses...')
     
     // Drop existing constraint
     const { error: dropError } = await supabase.rpc('sql', {
@@ -19,10 +19,10 @@ async function updateDatabaseConstraint() {
       return
     }
     
-    // Add new constraint with remote status
+    // Add new constraint with remote and school statuses
     const { error: addError } = await supabase.rpc('sql', {
       query: `ALTER TABLE availability ADD CONSTRAINT availability_status_check 
-              CHECK (status IN ('available', 'remote', 'unavailable', 'need_to_check', 'absent', 'holiday', 'maybe'));`
+              CHECK (status IN ('available', 'remote', 'school', 'unavailable', 'need_to_check', 'absent', 'holiday', 'maybe'));`
     })
     
     if (addError) {

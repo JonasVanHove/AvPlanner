@@ -108,9 +108,11 @@ export async function checkAndAwardBadgesClientSide(
         .single()
 
       if (insertError) {
-        console.error(`🏅 [CLIENT] ❌ Error awarding ${badge.type}:`, insertError.message)
-        if (insertError.code === '42501') {
-          console.error('🏅 [CLIENT] ⚠️  Permission denied. RLS may be blocking this.')
+        // If the insert fails due to RLS/permission (42501) or auth, don't spam the console.
+        if (insertError.code === '42501' || insertError.status === 401 || insertError.status === 403) {
+          console.warn(`🏅 [CLIENT] ⚠️ Permission denied awarding ${badge.type}. RLS may block client inserts. Falling back to local cache.`)
+        } else {
+          console.error(`🏅 [CLIENT] ❌ Error awarding ${badge.type}:`, insertError.message)
         }
       } else {
         console.log(`🏅 [CLIENT] ✅ Awarded ${badge.type}!`)

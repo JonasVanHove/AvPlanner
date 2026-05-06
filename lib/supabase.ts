@@ -86,7 +86,7 @@ export type Database = {
           id: string
           member_id: string
           date: string
-          status: "available" | "remote" | "unavailable" | "need_to_check" | "absent" | "holiday" | "maybe"
+          status: "available" | "remote" | "school" | "unavailable" | "need_to_check" | "absent" | "holiday" | "maybe"
           created_at: string
           updated_at?: string
           changed_by_id?: string
@@ -96,7 +96,7 @@ export type Database = {
           id?: string
           member_id: string
           date: string
-          status: "available" | "remote" | "unavailable" | "need_to_check" | "absent" | "holiday" | "maybe"
+          status: "available" | "remote" | "school" | "unavailable" | "need_to_check" | "absent" | "holiday" | "maybe"
           created_at?: string
           updated_at?: string
           changed_by_id?: string
@@ -106,7 +106,7 @@ export type Database = {
           id?: string
           member_id?: string
           date?: string
-          status?: "available" | "remote" | "unavailable" | "need_to_check" | "absent" | "holiday" | "maybe"
+          status?: "available" | "remote" | "school" | "unavailable" | "need_to_check" | "absent" | "holiday" | "maybe"
           created_at?: string
           updated_at?: string
           changed_by_id?: string

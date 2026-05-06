@@ -475,6 +475,7 @@ export function AnalyticsButton({ members, locale, weeksToShow, currentDate, tea
     switch (status) {
       case 'available': return t("status.available")
       case 'remote': return t("status.remote")
+      case 'school': return t("status.school")
       case 'unavailable': return t("status.unavailable")
       case 'need_to_check': return t("status.need_to_check")
       case 'absent': return t("status.absent")
@@ -488,6 +489,7 @@ export function AnalyticsButton({ members, locale, weeksToShow, currentDate, tea
     switch (status) {
       case 'available': return 'bg-green-500'
       case 'remote': return 'bg-purple-500'
+      case 'school': return 'bg-teal-500'
       case 'unavailable': return 'bg-red-500'
       case 'need_to_check': return 'bg-blue-500'
       case 'absent': return 'bg-gray-500'
@@ -502,6 +504,7 @@ export function AnalyticsButton({ members, locale, weeksToShow, currentDate, tea
     switch (status) {
       case 'available': return '🟢'
       case 'remote': return '🟣'
+      case 'school': return '🏫'
       case 'unavailable': return '🔴'
       case 'need_to_check': return '🔵'
       case 'absent': return '⚫'
@@ -1603,6 +1606,7 @@ function MemberAnalysisSection({
     switch (status) {
       case 'available': return t('status.available')
       case 'remote': return t('status.remote')
+      case 'school': return t('status.school')
       case 'unavailable': return t('status.unavailable')
       case 'need_to_check': return t('status.need_to_check')
       case 'absent': return t('status.absent')
@@ -3164,13 +3168,14 @@ function YearOverviewSection({
     // Weekend shown as a separate category; use holiday color for non-work-days for consistency
     weekend: '#f59e0b',
   }
-  const statusOrder: Array<'available'|'remote'|'unavailable'|'need_to_check'|'absent'|'holiday'|'unfilled'> = [
-    'available','remote','unavailable','need_to_check','absent','holiday','unfilled'
+  const statusOrder: Array<'available'|'remote'|'school'|'unavailable'|'need_to_check'|'absent'|'holiday'|'unfilled'> = [
+    'available','remote','school','unavailable','need_to_check','absent','holiday','unfilled'
   ]
   const getStatusLabel = (status: string) => {
     switch (status) {
       case 'available': return t('status.available')
       case 'remote': return t('status.remote')
+      case 'school': return t('status.school')
       case 'unavailable': return t('status.unavailable')
       case 'need_to_check': return t('status.need_to_check')
       case 'absent': return t('status.absent')
@@ -3183,6 +3188,7 @@ function YearOverviewSection({
     switch (status) {
       case 'available': return 'bg-green-500'
       case 'remote': return 'bg-purple-500'
+      case 'school': return 'bg-teal-500'
       case 'unavailable': return 'bg-red-500'
       case 'need_to_check': return 'bg-blue-500'
       case 'absent': return 'bg-gray-500'
@@ -3583,7 +3589,7 @@ export function BulkUpdateDialog({ members, locale, onUpdate, onRangeSelectionCh
   const [selectedMembers, setSelectedMembers] = useState<string[]>([])
   const [selectedDates, setSelectedDates] = useState<Date[]>([])
   const [selectedStatus, setSelectedStatus] = useState<
-    "available" | "unavailable" | "need_to_check" | "absent" | "holiday" | "remote"
+    "available" | "unavailable" | "need_to_check" | "absent" | "holiday" | "remote" | "school"
   >("available")
   const [isUpdating, setIsUpdating] = useState(false)
   const [showAnalytics, setShowAnalytics] = useState(false)
@@ -3960,6 +3966,7 @@ export function BulkUpdateDialog({ members, locale, onUpdate, onRangeSelectionCh
     { value: "not_set", label: t("status.not_set"), icon: "⚪" },
     { value: "available", label: t("status.available"), icon: "🟢" },
     { value: "remote", label: t("status.remote"), icon: "🟣" },
+    { value: "school", label: t("status.school"), icon: "🏫" },
     { value: "unavailable", label: t("status.unavailable"), icon: "🔴" },
     { value: "need_to_check", label: t("status.need_to_check"), icon: "🔵" },
     { value: "absent", label: t("status.absent"), icon: "⚫" },
@@ -4302,6 +4309,7 @@ export function BulkUpdateDialog({ members, locale, onUpdate, onRangeSelectionCh
     switch (status) {
       case 'available': return t("status.available")
       case 'remote': return t("status.remote")
+      case 'school': return t("status.school")
       case 'unavailable': return t("status.unavailable")
       case 'need_to_check': return t("status.need_to_check")
       case 'absent': return t("status.absent")

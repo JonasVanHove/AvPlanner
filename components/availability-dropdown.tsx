@@ -4,8 +4,8 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { useTranslation, type Locale } from "@/lib/i18n"
 
 interface AvailabilityDropdownProps {
-  value?: "available" | "unavailable" | "need_to_check" | "absent" | "holiday" | "remote"
-  onValueChange: (value: "available" | "unavailable" | "need_to_check" | "absent" | "holiday" | "remote") => void
+  value?: "available" | "unavailable" | "need_to_check" | "absent" | "holiday" | "remote" | "school"
+  onValueChange: (value: "available" | "unavailable" | "need_to_check" | "absent" | "holiday" | "remote" | "school") => void
   locale: Locale
   disabled?: boolean
   size?: "sm" | "md" | "lg"
@@ -14,6 +14,7 @@ interface AvailabilityDropdownProps {
 const statusConfig = {
   available: { color: "text-green-600" },
   remote: { color: "text-purple-600" },
+  school: { color: "text-teal-600" },
   unavailable: { color: "text-red-600" },
   need_to_check: { color: "text-blue-600" },
   absent: { color: "text-gray-600" },
@@ -21,7 +22,7 @@ const statusConfig = {
 }
 
 function renderStatusIcon(
-  status: "available" | "unavailable" | "need_to_check" | "absent" | "holiday" | "remote",
+  status: "available" | "unavailable" | "need_to_check" | "absent" | "holiday" | "remote" | "school",
   size: "sm" | "md" | "lg"
 ) {
   const sizeClass = size === "sm" ? "text-xs" : ""
@@ -40,6 +41,7 @@ function renderStatusIcon(
   const emojiMap: Record<string, string> = {
     available: "🟢",
     remote: "🟣",
+    school: "🏫",
     unavailable: "🔴",
     need_to_check: "🔵",
     absent: "⚫",
@@ -52,9 +54,9 @@ export function AvailabilityDropdown({ value, onValueChange, locale, disabled, s
   const { t } = useTranslation(locale)
 
   const sizeClasses = {
-    sm: "h-6 text-xs px-2",
-    md: "h-8 text-xs px-3", 
-    lg: "h-10 text-sm px-4"
+    sm: "h-6 text-xs px-2 min-w-[7rem]",
+    md: "h-8 text-xs px-3 min-w-[8.5rem]",
+    lg: "h-10 text-sm px-4 min-w-[10rem]"
   }
 
   // In test environments, render a simple native select to avoid Radix/jsdom limitations
@@ -70,6 +72,7 @@ export function AvailabilityDropdown({ value, onValueChange, locale, disabled, s
       >
         <option value="available">{t('status.available')}</option>
         <option value="remote">{t('status.remote')}</option>
+        <option value="school">{t('status.school')}</option>
         <option value="unavailable">{t('status.unavailable')}</option>
         <option value="need_to_check">{t('status.need_to_check')}</option>
         <option value="absent">{t('status.absent')}</option>
@@ -89,14 +92,12 @@ export function AvailabilityDropdown({ value, onValueChange, locale, disabled, s
           {value && (
             <div className="flex items-center gap-1">
               {renderStatusIcon(value, size)}
-              {size !== "sm" && (
-                <span className={statusConfig[value].color}>{t(`status.${value}` as any)}</span>
-              )}
+              <span className={statusConfig[value].color + (size === "sm" ? " text-xs" : "") + " whitespace-nowrap"}>{t(`status.${value}` as any)}</span>
             </div>
           )}
         </SelectValue>
       </SelectTrigger>
-      <SelectContent>
+      <SelectContent className="z-50">
         <SelectItem value="available">
           <div className="flex items-center gap-2">
             {renderStatusIcon("available", size)}
@@ -107,6 +108,12 @@ export function AvailabilityDropdown({ value, onValueChange, locale, disabled, s
           <div className="flex items-center gap-2">
             {renderStatusIcon("remote", size)}
             <span>{t("status.remote")}</span>
+          </div>
+        </SelectItem>
+        <SelectItem value="school">
+          <div className="flex items-center gap-2">
+            {renderStatusIcon("school", size)}
+            <span>{t("status.school")}</span>
           </div>
         </SelectItem>
         <SelectItem value="unavailable">

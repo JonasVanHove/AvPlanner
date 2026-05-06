@@ -75,7 +75,7 @@ interface Member {
 interface Availability {
   member_id: string
   date: string
-  status: "available" | "unavailable" | "need_to_check" | "absent" | "holiday" | "remote"
+  status: "available" | "unavailable" | "need_to_check" | "absent" | "holiday" | "remote" | "school"
   auto_holiday?: boolean
 }
 
@@ -133,6 +133,7 @@ const AvailabilityCalendarRedesigned = ({
     return new Date(d.setDate(diff))
   })
   const [availability, setAvailability] = useState<Availability[]>([])
+  
   const [viewMode, setViewMode] = useState<"week">("week")
   const [weeksToShow, setWeeksToShow] = useState<1 | 2 | 4 | 8>(initialWeeksToShow || 1)
   const [isLoading, setIsLoading] = useState(false)
@@ -840,6 +841,12 @@ const AvailabilityCalendarRedesigned = ({
           label: t("status.remote"),
           textColor: "text-purple-700 dark:text-purple-300",
         },
+        school: {
+          icon: "🏫",
+          color: "bg-teal-50 border-teal-200 dark:bg-teal-900/20 dark:border-teal-700/50",
+          label: t("status.school"),
+          textColor: "text-teal-700 dark:text-teal-300",
+        },
         unavailable: {
           icon: "🔴",
           color: "bg-red-50 border-red-200 dark:bg-red-500/20 dark:border-red-400/60 dark:ring-1 dark:ring-red-300/40 dark:shadow-[0_0_10px_rgba(239,68,68,0.35)]",
@@ -883,6 +890,12 @@ const AvailabilityCalendarRedesigned = ({
         color: "bg-purple-50 border-purple-200 dark:bg-purple-900/20 dark:border-purple-700/50",
         label: t("status.remote"),
         textColor: "text-purple-700 dark:text-purple-300",
+      },
+      school: {
+        icon: "🏫",
+        color: "bg-teal-50 border-teal-200 dark:bg-teal-900/20 dark:border-teal-700/50",
+        label: t("status.school"),
+        textColor: "text-teal-700 dark:text-teal-300",
       },
       unavailable: {
         icon: "🔴",
@@ -1069,7 +1082,7 @@ const AvailabilityCalendarRedesigned = ({
   const updateAvailability = async (
     memberId: string,
     date: string,
-    status: "available" | "unavailable" | "need_to_check" | "absent" | "holiday" | "remote",
+    status: "available" | "unavailable" | "need_to_check" | "absent" | "holiday" | "remote" | "school",
   ) => {
     if (isReadOnly || !editMode) return
 
@@ -2024,7 +2037,7 @@ const AvailabilityCalendarRedesigned = ({
                                 <div className="flex flex-col items-center gap-1">
                                   <AvailabilityDropdown
                                     value={record?.status}
-                                    onValueChange={(status: "available" | "unavailable" | "need_to_check" | "absent" | "holiday" | "remote") => 
+                                    onValueChange={(status: "available" | "unavailable" | "need_to_check" | "absent" | "holiday" | "remote" | "school") => 
                                       updateAvailability(member.id, getDateString(date), status)
                                     }
                                     locale={locale}
@@ -2344,7 +2357,8 @@ const AvailabilityCalendarRedesigned = ({
                                   const current = availability
                                   const statuses: Availability["status"][] = [
                                     "available",
-                                    "remote", 
+                                    "remote",
+                                    "school",
                                     "unavailable",
                                     "need_to_check",
                                     "absent",
@@ -2392,7 +2406,7 @@ const AvailabilityCalendarRedesigned = ({
                                     align="end"
                                     className="bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700"
                                   >
-                                  {["available", "remote", "unavailable", "need_to_check", "absent", "holiday"].map((status) => {
+                                  {["available", "remote", "school", "unavailable", "need_to_check", "absent", "holiday"].map((status) => {
                                     const config = getRealStatusConfig(status) // Use real config for dropdown
                                     return (
                                     <DropdownMenuItem
@@ -3025,7 +3039,7 @@ const AvailabilityCalendarRedesigned = ({
             ) : (
               <>
                 {/* Full legend: all status options */}
-                {["available", "remote", "unavailable", "need_to_check", "absent", "holiday"].map((status) => {
+                {["available", "remote", "school", "unavailable", "need_to_check", "absent", "holiday"].map((status) => {
                   const config = getStatusConfig(status)
                   return (
                   <div key={status} className="flex items-center gap-1">

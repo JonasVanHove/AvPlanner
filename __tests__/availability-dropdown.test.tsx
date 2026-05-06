@@ -39,6 +39,11 @@ describe('AvailabilityDropdown', () => {
     }
   })
 
+  it('includes the school availability option', () => {
+    render(<AvailabilityDropdown {...defaultProps} />)
+    expect(screen.getByRole('option', { name: 'status.school' })).toBeTruthy()
+  })
+
   it('shows only icon for small size', () => {
     render(<AvailabilityDropdown {...defaultProps} size="sm" />)
     const combo = screen.getByRole('combobox') as HTMLElement
@@ -54,8 +59,8 @@ describe('AvailabilityDropdown', () => {
     // Native select path (test fallback preferred)
     fireEvent.change(combo, { target: { value: 'remote' } })
     expect(onValueChange).toHaveBeenCalledWith('remote')
-    fireEvent.change(combo, { target: { value: 'holiday' } })
-    expect(onValueChange).toHaveBeenCalledWith('holiday')
+    fireEvent.change(combo, { target: { value: 'school' } })
+    expect(onValueChange).toHaveBeenCalledWith('school')
   })
 
   it('can be disabled', () => {

@@ -58,6 +58,7 @@ export const translations = {
     // Availability statuses
     "status.available": "Available",
     "status.remote": "Remote",
+    "status.school": "School",
     "status.maybe": "Maybe",
     "status.unavailable": "Unavailable",
     "status.need_to_check": "Need to check",
@@ -740,6 +741,7 @@ export const translations = {
     // Availability statuses
     "status.available": "Beschikbaar",
     "status.remote": "Op Afstand",
+    "status.school": "School",
     "status.maybe": "Misschien",
     "status.unavailable": "Niet Beschikbaar",
     "status.need_to_check": "Moet Nakijken",
@@ -1420,6 +1422,7 @@ export const translations = {
     // Availability statuses
     "status.available": "Disponible",
     "status.remote": "À Distance",
+    "status.school": "École",
     "status.maybe": "Peut-être",
     "status.unavailable": "Indisponible",
     "status.need_to_check": "À Vérifier",
