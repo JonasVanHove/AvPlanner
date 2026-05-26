@@ -66,8 +66,8 @@ export const translations = {
     "status.holiday": "Holiday",
     "status.not_set": "Not set",
 
-    // Bulk update
-    "bulk.title": "Bulk Update",
+    // Bulk edit
+    "bulk.title": "Bulk Edit",
     "bulk.selectMembers": "Select Members",
     "bulk.selectDates": "Select Date Range",
     "bulk.selectStatus": "Select Status",
@@ -749,8 +749,8 @@ export const translations = {
     "status.holiday": "Vakantie",
     "status.not_set": "Niet ingesteld",
 
-    // Bulk update
-    "bulk.title": "Bulk Aanpassing",
+    // Bulk edit
+    "bulk.title": "Bulk Bewerken",
     "bulk.selectMembers": "Selecteer Leden",
     "bulk.selectDates": "Selecteer Datumbereik",
     "bulk.selectStatus": "Selecteer Status",
@@ -1430,8 +1430,8 @@ export const translations = {
     "status.holiday": "Vacances",
     "status.not_set": "Non défini",
 
-    // Bulk update
-    "bulk.title": "Mise à Jour en Lot",
+    // Bulk edit
+    "bulk.title": "Édition en Lot",
     "bulk.selectMembers": "Sélectionner les Membres",
     "bulk.selectDates": "Sélectionner la Plage de Dates",
     "bulk.selectStatus": "Sélectionner le Statut",

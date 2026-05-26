@@ -4324,13 +4324,13 @@ export function BulkUpdateDialog({ members, locale, onUpdate, onRangeSelectionCh
       {/* Bulk Update Dialog */}
       <Dialog open={open} onOpenChange={setOpen}>
         <DialogTrigger asChild>
-          <Button 
+            <Button 
             variant="ghost" 
             size="sm" 
             className={`rounded-md backdrop-blur-sm border font-medium transition-all duration-200 px-2 py-1.5 h-8 ${theme === 'blackwhite' ? 'bg-gray-400/50 border-gray-400 text-gray-900 hover:bg-gray-400/70' : 'bg-white/10 border-white/20 text-white hover:bg-white/20'}`}
           >
             <BarChart3 className="h-4 w-4 mr-1 flex-shrink-0" />
-            <span className="truncate hidden sm:inline">{t("calendar.analytics")}</span>
+            <span className="truncate hidden sm:inline">{t("bulk.title")}</span>
           </Button>
         </DialogTrigger>
         <DialogContent className="max-w-[95vw] sm:max-w-4xl max-h-[90vh] overflow-y-auto bg-white dark:bg-gray-900 border-gray-200 dark:border-gray-700">

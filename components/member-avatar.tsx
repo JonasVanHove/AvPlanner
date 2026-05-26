@@ -189,6 +189,7 @@ function MemberAvatarComponent({
   const statusColors = {
     available: "bg-green-500",
     remote: "bg-purple-500",
+    school: "bg-teal-500",
     unavailable: "bg-red-500", 
     need_to_check: "bg-blue-500",
     absent: "bg-gray-500",

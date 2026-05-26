@@ -56,6 +56,22 @@ const BulkUpdateDialog = lazy(() => import("./bulk-update-dialog").then(m => ({ 
 const AnalyticsButton = lazy(() => import("./bulk-update-dialog").then(m => ({ default: m.AnalyticsButton })))
 const PlannerButton = lazy(() => import("./bulk-update-dialog").then(m => ({ default: m.PlannerButton })))
 
+const AVAILABILITY_STATUS_OPTIONS = [
+  "available",
+  "remote",
+  "school",
+  "unavailable",
+  "need_to_check",
+  "absent",
+  "holiday",
+] as const
+
+const DEFAULT_CLICK_STATUS_KEY = "availabilityCalendarDefaultClickStatus"
+
+const isAvailabilityStatus = (value: string): value is (typeof AVAILABILITY_STATUS_OPTIONS)[number] => {
+  return AVAILABILITY_STATUS_OPTIONS.includes(value as (typeof AVAILABILITY_STATUS_OPTIONS)[number])
+}
+
 interface Member {
   id: string
   first_name: string
@@ -152,6 +168,7 @@ const AvailabilityCalendarRedesigned = ({
   const [showDatePicker, setShowDatePicker] = useState(false)
   const [showKeyboardHelp, setShowKeyboardHelp] = useState(false)
   const [openSettings, setOpenSettings] = useState(false)
+  const [defaultClickStatus, setDefaultClickStatus] = useState<(typeof AVAILABILITY_STATUS_OPTIONS)[number]>("available")
   const [swipeDirection, setSwipeDirection] = useState<"left" | "right" | null>(null)
   const [bulkSelectionRange, setBulkSelectionRange] = useState<{
     startDate?: Date
@@ -210,6 +227,15 @@ const AvailabilityCalendarRedesigned = ({
     window.addEventListener('weekendsAsWeekdaysChanged', handler as EventListener)
     return () => window.removeEventListener('weekendsAsWeekdaysChanged', handler as EventListener)
   }, [teamId])
+
+  useEffect(() => {
+    try {
+      const saved = localStorage.getItem(DEFAULT_CLICK_STATUS_KEY)
+      if (saved && isAvailabilityStatus(saved)) {
+        setDefaultClickStatus(saved)
+      }
+    } catch {}
+  }, [])
 
   // Memoized theme colors - only recalculate when theme changes
   const themeColors = useMemo(() => {
@@ -923,6 +949,39 @@ const AvailabilityCalendarRedesigned = ({
       },
     }
     return statusConfig[status as keyof typeof statusConfig] || statusConfig.need_to_check
+  }
+
+  const getShortStatusLabel = (status: string) => {
+    switch (status) {
+      case 'need_to_check':
+        return t('analytics.needToCheck')
+      case 'available':
+        return t('status.available')
+      case 'remote':
+        return t('status.remote')
+      case 'school':
+        return t('status.school')
+      case 'unavailable':
+        return t('status.unavailable')
+      case 'absent':
+        return t('status.absent')
+      case 'holiday':
+        return t('status.holiday')
+      default:
+        return t('status.not_set')
+    }
+  }
+
+  const getClickStatusOrder = (preferredStatus: (typeof AVAILABILITY_STATUS_OPTIONS)[number]) => {
+    const remainingStatuses = AVAILABILITY_STATUS_OPTIONS.filter((status) => status !== preferredStatus)
+    return [preferredStatus, ...remainingStatuses]
+  }
+
+  const handleDefaultClickStatusChange = (status: (typeof AVAILABILITY_STATUS_OPTIONS)[number]) => {
+    setDefaultClickStatus(status)
+    try {
+      localStorage.setItem(DEFAULT_CLICK_STATUS_KEY, status)
+    } catch {}
   }
 
   // Helper function to get ISO week number
@@ -2353,17 +2412,9 @@ const AvailabilityCalendarRedesigned = ({
                                     return
                                   }
                                   
-                                  // Regular click cycles through all statuses
+                                  // Regular click cycles through all statuses, starting with the user's preferred default
                                   const current = availability
-                                  const statuses: Availability["status"][] = [
-                                    "available",
-                                    "remote",
-                                    "school",
-                                    "unavailable",
-                                    "need_to_check",
-                                    "absent",
-                                    "holiday",
-                                  ]
+                                  const statuses = getClickStatusOrder(defaultClickStatus)
                                   const currentIndex = current ? statuses.indexOf(current.status) : -1
                                   const nextStatus = statuses[(currentIndex + 1) % statuses.length]
                                   updateAvailability(member.id, getDateString(date), nextStatus)
@@ -2533,19 +2584,23 @@ const AvailabilityCalendarRedesigned = ({
                     <>
                       {/* Analytics and Planner Buttons */}
                       <div className="flex items-center gap-1">
-                        <AnalyticsButton 
-                          members={activeMembersForAnalytics} 
-                          locale={locale} 
-                          weeksToShow={weeksToShow}
-                          currentDate={currentDate}
-                          teamId={teamId}
-                          teamSlug={team?.slug}
-                        />
-                        <PlannerButton 
-                          members={visibleMembers} 
-                          locale={locale} 
-                          teamId={teamId}
-                        />
+                        {!editMode && (
+                          <>
+                            <AnalyticsButton 
+                              members={activeMembersForAnalytics} 
+                              locale={locale} 
+                              weeksToShow={weeksToShow}
+                              currentDate={currentDate}
+                              teamId={teamId}
+                              teamSlug={team?.slug}
+                            />
+                            <PlannerButton 
+                              members={visibleMembers} 
+                              locale={locale} 
+                              teamId={teamId}
+                            />
+                          </>
+                        )}
                       </div>
 
                       {/* Edit Mode Actions */}
@@ -2565,6 +2620,50 @@ const AvailabilityCalendarRedesigned = ({
                               }`}>Edit Mode</span>
                             </div>
                             <div className={`w-px h-6 ${theme === 'blackwhite' ? 'bg-gray-400/50' : 'bg-orange-300/30'}`}></div>
+                            <div className="flex items-center gap-2 px-2">
+                              <Switch checked={editMode} onCheckedChange={handleEditModeToggle} />
+                            </div>
+                            <div className={`w-px h-6 ${theme === 'blackwhite' ? 'bg-gray-400/60' : 'bg-orange-300/30'}`}></div>
+                            <DropdownMenu>
+                              <DropdownMenuTrigger asChild>
+                                <Button
+                                  variant="ghost"
+                                  size="sm"
+                                  className={`h-8 px-2 gap-2 ${theme === 'blackwhite' ? 'bg-white/80 border border-gray-300 text-gray-900 hover:bg-white/90' : 'bg-white/10 border border-transparent text-orange-100 hover:bg-white/15'}`}
+                                  aria-label={locale === "nl" ? "Klikstandaard" : locale === "fr" ? "Défaut clic" : "Click default"}
+                                >
+                                  <span className="text-sm leading-none">{getRealStatusConfig(defaultClickStatus).icon}</span>
+                                  <span className="hidden md:inline-block text-xs font-medium truncate max-w-[8rem]">
+                                    {getShortStatusLabel(defaultClickStatus)}
+                                  </span>
+                                  <ChevronDown className="h-3.5 w-3.5 opacity-70" />
+                                </Button>
+                              </DropdownMenuTrigger>
+                              <DropdownMenuContent align="end" className="min-w-48">
+                                {AVAILABILITY_STATUS_OPTIONS.map((status) => {
+                                  const statusConfig = getRealStatusConfig(status)
+
+                                  return (
+                                    <DropdownMenuItem
+                                      key={status}
+                                      onClick={() => handleDefaultClickStatusChange(status)}
+                                      className="flex items-center justify-between gap-3"
+                                    >
+                                      <span className="flex items-center gap-2 min-w-0">
+                                        <span className="text-sm leading-none">{statusConfig.icon}</span>
+                                        <span className="truncate">{statusConfig.label}</span>
+                                      </span>
+                                      {status === defaultClickStatus && (
+                                        <span className="text-xs font-medium text-primary">✓</span>
+                                      )}
+                                    </DropdownMenuItem>
+                                  )
+                                })}
+                              </DropdownMenuContent>
+                            </DropdownMenu>
+                            <div className={`w-px h-6 ${
+                              theme === 'blackwhite' ? 'bg-gray-400/60' : 'bg-orange-300/30'
+                            }`}></div>
                             {/* Undo/Redo buttons */}
                             <TooltipProvider>
                               <Tooltip>
@@ -2620,12 +2719,6 @@ const AvailabilityCalendarRedesigned = ({
                               onRangeSelectionChange={handleRangeSelectionChange}
                             />
                             <MemberForm teamId={teamId} locale={locale} onMemberAdded={onMembersUpdate} />
-                            <div className={`w-px h-6 ${
-                              theme === 'blackwhite' ? 'bg-gray-400/60' : 'bg-orange-300/30'
-                            }`}></div>
-                            <div className="flex items-center gap-1 px-2">
-                              <Switch checked={editMode} onCheckedChange={handleEditModeToggle} />
-                            </div>
                             {!userEmail && (
                               <>
                                 <div className={`w-px h-6 ${theme === 'blackwhite' ? 'bg-gray-400/60' : 'bg-orange-300/30'}`}></div>
@@ -2838,7 +2931,7 @@ const AvailabilityCalendarRedesigned = ({
                       <span className={weeksToShow === 4 ? "font-semibold" : ""}>4 Weeks</span>
                     </HamburgerMenuItem>
                     
-                    {!isReadOnly && (
+                    {!isReadOnly && !editMode && (
                       <>
                         <HamburgerMenuItem>
                           <AnalyticsButton 
@@ -2863,6 +2956,55 @@ const AvailabilityCalendarRedesigned = ({
                     {/* Edit Actions (only in edit mode) */}
                     {!isReadOnly && editMode && (
                       <>
+                        <HamburgerMenuItem>
+                          <div className="flex items-center justify-between gap-3 w-full">
+                            <div className="flex items-center gap-2">
+                              <Edit3 className="h-4 w-4 text-orange-600 dark:text-orange-300" />
+                              <div>
+                                <div className="font-medium">Edit Mode</div>
+                                <div className="text-xs text-gray-500 dark:text-gray-400">{getShortStatusLabel(defaultClickStatus)}</div>
+                              </div>
+                            </div>
+                            <Switch checked={editMode} onCheckedChange={handleEditModeToggle} />
+                          </div>
+                        </HamburgerMenuItem>
+                        <DropdownMenu>
+                          <DropdownMenuTrigger asChild>
+                            <HamburgerMenuItem>
+                              <div className="flex items-center justify-between w-full gap-3">
+                                <div className="flex items-center gap-2 min-w-0">
+                                  <span className="text-base leading-none">{getRealStatusConfig(defaultClickStatus).icon}</span>
+                                  <div className="min-w-0">
+                                    <div className="font-medium">Default click</div>
+                                    <div className="text-xs text-gray-500 dark:text-gray-400 truncate">{getRealStatusConfig(defaultClickStatus).label}</div>
+                                  </div>
+                                </div>
+                                <ChevronRight className="h-4 w-4 text-gray-400 flex-shrink-0" />
+                              </div>
+                            </HamburgerMenuItem>
+                          </DropdownMenuTrigger>
+                          <DropdownMenuContent align="start" className="min-w-48">
+                            {AVAILABILITY_STATUS_OPTIONS.map((status) => {
+                              const statusConfig = getRealStatusConfig(status)
+
+                              return (
+                                <DropdownMenuItem
+                                  key={status}
+                                  onClick={() => handleDefaultClickStatusChange(status)}
+                                  className="flex items-center justify-between gap-3"
+                                >
+                                  <span className="flex items-center gap-2 min-w-0">
+                                    <span className="text-sm leading-none">{statusConfig.icon}</span>
+                                    <span className="truncate">{statusConfig.label}</span>
+                                  </span>
+                                  {status === defaultClickStatus && (
+                                    <span className="text-xs font-medium text-primary">✓</span>
+                                  )}
+                                </DropdownMenuItem>
+                              )
+                            })}
+                          </DropdownMenuContent>
+                        </DropdownMenu>
                         <HamburgerMenuItem>
                           <BulkUpdateDialog 
                             members={members} 
